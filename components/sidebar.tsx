@@ -1,0 +1,259 @@
+"use client"
+
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { useAuth } from "@/components/auth-provider"
+
+export default function Sidebar() {
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isDashboardOpen, setIsDashboardOpen] = useState(true)
+  const pathname = usePathname()
+  const { user, logout } = useAuth()
+
+  // Load sidebar state from localStorage
+  useEffect(() => {
+    const storedState = localStorage.getItem("sidebarCollapsedState")
+    if (storedState === "true") {
+      setIsCollapsed(true)
+      setIsDashboardOpen(false)
+    }
+  }, [])
+
+  // Save sidebar state to localStorage
+  useEffect(() => {
+    localStorage.setItem("sidebarCollapsedState", isCollapsed.toString())
+    if (isCollapsed) {
+      setIsDashboardOpen(false)
+    } else {
+      // Re-open dashboard submenu if we're on a dashboard page
+      const isDashboardPage = pathname === "/" || pathname.includes("dashboard")
+      setIsDashboardOpen(isDashboardPage)
+    }
+  }, [isCollapsed, pathname])
+
+  const toggleSidebar = () => {
+    setIsCollapsed(!isCollapsed)
+  }
+
+  const toggleDashboard = (e: React.MouseEvent) => {
+    // Only toggle if clicking the arrow, not the link
+    if ((e.target as HTMLElement).closest("#dashboard-arrow")) {
+      e.preventDefault()
+      if (!isCollapsed) {
+        setIsDashboardOpen(!isDashboardOpen)
+      }
+    }
+  }
+
+  const isActiveLink = (href: string) => {
+    if (href === "/" && pathname === "/") return true
+    if (href !== "/" && pathname.includes(href.replace(".html", ""))) return true
+    return false
+  }
+
+  const dashboardPages = [
+    { href: "/youtube", label: "YouTube" },
+    { href: "/facebook", label: "Meta Facebook" },
+    { href: "/spotify", label: "Spotify" },
+    { href: "/instagram", label: "Instagram" },
+    { href: "/tiktok", label: "TikTok" },
+  ]
+
+  const isDashboardActive = pathname === "/" || dashboardPages.some((page) => pathname.includes(page.href))
+
+  return (
+    <aside
+      className={`sidebar bg-white shadow-lg p-6 flex flex-col rounded-r-lg transition-all duration-300 ease-in-out ${isCollapsed ? "w-20" : "w-64"}`}
+    >
+      <div className="mb-8 flex items-center justify-between logo-container">
+        {/* Hamburger Icon */}
+        <button onClick={toggleSidebar} className="text-red-600 focus:outline-none p-2 rounded-lg hover:bg-gray-100">
+          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fillRule="evenodd"
+              d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+              clipRule="evenodd"
+            ></path>
+          </svg>
+        </button>
+
+        {/* Logo */}
+        {!isCollapsed && (
+          <img
+            src="https://placehold.co/150x40/ef4444/ffffff?text=sugarcane"
+            alt="Sugarcane Logo"
+            className="h-10 w-auto rounded logo-text"
+          />
+        )}
+      </div>
+
+      {!isCollapsed && user && (
+        <div className="mb-6 p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
+              <p className="text-xs text-gray-500 truncate">{user.email}</p>
+            </div>
+            <button
+              onClick={logout}
+              className="ml-2 p-1 text-gray-400 hover:text-red-600 transition-colors duration-200"
+              title="Logout"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      <nav className="flex-1">
+        <ul>
+          <li className="mb-4">
+            {/* Dashboard parent link */}
+            <Link
+              href="/"
+              onClick={toggleDashboard}
+              className={`flex items-center p-3 rounded-lg font-semibold shadow-sm cursor-pointer nav-item transition-colors duration-200 ${
+                isDashboardActive ? "bg-red-100 text-red-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              }`}
+            >
+              {/* Dashboard Icon */}
+              <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+              </svg>
+              {!isCollapsed && <span className="nav-text">Dashboard</span>}
+              {!isCollapsed && (
+                <svg
+                  id="dashboard-arrow"
+                  className={`w-4 h-4 ml-auto transform transition-transform duration-200 ${isDashboardOpen ? "rotate-180" : ""}`}
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  ></path>
+                </svg>
+              )}
+            </Link>
+
+            {/* Dashboard Submenu */}
+            {!isCollapsed && (
+              <ul className={`submenu pl-8 pt-2 transition-all duration-200 ${isDashboardOpen ? "active" : "hidden"}`}>
+                {dashboardPages.map((page) => (
+                  <li key={page.href} className="mb-2">
+                    <Link
+                      href={page.href}
+                      className={`flex items-center p-2 rounded-lg transition-colors duration-200 nav-item ${
+                        isActiveLink(page.href)
+                          ? "bg-gray-200 text-gray-900 font-semibold"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <span className="nav-text">{page.label}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+
+          {/* Other Navigation Items */}
+          <li className="mb-4">
+            <Link
+              href="/predictive-analytics"
+              className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
+                isActiveLink("/predictive-analytics")
+                  ? "bg-red-100 text-red-700 font-semibold"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              }`}
+            >
+              <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              {!isCollapsed && <span className="nav-text">Predictive Analytics</span>}
+            </Link>
+          </li>
+
+          <li className="mb-4">
+            <Link
+              href="/notifications"
+              className="flex items-center p-3 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200 nav-item"
+            >
+              <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path>
+              </svg>
+              {!isCollapsed && <span className="nav-text">Notifications</span>}
+            </Link>
+          </li>
+
+          <li className="mb-4">
+            <Link
+              href="/faq"
+              className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
+                isActiveLink("/faq")
+                  ? "bg-red-100 text-red-700 font-semibold"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              }`}
+            >
+              <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5L6 11H5a1 1 0 100 2h1a1 1 0 00.867.5L10 13h1a1 1 0 000-2h-1a1 1 0 00-.867-.5z"
+                  clipRule="evenodd"
+                ></path>
+              </svg>
+              {!isCollapsed && <span className="nav-text">FAQ</span>}
+            </Link>
+          </li>
+
+          <li className="mb-4">
+            <Link
+              href="/cross-platform"
+              className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
+                isActiveLink("/cross-platform")
+                  ? "bg-red-100 text-red-700 font-semibold"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              }`}
+            >
+              <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
+                <path
+                  fillRule="evenodd"
+                  d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 0a1 1 0 00-1 1v5a1 1 0 102 0V6a1 1 0 00-1-1zm3 0a1 1 0 00-1 1v5a1 1 0 102 0V6a1 1 0 00-1-1zm3 0a1 1 0 00-1 1v5a1 1 0 102 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                ></path>
+              </svg>
+              {!isCollapsed && <span className="nav-text">Cross-platform</span>}
+            </Link>
+          </li>
+
+          <li className="mb-4">
+            <Link
+              href="/import"
+              className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
+                isActiveLink("/import")
+                  ? "bg-red-100 text-red-700 font-semibold"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              }`}
+            >
+              <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              {!isCollapsed && <span className="nav-text">Import</span>}
+            </Link>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+  )
+}

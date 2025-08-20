@@ -1,0 +1,70 @@
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Hide sub-menu by default */
+.submenu {
+    display: none;
+}
+
+/* Show sub-menu when parent is active (using JavaScript for toggling) */
+.submenu.active {
+    display: block;
+}
+
+/* Collapsed sidebar styles */
+.sidebar.collapsed {
+    width: 80px; /* Smaller width when collapsed */
+    padding-left: 0;
+    padding-right: 0;
+    align-items: center;
+}
+
+/* Hide text elements when sidebar is collapsed */
+.sidebar.collapsed .logo-text,
+.sidebar.collapsed .nav-text {
+    display: none;
+}
+
+/* Adjust nav-item styling when sidebar is collapsed */
+.sidebar.collapsed .nav-item {
+    display: flex; /* Ensure it's a flex container */
+    justify-content: center; /* Center content horizontally */
+    align-items: center; /* Center content vertically */
+    padding: 0; /* Remove padding */
+    width: 100%; /* Take full width of the collapsed sidebar item */
+    height: 48px; /* Fixed height for consistent icon spacing */
+    border-radius: 0.5rem; /* Apply rounded corners */
+    transition: all 0.2s ease-in-out; /* Smooth transitions */
+}
+
+/* Style for the SVG icon within the nav-item when collapsed */
+.sidebar.collapsed .nav-item svg {
+    margin-right: 0; /* Remove margin from SVG when collapsed */
+    width: 24px; /* Ensure consistent icon size */
+    height: 24px; /* Ensure consistent icon size */
+}
+
+/* Adjust padding for the active background when collapsed to allow icon to fill space */
+.sidebar.collapsed .nav-item.bg-red-100,
+.sidebar.collapsed .nav-item.bg-gray-200 {
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Ensure submenus are hidden when sidebar is collapsed */
+.sidebar.collapsed .submenu {
+    display: none !important;
+}
+
+/* Hide dropdown arrow when sidebar is collapsed */
+.sidebar.collapsed #dashboard-arrow {
+    display: none;
+}
+
+/* Center the logo container when sidebar is collapsed */
+.sidebar.collapsed .logo-container {
+    justify-content: center;
+}
