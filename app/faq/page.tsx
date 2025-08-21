@@ -2,13 +2,13 @@ import Sidebar from "@/components/sidebar"
 
 export default function FAQDashboard() {
   return (
-    <div className="flex min-h-screen bg-gray-100 text-gray-800">
+    <div className="flex min-h-screen bg-[#123458] text-[#123458]">
       <Sidebar />
 
       {/* Main Content Area for FAQ Dashboard */}
       <main className="flex-1 p-8">
         <header className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Frequently Asked Questions</h1>
+          <h1 className="text-3xl font-bold text-[#FFFFFF]">Frequently Asked Questions</h1>
         </header>
 
         {/* FAQ Section */}

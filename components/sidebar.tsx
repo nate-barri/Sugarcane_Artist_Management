@@ -22,17 +22,14 @@ export default function Sidebar() {
     }
   }, [])
 
-  // Save sidebar state to localStorage
+ // Save sidebar state to localStorage
   useEffect(() => {
     localStorage.setItem("sidebarCollapsedState", isCollapsed.toString())
     if (isCollapsed) {
       setIsDashboardOpen(false)
-    } else {
-      // Re-open dashboard submenu if we're on a dashboard page
-      const isDashboardPage = pathname === "/" || pathname.includes("dashboard")
-      setIsDashboardOpen(isDashboardPage)
     }
-  }, [isCollapsed, pathname])
+  }, [isCollapsed])
+
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed)
@@ -70,7 +67,7 @@ export default function Sidebar() {
     >
       <div className="mb-8 flex items-center justify-between logo-container">
         {/* Hamburger Icon */}
-        <button onClick={toggleSidebar} className="text-red-600 focus:outline-none p-2 rounded-lg hover:bg-gray-100">
+        <button onClick={toggleSidebar} className="text-[#123458] focus:outline-none p-2 rounded-lg hover:bg-gray-100">
           <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
             <path
               fillRule="evenodd"
@@ -83,10 +80,11 @@ export default function Sidebar() {
         {/* Logo */}
         {!isCollapsed && (
           <img
-            src="https://placehold.co/150x40/ef4444/ffffff?text=sugarcane"
-            alt="Sugarcane Logo"
-            className="h-10 w-auto rounded logo-text"
-          />
+          src="/SUGARCANE LOGO.png"
+          alt="Sugarcane Logo"
+          className="h-10 w-auto rounded logo-text"
+        />
+
         )}
       </div>
 
@@ -99,7 +97,7 @@ export default function Sidebar() {
             </div>
             <button
               onClick={logout}
-              className="ml-2 p-1 text-gray-400 hover:text-red-600 transition-colors duration-200"
+              className="ml-2 p-1 text-gray-400 hover:text-[#123458] transition-colors duration-200"
               title="Logout"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -122,7 +120,7 @@ export default function Sidebar() {
               href="/"
               onClick={toggleDashboard}
               className={`flex items-center p-3 rounded-lg font-semibold shadow-sm cursor-pointer nav-item transition-colors duration-200 ${
-                isDashboardActive ? "bg-red-100 text-red-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                isDashboardActive ? "bg-[#123458] text-[#FFFFFF]" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }`}
             >
               {/* Dashboard Icon */}
@@ -155,7 +153,7 @@ export default function Sidebar() {
                       href={page.href}
                       className={`flex items-center p-2 rounded-lg transition-colors duration-200 nav-item ${
                         isActiveLink(page.href)
-                          ? "bg-gray-200 text-gray-900 font-semibold"
+                          ? "bg-gray-200 text-[#123458] font-semibold"
                           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                       }`}
                     >
@@ -173,7 +171,7 @@ export default function Sidebar() {
               href="/predictive-analytics"
               className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
                 isActiveLink("/predictive-analytics")
-                  ? "bg-red-100 text-red-700 font-semibold"
+                  ? "bg-[#123458] text-[#FFFFFF] font-semibold"
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }`}
             >
@@ -184,10 +182,14 @@ export default function Sidebar() {
             </Link>
           </li>
 
-          <li className="mb-4">
-            <Link
-              href="/notifications"
-              className="flex items-center p-3 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200 nav-item"
+        <li className="mb-4">
+          <Link
+            href="/notifications"
+            className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
+              isActiveLink("/notifications")
+                ? "bg-[#123458] text-white font-semibold"
+                : "text-[#123458] hover:bg-[#123458] hover:text-white"
+              }`}
             >
               <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path>
@@ -196,12 +198,13 @@ export default function Sidebar() {
             </Link>
           </li>
 
+
           <li className="mb-4">
             <Link
               href="/faq"
               className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
                 isActiveLink("/faq")
-                  ? "bg-red-100 text-red-700 font-semibold"
+                  ? "bg-[#123458] text-[#FFFFFF] font-semibold"
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }`}
             >
@@ -221,7 +224,7 @@ export default function Sidebar() {
               href="/cross-platform"
               className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
                 isActiveLink("/cross-platform")
-                  ? "bg-red-100 text-red-700 font-semibold"
+                  ? "bg-[#123458] text-[#FFFFFF] font-semibold"
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }`}
             >
@@ -242,7 +245,7 @@ export default function Sidebar() {
               href="/import"
               className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
                 isActiveLink("/import")
-                  ? "bg-red-100 text-red-700 font-semibold"
+                  ? "bg-[#123458] text-[#FFFFFF] font-semibold"
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               }`}
             >

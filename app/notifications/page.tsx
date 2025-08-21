@@ -2,13 +2,13 @@ import Sidebar from "@/components/sidebar"
 
 export default function NotificationsDashboard() {
   return (
-    <div className="flex min-h-screen bg-gray-100 text-gray-800">
+    <div className="flex min-h-screen bg-[#123458] text-[#123458]">
       <Sidebar />
 
       {/* Main Content Area for Notifications Dashboard */}
       <main className="flex-1 p-8">
         <header className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
+          <h1 className="text-3xl font-bold text-[#FFFFFF]">Notifications</h1>
         </header>
 
         {/* Notifications List */}
@@ -143,7 +143,7 @@ export default function NotificationsDashboard() {
                 <h3 className="font-medium text-gray-900">Email Notifications</h3>
                 <p className="text-sm text-gray-600">Receive alerts via email</p>
               </div>
-              <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+              <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-[#123458] transition-colors focus:outline-none focus:ring-2 focus:ring-[#123458] focus:ring-offset-2">
                 <span className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-6"></span>
               </button>
             </div>
