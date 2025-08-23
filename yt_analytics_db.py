@@ -97,16 +97,81 @@ plt.show()
 avg_views = df["views"].mean()
 print(f"Average views per video: {avg_views:.2f}")
 
-# --- 6. Average views by day of week ---
-avg_views_day = df.groupby("DayOfWeek")["views"].mean().sort_values(ascending=False)
+# --- 6. Average views by day of week (in calendar order) ---
+day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+avg_views_day = (
+    df.groupby("DayOfWeek")["views"]
+      .mean()
+      .reindex(day_order)  # reorder to calendar order
+)
+
 plt.figure(figsize=(8,5))
-sns.barplot(x=avg_views_day.index, y=avg_views_day.values)
+sns.barplot(x=avg_views_day.index, y=avg_views_day.values, order=day_order)
 plt.title("Average Views by Day of Week")
+plt.xlabel("Day of Week")
+plt.ylabel("Average Views")
 plt.show()
 
-# --- 7. Best day to post ---
+# --- NEW SECTION: Mean vs Median comparison ---
+views_day_stats = (
+    df.groupby("DayOfWeek")["views"]
+      .agg(["mean", "median"])
+      .reindex(day_order)
+)
+
+views_day_stats.plot(kind="bar", figsize=(10,6))
+plt.title("Mean vs Median Views by Day of Week")
+plt.xlabel("Day of Week")
+plt.ylabel("Views")
+plt.legend(["Mean", "Median"])
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# Print best days by both metrics
+best_day_mean = views_day_stats["mean"].idxmax()
+best_day_median = views_day_stats["median"].idxmax()
+print(f"📊 Best day by average (mean) views: {best_day_mean}")
+print(f"📊 Best day by typical (median) views: {best_day_median}")# --- 6a. Average (Mean) views by day of week ---
+day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+mean_views_day = (
+    df.groupby("DayOfWeek")["views"]
+      .mean()
+      .reindex(day_order)
+)
+
+plt.figure(figsize=(8,5))
+sns.barplot(x=mean_views_day.index, y=mean_views_day.values, order=day_order)
+plt.title("Average (Mean) Views by Day of Week")
+plt.xlabel("Day of Week")
+plt.ylabel("Mean Views")
+plt.show()
+
+# --- 6b. Median views by day of week ---
+median_views_day = (
+    df.groupby("DayOfWeek")["views"]
+      .median()
+      .reindex(day_order)
+)
+
+plt.figure(figsize=(8,5))
+sns.barplot(x=median_views_day.index, y=median_views_day.values, order=day_order)
+plt.title("Median Views by Day of Week")
+plt.xlabel("Day of Week")
+plt.ylabel("Median Views")
+plt.show()
+
+# Print best days by both metrics
+best_day_mean = mean_views_day.idxmax()
+best_day_median = median_views_day.idxmax()
+print(f"📊 Best day by average (mean) views: {best_day_mean}")
+print(f"📊 Best day by typical (median) views: {best_day_median}")
+
+# --- 7. Best day to post (keep this if you want old version too) ---
 best_day = avg_views_day.idxmax()
-print(f"Best day to post (based on avg views): {best_day}")
+print(f"✅ Best day to post (based on avg views): {best_day}")
 
 # --- 8. Video performance clusters with custom K-Medoids ---
 features = [
@@ -186,22 +251,16 @@ print("\n📊 Benchmark thresholds (top 25% of your dataset):")
 for feature, threshold in benchmarks.items():
     print(f"{feature}: {threshold:.2f}")
 
-# --- Data-driven cutoff lines ---
-q1 = importances.quantile(0.25)
-q2 = importances.quantile(0.50)
-q3 = importances.quantile(0.75)
-
 plt.figure(figsize=(8,5))
 sns.barplot(x=importances.values, y=importances.index)
-plt.title("Variables for Predicting Views (with Data-Driven Benchmarks)")
+plt.title("Variables for Predicting Views (with Benchmarks)")
 plt.xlabel("Importance")
 plt.ylabel("Feature")
 
-# Add percentile-based cutoff lines
-plt.axvline(q1, color="red", linestyle="--", label=f"25th % ({q1:.2f})")
-plt.axvline(q2, color="orange", linestyle="--", label=f"50th % ({q2:.2f})")
-plt.axvline(q3, color="green", linestyle="--", label=f"75th % ({q3:.2f})")
+# Add red cutoff lines (descriptive indicators)
+cutoffs = [0.05, 0.10, 0.20]
+for cutoff in cutoffs:
+    plt.axvline(cutoff, color="red", linestyle="--")
 
-plt.legend()
 plt.tight_layout()
 plt.show()

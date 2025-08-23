@@ -157,10 +157,8 @@ def ingest_data(file_path):
 
 if __name__ == "__main__":
     create_table()
-    ingest_data("Jan-01-2024_Apr-01-2024_1162450548895235.csv")
-    ingest_data("Apr-02-2024_Jul-02-2024_665360019788100.csv")
-    ingest_data("Jul-03-2024_Sep-03-2024_1203413187991881.csv")
-    ingest_data("Sep-04-2024_Nov-04-2024_1223451109303636.csv") 
-    ingest_data("Nov-05-2024_Jan-05-2025_1016476477111055.csv") 
+    ingest_data("1_year_data.csv")
+
+ 
     
     
