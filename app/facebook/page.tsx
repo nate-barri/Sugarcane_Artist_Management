@@ -80,7 +80,7 @@ export default function FacebookDashboard() {
         <div className="flex justify-end">
           <button
             onClick={() => generateReport("Facebook")}
-            className="bg-[#123458] hover:bg-[#001F3F] text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center transition-colors duration-200"
+            className="bg-[#0f2946] hover:bg-[#001F3F] text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center transition-colors duration-200"
           >
             GENERATE REPORT
           </button>

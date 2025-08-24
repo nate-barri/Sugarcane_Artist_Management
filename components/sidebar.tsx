@@ -22,7 +22,7 @@ export default function Sidebar() {
     }
   }, [])
 
- // Save sidebar state to localStorage
+  // Save sidebar state to localStorage
   useEffect(() => {
     localStorage.setItem("sidebarCollapsedState", isCollapsed.toString())
     if (isCollapsed) {
@@ -30,13 +30,11 @@ export default function Sidebar() {
     }
   }, [isCollapsed])
 
-
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed)
   }
 
   const toggleDashboard = (e: React.MouseEvent) => {
-    // Only toggle if clicking the arrow, not the link
     if ((e.target as HTMLElement).closest("#dashboard-arrow")) {
       e.preventDefault()
       if (!isCollapsed) {
@@ -59,15 +57,21 @@ export default function Sidebar() {
     { href: "/tiktok", label: "TikTok" },
   ]
 
-  const isDashboardActive = pathname === "/" || dashboardPages.some((page) => pathname.includes(page.href))
+  const isDashboardActive =
+    pathname === "/" || dashboardPages.some((page) => pathname.includes(page.href))
 
   return (
     <aside
-      className={`sidebar bg-white shadow-lg p-6 flex flex-col rounded-r-lg transition-all duration-300 ease-in-out ${isCollapsed ? "w-20" : "w-64"}`}
+      className={`sidebar bg-[#0f2946] shadow-lg p-6 flex flex-col rounded-r-lg transition-all duration-300 ease-in-out ${
+        isCollapsed ? "w-20" : "w-64"
+      }`}
     >
       <div className="mb-8 flex items-center justify-between logo-container">
         {/* Hamburger Icon */}
-        <button onClick={toggleSidebar} className="text-[#123458] focus:outline-none p-2 rounded-lg hover:bg-gray-100">
+        <button
+          onClick={toggleSidebar}
+          className="text-white focus:outline-none p-2 rounded-lg hover:bg-gray-700"
+        >
           <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
             <path
               fillRule="evenodd"
@@ -80,24 +84,23 @@ export default function Sidebar() {
         {/* Logo */}
         {!isCollapsed && (
           <img
-          src="/SUGARCANE LOGO.png"
-          alt="Sugarcane Logo"
-          className="h-10 w-auto rounded logo-text"
-        />
-
+            src="/SUGARCANE-LOGO.png"
+            alt="Sugarcane Logo"
+            className="h-8 w-auto rounded logo-text"
+          />
         )}
       </div>
 
       {!isCollapsed && user && (
-        <div className="mb-6 p-3 bg-gray-50 rounded-lg">
+        <div className="mb-6 p-3 bg-gray-700 rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
-              <p className="text-xs text-gray-500 truncate">{user.email}</p>
+              <p className="text-sm font-medium text-white truncate">{user.name}</p>
+              <p className="text-xs text-gray-300 truncate">{user.email}</p>
             </div>
             <button
               onClick={logout}
-              className="ml-2 p-1 text-gray-400 hover:text-[#123458] transition-colors duration-200"
+              className="ml-2 p-1 text-gray-300 hover:text-white transition-colors duration-200"
               title="Logout"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -114,16 +117,17 @@ export default function Sidebar() {
 
       <nav className="flex-1">
         <ul>
+          {/* Dashboard */}
           <li className="mb-4">
-            {/* Dashboard parent link */}
             <Link
               href="/"
               onClick={toggleDashboard}
               className={`flex items-center p-3 rounded-lg font-semibold shadow-sm cursor-pointer nav-item transition-colors duration-200 ${
-                isDashboardActive ? "bg-[#123458] text-[#FFFFFF]" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                isDashboardActive
+                  ? "bg-[#123458] text-white"
+                  : "text-white hover:bg-gray-700"
               }`}
             >
-              {/* Dashboard Icon */}
               <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
               </svg>
@@ -131,7 +135,9 @@ export default function Sidebar() {
               {!isCollapsed && (
                 <svg
                   id="dashboard-arrow"
-                  className={`w-4 h-4 ml-auto transform transition-transform duration-200 ${isDashboardOpen ? "rotate-180" : ""}`}
+                  className={`w-4 h-4 ml-auto transform transition-transform duration-200 ${
+                    isDashboardOpen ? "rotate-180" : ""
+                  }`}
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
@@ -144,17 +150,20 @@ export default function Sidebar() {
               )}
             </Link>
 
-            {/* Dashboard Submenu */}
             {!isCollapsed && (
-              <ul className={`submenu pl-8 pt-2 transition-all duration-200 ${isDashboardOpen ? "active" : "hidden"}`}>
+              <ul
+                className={`submenu pl-8 pt-2 transition-all duration-200 ${
+                  isDashboardOpen ? "active" : "hidden"
+                }`}
+              >
                 {dashboardPages.map((page) => (
                   <li key={page.href} className="mb-2">
                     <Link
                       href={page.href}
                       className={`flex items-center p-2 rounded-lg transition-colors duration-200 nav-item ${
                         isActiveLink(page.href)
-                          ? "bg-gray-200 text-[#123458] font-semibold"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                          ? "bg-gray-600 text-white font-semibold"
+                          : "text-gray-300 hover:bg-gray-700 hover:text-white"
                       }`}
                     >
                       <span className="nav-text">{page.label}</span>
@@ -165,14 +174,14 @@ export default function Sidebar() {
             )}
           </li>
 
-          {/* Other Navigation Items */}
+          {/* Other Items */}
           <li className="mb-4">
             <Link
               href="/predictive-analytics"
               className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
                 isActiveLink("/predictive-analytics")
-                  ? "bg-[#123458] text-[#FFFFFF] font-semibold"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  ? "bg-[#123458] text-white font-semibold"
+                  : "text-white hover:bg-gray-700"
               }`}
             >
               <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
@@ -182,13 +191,13 @@ export default function Sidebar() {
             </Link>
           </li>
 
-        <li className="mb-4">
-          <Link
-            href="/notifications"
-            className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
-              isActiveLink("/notifications")
-                ? "bg-[#123458] text-white font-semibold"
-                : "text-[#123458] hover:bg-[#123458] hover:text-white"
+          <li className="mb-4">
+            <Link
+              href="/notifications"
+              className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
+                isActiveLink("/notifications")
+                  ? "bg-[#123458] text-white font-semibold"
+                  : "text-white hover:bg-gray-700"
               }`}
             >
               <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
@@ -198,14 +207,13 @@ export default function Sidebar() {
             </Link>
           </li>
 
-
           <li className="mb-4">
             <Link
               href="/faq"
               className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
                 isActiveLink("/faq")
-                  ? "bg-[#123458] text-[#FFFFFF] font-semibold"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  ? "bg-[#123458] text-white font-semibold"
+                  : "text-white hover:bg-gray-700"
               }`}
             >
               <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
@@ -224,8 +232,8 @@ export default function Sidebar() {
               href="/cross-platform"
               className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
                 isActiveLink("/cross-platform")
-                  ? "bg-[#123458] text-[#FFFFFF] font-semibold"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  ? "bg-[#123458] text-white font-semibold"
+                  : "text-white hover:bg-gray-700"
               }`}
             >
               <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
@@ -245,8 +253,8 @@ export default function Sidebar() {
               href="/import"
               className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
                 isActiveLink("/import")
-                  ? "bg-[#123458] text-[#FFFFFF] font-semibold"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  ? "bg-[#123458] text-white font-semibold"
+                  : "text-white hover:bg-gray-700"
               }`}
             >
               <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">

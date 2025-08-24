@@ -81,7 +81,7 @@ export default function InstagramDashboard() {
         <div className="flex justify-end">
           <button
             onClick={() => generateReport("Instagram")}
-            className="bg-[#123458] hover:bg-[#001F3F] text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center transition-colors duration-200"
+            className="bg-[#0f2946] hover:bg-[#001F3F] text-white font-bold py-3 px-6 rounded-lg shadow-lg flex items-center transition-colors duration-200"
           >
             GENERATE REPORT
             <svg className="w-5 h-5 ml-2" fill="currentColor" viewBox="0 0 20 20">
