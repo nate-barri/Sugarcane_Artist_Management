@@ -264,3 +264,322 @@ for cutoff in cutoffs:
 
 plt.tight_layout()
 plt.show()
+
+
+# --- 10F. Frozen Future Benchmark (for NEW videos) --------------------------
+# Defines what "OK" and "Great" mean going forward, using only past data.
+# - Primary score: CPSr = robust blend of log(views), VTR, ER
+# - Gates: floors for VTR, ER, and views so high CPSr can't happen with weak quality
+
+# 1) Choose the historical window (exclude very recent days to avoid leakage)
+AS_OF = pd.Timestamp.today().normalize()
+HOLDOUT_DAYS = 14      # ignore the most recent N days
+HIST_DAYS    = 365     # use the last 365 days before holdout
+
+hist_end   = AS_OF - pd.Timedelta(days=HOLDOUT_DAYS)
+hist_start = hist_end - pd.Timedelta(days=HIST_DAYS)
+
+hist = df[(df["Publish_Date"] >= hist_start) & (df["Publish_Date"] < hist_end)].copy()
+if hist.empty:
+    # fallback: use all data strictly before holdout end
+    hist = df[df["Publish_Date"] < hist_end].copy()
+
+# 2) Build core metrics on HISTORY ONLY
+for c in ["likes", "shares", "comments_added", "impressions", "views"]:
+    if c not in hist.columns:
+        hist[c] = 0
+hist["likes"] = hist["likes"].fillna(0)
+hist["shares"] = hist["shares"].fillna(0)
+hist["comments_added"] = hist["comments_added"].fillna(0)
+hist["impressions"] = hist["impressions"].fillna(0).clip(lower=1)
+hist["views"] = hist["views"].fillna(0)
+
+hist["ER"]  = (hist["likes"] + hist["comments_added"] + hist["shares"]) / hist["impressions"]
+hist["VTR"] = hist["views"] / hist["impressions"]
+
+# Winsorize tails (robust)
+def _winsorize(s, p=0.01):
+    lo, hi = s.quantile(p), s.quantile(1-p)
+    return s.clip(lo, hi)
+
+hist["views_w"] = _winsorize(hist["views"])
+hist["ER_w"]    = _winsorize(hist["ER"])
+hist["VTR_w"]   = _winsorize(hist["VTR"])
+hist["log_views"] = np.log1p(hist["views_w"])
+
+# Robust params (median/MAD) so future scoring uses the same scale
+def _robust_params(s: pd.Series):
+    med = float(np.nanmedian(s))
+    mad = float(np.nanmedian(np.abs(s - med)))
+    if not np.isfinite(mad) or mad == 0:
+        mad = np.nan  # flag for "flat" series
+    return {"med": med, "mad": mad}
+
+rp_logv = _robust_params(hist["log_views"])
+rp_vtr  = _robust_params(hist["VTR_w"])
+rp_er   = _robust_params(hist["ER_w"])
+
+def _r_z(x, rp):
+    if (rp is None) or (rp.get("mad") is None) or (not np.isfinite(rp["mad"])) or rp["mad"] == 0:
+        return 0.0
+    return 0.6745 * (x - rp["med"]) / rp["mad"]
+
+hist["CPSr_hist"] = (
+    hist["log_views"].apply(lambda x: _r_z(x, rp_logv)) +
+    hist["VTR_w"].apply(lambda x: _r_z(x, rp_vtr)) +
+    hist["ER_w"].apply(lambda x: _r_z(x, rp_er))
+) / 3.0
+
+# 3) Freeze thresholds for FUTURE classification
+standard = {
+    "as_of": AS_OF.date().isoformat(),
+    "history_window": {"start": hist_start.date().isoformat(), "end": hist_end.date().isoformat()},
+    "cuts": {
+        "cpsr_ok":    float(np.nanpercentile(hist["CPSr_hist"], 50)),
+        "cpsr_great": float(np.nanpercentile(hist["CPSr_hist"], 75)),
+    },
+    "gates": {
+        "vtr_floor":   float(hist["VTR_w"].quantile(0.40)),
+        "er_floor":    float(hist["ER_w"].quantile(0.40)),
+        "views_floor": int(hist["views_w"].quantile(0.25))
+    },
+    "robust_params": {"log_views": rp_logv, "VTR": rp_vtr, "ER": rp_er}
+}
+
+print("\n=== Frozen Future Benchmark (do not use current videos to set the bar) ===")
+print(f"As-of date: {standard['as_of']} | History: {standard['history_window']}")
+print(f"CPSr OK cut  : {standard['cuts']['cpsr_ok']:.3f}")
+print(f"CPSr GREAT cut: {standard['cuts']['cpsr_great']:.3f}")
+print(f"VTR floor (40th pct): {standard['gates']['vtr_floor']:.4f}")
+print(f"ER floor  (40th pct): {standard['gates']['er_floor']:.4f}")
+print(f"Views floor (25th pct): {standard['gates']['views_floor']}")
+
+# 4) Scorer for any NEW video (use totals at 1d/7d/28d as you prefer)
+def classify_future_video(metrics: dict, std: dict) -> dict:
+    """
+    metrics: {'impressions','views','likes','comments','shares'}
+    returns: {'CPSr','tier','VTR','ER','views'}
+    """
+    imp = max(1.0, float(metrics.get("impressions", 0)))
+    views = max(0.0, float(metrics.get("views", 0)))
+    likes = float(metrics.get("likes", 0))
+    comments = float(metrics.get("comments", 0))
+    shares = float(metrics.get("shares", 0))
+
+    # same transforms as history
+    log_views = np.log1p(views)
+    VTR = views / imp
+    ER  = (likes + comments + shares) / imp
+
+    rp = std["robust_params"]
+    cpsr = (_r_z(log_views, rp["log_views"]) +
+            _r_z(VTR, rp["VTR"]) +
+            _r_z(ER,  rp["ER"])) / 3.0
+
+    ok_cut    = std["cuts"]["cpsr_ok"]
+    great_cut = std["cuts"]["cpsr_great"]
+    vtr_floor = std["gates"]["vtr_floor"]
+    er_floor  = std["gates"]["er_floor"]
+    views_floor = std["gates"]["views_floor"]
+
+    tier = "Needs Work"
+    if (cpsr >= great_cut and VTR >= vtr_floor and ER >= er_floor and views >= views_floor):
+        tier = "Great"
+    elif (cpsr >= ok_cut and VTR >= vtr_floor and ER >= er_floor and views >= views_floor):
+        tier = "OK"
+
+    return {"CPSr": float(cpsr), "tier": tier, "VTR": float(VTR), "ER": float(ER), "views": int(views)}
+
+# 5) (Optional) Audit how the frozen rule would score the most recent videos we have
+recent = df[df["Publish_Date"] >= hist_end].copy()
+if not recent.empty:
+    recent["ER"]  = (recent["likes"].fillna(0) + recent["comments_added"].fillna(0) + recent["shares"].fillna(0)) / recent["impressions"].clip(lower=1)
+    recent["VTR"] = recent["views"].fillna(0) / recent["impressions"].clip(lower=1)
+
+    def _apply_row(row):
+        metrics = dict(
+            impressions=float(row["impressions"] or 0),
+            views=float(row["views"] or 0),
+            likes=float(row.get("likes", 0) or 0),
+            comments=float(row.get("comments_added", 0) or 0),
+            shares=float(row.get("shares", 0) or 0),
+        )
+        out = classify_future_video(metrics, standard)
+        return pd.Series([out["tier"], out["CPSr"], out["VTR"], out["ER"]], index=["Tier_Frozen","CPSr_Frozen","VTR","ER"])
+
+    recent[["Tier_Frozen","CPSr_Frozen","VTR","ER"]] = recent.apply(_apply_row, axis=1)
+    print("\nHow the frozen standard scores the most recent period (sanity check):")
+    print(recent["Tier_Frozen"].value_counts())
+    
+    # --- 10G. Aspirational Top-Performer Benchmark (median-of-top cohort) ------
+# Goal: set a high bar using the median of your best historical posts.
+
+TOP_SHARE = 0.20     # top 20% define the "best" cohort
+MIN_TOP_N = 20       # ensure enough samples
+RELAX = 0.80         # 80% rule for "Aspirational OK"
+
+# Reuse the 'hist' (historical window) and robust params from 10F; rebuild if missing
+if "hist" not in locals() or hist.empty:
+    AS_OF = pd.Timestamp.today().normalize()
+    HOLDOUT_DAYS, HIST_DAYS = 14, 365
+    hist_end = AS_OF - pd.Timedelta(days=HOLDOUT_DAYS)
+    hist_start = hist_end - pd.Timedelta(days=HIST_DAYS)
+    hist = df[(df["Publish_Date"] >= hist_start) & (df["Publish_Date"] < hist_end)].copy()
+    if hist.empty: hist = df[df["Publish_Date"] < hist_end].copy()
+
+for c in ["likes","shares","comments_added","impressions","views"]:
+    if c not in hist.columns: hist[c] = 0
+hist["impressions"] = hist["impressions"].fillna(0).clip(lower=1)
+hist["views"]       = hist["views"].fillna(0)
+hist["likes"]       = hist["likes"].fillna(0)
+hist["shares"]      = hist["shares"].fillna(0)
+hist["comments_added"] = hist["comments_added"].fillna(0)
+hist["ER"]  = (hist["likes"] + hist["comments_added"] + hist["shares"]) / hist["impressions"]
+hist["VTR"] = hist["views"] / hist["impressions"]
+
+def _winsorize(s, p=0.01):
+    lo, hi = s.quantile(p), s.quantile(1-p)
+    return s.clip(lo, hi)
+
+hist["views_w"] = _winsorize(hist["views"])
+hist["ER_w"]    = _winsorize(hist["ER"])
+hist["VTR_w"]   = _winsorize(hist["VTR"])
+hist["log_views"] = np.log1p(hist["views_w"])
+
+def _robust_params(s):
+    med = float(np.nanmedian(s))
+    mad = float(np.nanmedian(np.abs(s - med)))
+    return {"med": med, "mad": (mad if (np.isfinite(mad) and mad > 0) else np.nan)}
+
+def _r_z(x, rp):
+    if not rp or not np.isfinite(rp["mad"]) or rp["mad"] == 0: return 0.0
+    return 0.6745 * (x - rp["med"]) / rp["mad"]
+
+# Reuse params from 10F if available; otherwise compute
+if "rp_logv" not in locals(): rp_logv = _robust_params(hist["log_views"])
+if "rp_vtr"  not in locals(): rp_vtr  = _robust_params(hist["VTR_w"])
+if "rp_er"   not in locals(): rp_er   = _robust_params(hist["ER_w"])
+
+hist["CPSr_hist"] = (
+    hist["log_views"].apply(lambda x: _r_z(x, rp_logv)) +
+    hist["VTR_w"].apply(lambda x: _r_z(x, rp_vtr)) +
+    hist["ER_w"].apply(lambda x: _r_z(x, rp_er))
+) / 3.0
+
+# ----- define the "top cohort" and take MEDIANS as targets
+n_top = max(MIN_TOP_N, int(np.ceil(len(hist) * TOP_SHARE)))
+top = hist.nlargest(n_top, "CPSr_hist")
+
+aspirational = {
+    "as_of": pd.Timestamp.today().date().isoformat(),
+    "top_share": TOP_SHARE,
+    "n_top": int(len(top)),
+    "targets": {
+        "cpsr_target": float(np.nanmedian(top["CPSr_hist"])),
+        "vtr_target":  float(np.nanmedian(top["VTR_w"])),
+        "er_target":   float(np.nanmedian(top["ER_w"])),
+        "views_target": int(np.nanmedian(top["views_w"]))
+    },
+    "robust_params": {"log_views": rp_logv, "VTR": rp_vtr, "ER": rp_er},
+    "relax": RELAX
+}
+
+print("\n=== Aspirational Top-Performer Standard (median of top cohort) ===")
+print(f"Using top {aspirational['n_top']} posts (~{int(TOP_SHARE*100)}%) as 'best'.")
+print("Targets  →  CPSr ≥ {cpsr_target:.2f},  VTR ≥ {vtr:.4f},  ER ≥ {er:.4f},  Views ≥ {views}"
+      .format(cpsr_target=aspirational["targets"]["cpsr_target"],
+              vtr=aspirational["targets"]["vtr_target"],
+              er=aspirational["targets"]["er_target"],
+              views=aspirational["targets"]["views_target"]))
+
+# ----- classifier against the aspirational bar
+def classify_future_video_aspirational(metrics: dict, std: dict) -> dict:
+    """
+    'Great (Aspirational)'  = meets/exceeds top-cohort medians on CPSr, VTR, ER, Views
+    'OK (Aspirational)'     = meets >= RELAX * targets on all metrics
+    else 'Needs Work'
+    """
+    imp = max(1.0, float(metrics.get("impressions", 0)))
+    views = max(0.0, float(metrics.get("views", 0)))
+    likes = float(metrics.get("likes", 0))
+    comments = float(metrics.get("comments", 0))
+    shares = float(metrics.get("shares", 0))
+
+    log_views = np.log1p(views)
+    VTR = views / imp
+    ER  = (likes + comments + shares) / imp
+
+    rp = std["robust_params"]
+    cpsr = (_r_z(log_views, rp["log_views"]) +
+            _r_z(VTR, rp["VTR"]) +
+            _r_z(ER,  rp["ER"])) / 3.0
+
+    t = std["targets"]; relax = std["relax"]
+    great = (cpsr >= t["cpsr_target"] and VTR >= t["vtr_target"] and
+             ER >= t["er_target"] and views >= t["views_target"])
+    ok    = (cpsr >= relax*t["cpsr_target"] and VTR >= relax*t["vtr_target"] and
+             ER >= relax*t["er_target"] and views >= relax*t["views_target"])
+
+    tier = "Great (Aspirational)" if great else ("OK (Aspirational)" if ok else "Needs Work")
+    return {"tier": tier, "CPSr": float(cpsr), "VTR": float(VTR), "ER": float(ER), "views": int(views)}
+
+# Example:
+# new_vid = {"impressions": 60000, "views": 12000, "likes": 550, "comments": 80, "shares": 70}
+# print(classify_future_video_aspirational(new_vid, aspirational))
+
+# --- 10H. Graphs for Aspirational (Top-Performer) Benchmarks ----------------
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
+# Guard: ensure required objects exist
+assert 'aspirational' in globals(), "Run 10G first to build 'aspirational'."
+assert 'hist' in globals() and 'top' in globals(), "Run 10G to create 'hist' and 'top'."
+
+# Targets and relaxed thresholds
+t = aspirational["targets"]
+relax = aspirational.get("relax", 0.80)
+
+cpsr_t  = t["cpsr_target"];  cpsr_t_rel  = relax * cpsr_t
+vtr_t   = t["vtr_target"];   vtr_t_rel   = relax * vtr_t
+er_t    = t["er_target"];    er_t_rel    = relax * er_t
+views_t = t["views_target"]; views_t_rel = int(np.round(relax * views_t))
+
+# 1) CPSr histogram with target lines
+plt.figure(figsize=(9,4))
+sns.histplot(hist["CPSr_hist"].dropna(), bins=30, kde=True)
+plt.axvline(cpsr_t, color="black", linestyle="--", label=f"CPSr target (median of top) = {cpsr_t:.2f}")
+plt.axvline(cpsr_t_rel, color="gray", linestyle="--", label=f"CPSr relaxed ({int(relax*100)}%) = {cpsr_t_rel:.2f}")
+plt.title("Aspirational CPSr Benchmark (Top-Performer Median)")
+plt.xlabel("CPSr (robust composite)"); plt.ylabel("Posts")
+plt.legend(); plt.tight_layout(); plt.show()
+
+# 2) VTR vs ER scatter with targets (highlight top cohort)
+plot_df = hist.copy()
+plot_df["is_top"] = plot_df.index.isin(top.index)
+
+plt.figure(figsize=(8,6))
+sns.scatterplot(
+    data=plot_df, x="VTR_w", y="ER_w",
+    hue="is_top", palette={False:"tab:blue", True:"tab:orange"},
+    size=np.clip(plot_df["views_w"], 1, np.nanpercentile(plot_df["views_w"], 95)),
+    sizes=(20, 120), alpha=0.6
+)
+# target lines
+plt.axvline(vtr_t, color="black", linestyle="--", label=f"VTR target = {vtr_t:.4f}")
+plt.axvline(vtr_t_rel, color="gray", linestyle="--", label=f"VTR relaxed = {vtr_t_rel:.4f}")
+plt.axhline(er_t, color="black", linestyle="--", label=f"ER target = {er_t:.4f}")
+plt.axhline(er_t_rel, color="gray", linestyle="--", label=f"ER relaxed = {er_t_rel:.4f}")
+plt.title("Aspirational Quality Targets — VTR vs ER (point size ~ views)")
+plt.xlabel("VTR (views / impressions)")
+plt.ylabel("ER  (likes+comments+shares / impressions)")
+plt.legend(title="Top cohort?"); plt.tight_layout(); plt.show()
+
+# 3) Views histogram (winsorized) with target lines
+plt.figure(figsize=(9,4))
+sns.histplot(plot_df["views_w"].dropna(), bins=30, kde=False)
+plt.axvline(views_t, color="black", linestyle="--", label=f"Views target = {views_t:,}")
+plt.axvline(views_t_rel, color="gray", linestyle="--", label=f"Views relaxed = {views_t_rel:,}")
+plt.title("Aspirational Reach Benchmark (Views, winsorized)")
+plt.xlabel("Views (winsorized)"); plt.ylabel("Posts")
+plt.legend(); plt.tight_layout(); plt.show()

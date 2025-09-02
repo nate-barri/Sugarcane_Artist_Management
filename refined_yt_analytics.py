@@ -349,3 +349,84 @@ print("- Optimize thumbnails/titles aiming to lift impressions_ctr into your top
 print("- Encourage comments (calls to action) where comments per 1k views historically skew high.")
 print("- Experiment with a 3–5s live-performance hook; track changes in view_through_rate.")
 print("- Add captions/subtitles if you can measure watch_time_hours uplift.")
+
+
+# =========================
+# 9) Performance Benchmark — CPS + Tiers (Overall & Monthly)
+# =========================
+def _zscore(s: pd.Series):
+    s = s.astype(float)
+    mu, sd = s.mean(), s.std(ddof=0)
+    if sd == 0 or np.isnan(sd):
+        return pd.Series(np.zeros(len(s)), index=s.index)
+    return (s - mu) / sd
+
+# Use stabilized metrics
+z_log_views = _zscore(df["log_views"])                    # reach (log)
+z_eng_rate  = _zscore(df["engagement_rate"])              # interaction quality
+z_vtr       = _zscore(df["view_through_rate"])            # click/view attractiveness
+
+# Composite Performance Score (equal weights; simple & defensible)
+df["CPS"] = (z_log_views + z_eng_rate + z_vtr) / 3.0
+
+# --- Overall tiers via percentiles ---
+q25, q50, q75 = np.nanpercentile(df["CPS"], [25, 50, 75])
+def _tier_overall(x):
+    if x >= q75: return "Great"
+    if x >= q50: return "OK"
+    return "Needs Work"
+
+df["PerfTier_Overall"] = df["CPS"].apply(_tier_overall)
+df["Will_Do_OK_Overall"] = df["PerfTier_Overall"].isin(["OK","Great"]).astype(int)
+
+print("\n=== Overall CPS thresholds ===")
+print(f"25th: {q25:.3f} | 50th (OK cut): {q50:.3f} | 75th (Great cut): {q75:.3f}")
+
+print("\nOverall tier distribution:")
+print(df["PerfTier_Overall"].value_counts().rename_axis("Tier").to_frame("Count"))
+
+# Quick summary table by overall tier
+overall_summary = (df
+   .groupby("PerfTier_Overall")
+   .agg(
+       n=("video_title","count"),
+       med_cps=("CPS","median"),
+       med_views=("views","median"),
+       med_er=("engagement_rate","median"),
+       med_vtr=("view_through_rate","median"),
+   ).sort_values("med_cps", ascending=False)
+)
+print("\nOverall tier summary (medians):")
+print(overall_summary)
+
+# --- Monthly baseline (accounts for channel growth over time) ---
+df["YearMonth"] = df["Publish_Date"].dt.to_period("M")
+grp = df.groupby("YearMonth")["CPS"]
+df["CPS_q50_m"] = grp.transform("median")
+df["CPS_q75_m"] = grp.transform(lambda s: s.quantile(0.75))
+
+def _tier_monthly(row):
+    if pd.isna(row["CPS_q50_m"]) or pd.isna(row["CPS_q75_m"]):
+        return np.nan
+    if row["CPS"] >= row["CPS_q75_m"]: return "Great"
+    if row["CPS"] >= row["CPS_q50_m"]: return "OK"
+    return "Needs Work"
+
+df["PerfTier_Month"] = df.apply(_tier_monthly, axis=1)
+df["Will_Do_OK_Month"] = df["PerfTier_Month"].isin(["OK","Great"]).astype(int)
+
+print("\nMonthly tier distribution (ignores months with too few videos automatically):")
+print(df["PerfTier_Month"].value_counts(dropna=True).rename_axis("Tier").to_frame("Count"))
+
+# Optional: visualize CPS distribution with tier cut lines
+plt.figure(figsize=(8,4))
+sns.histplot(df["CPS"], bins=30, kde=True)
+plt.axvline(q50, linestyle="--", label="OK cut (50th)")
+plt.axvline(q75, linestyle="--", label="Great cut (75th)")
+plt.title("Composite Performance Score (CPS) — Overall")
+plt.legend(); plt.tight_layout(); plt.show()
+
+# Optional: cross-tab against your clusters
+if "Cluster_Name" in df.columns:
+    print("\nCross-tab: Clusters vs Overall Tiers")
+    print(pd.crosstab(df["Cluster_Name"], df["PerfTier_Overall"]))
