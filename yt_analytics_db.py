@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import psycopg2
 import numpy as np
+import re  
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import pairwise_distances
@@ -58,6 +59,31 @@ FROM yt_video_etl
 df = pd.read_sql(query, conn)
 conn.close()
 
+# --- NEW: remove emojis from ALL text columns BEFORE any charts/aggregations ---
+def remove_emojis(text):
+    if not isinstance(text, str):
+        return text
+    emoji_pattern = re.compile(
+        "["                     # common emoji blocks
+        "\U0001F600-\U0001F64F" # emoticons
+        "\U0001F300-\U0001F5FF" # symbols & pictographs
+        "\U0001F680-\U0001F6FF" # transport & map
+        "\U0001F700-\U0001F77F" # alchemical
+        "\U0001F780-\U0001F7FF" # geometric shapes ext
+        "\U0001F800-\U0001F8FF" # arrows-C
+        "\U0001F900-\U0001F9FF" # supplemental pictographs
+        "\U0001FA00-\U0001FA6F" # chess etc.
+        "\U0001FA70-\U0001FAFF" # pictographs ext-A
+        "\U00002702-\U000027B0" # dingbats
+        "\U000024C2-\U0001F251" # enclosed
+        "]+", flags=re.UNICODE
+    )
+    return emoji_pattern.sub("", text)
+
+for col in df.select_dtypes(include=["object"]).columns:
+    df[col] = df[col].apply(remove_emojis)
+
+
 # --- Clean publish date ---
 df = df.dropna(subset=["publish_day", "publish_month", "publish_year"])
 df["publish_day"] = df["publish_day"].astype(int)
@@ -82,7 +108,7 @@ plt.figure(figsize=(10,5))
 sns.barplot(x="views", y="video_title", data=top10)
 plt.title("Top 10 Videos by Views")
 plt.tight_layout()
-plt.show()
+# plt.show()
 
 # --- 4. Views over time ---
 views_over_time = df.groupby(df["Publish_Date"].dt.date)["views"].sum()
@@ -91,7 +117,7 @@ views_over_time.plot()
 plt.title("Views Over Time")
 plt.xlabel("Date")
 plt.ylabel("Views")
-plt.show()
+# plt.show()
 
 # --- 5. Average views ---
 avg_views = df["views"].mean()
@@ -111,7 +137,7 @@ sns.barplot(x=avg_views_day.index, y=avg_views_day.values, order=day_order)
 plt.title("Average Views by Day of Week")
 plt.xlabel("Day of Week")
 plt.ylabel("Average Views")
-plt.show()
+# plt.show()
 
 # --- NEW SECTION: Mean vs Median comparison ---
 views_day_stats = (
@@ -127,15 +153,15 @@ plt.ylabel("Views")
 plt.legend(["Mean", "Median"])
 plt.xticks(rotation=45)
 plt.tight_layout()
-plt.show()
+# plt.show()
 
 # Print best days by both metrics
 best_day_mean = views_day_stats["mean"].idxmax()
 best_day_median = views_day_stats["median"].idxmax()
 print(f"📊 Best day by average (mean) views: {best_day_mean}")
-print(f"📊 Best day by typical (median) views: {best_day_median}")# --- 6a. Average (Mean) views by day of week ---
-day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+print(f"📊 Best day by typical (median) views: {best_day_median}")
 
+# --- 6a. Average (Mean) views by day of week ---
 mean_views_day = (
     df.groupby("DayOfWeek")["views"]
       .mean()
@@ -147,7 +173,7 @@ sns.barplot(x=mean_views_day.index, y=mean_views_day.values, order=day_order)
 plt.title("Average (Mean) Views by Day of Week")
 plt.xlabel("Day of Week")
 plt.ylabel("Mean Views")
-plt.show()
+# plt.show()
 
 # --- 6b. Median views by day of week ---
 median_views_day = (
@@ -161,7 +187,7 @@ sns.barplot(x=median_views_day.index, y=median_views_day.values, order=day_order
 plt.title("Median Views by Day of Week")
 plt.xlabel("Day of Week")
 plt.ylabel("Median Views")
-plt.show()
+# plt.show()
 
 # Print best days by both metrics
 best_day_mean = mean_views_day.idxmax()
@@ -214,7 +240,7 @@ plt.title("Video Performance Clusters (K-Medoids, Labeled)")
 plt.xlabel("Impressions")
 plt.ylabel("Views")
 plt.tight_layout()
-plt.show()
+# plt.show()
 
 # Show videos in each category
 for category in ["Low", "Mid", "High"]:
@@ -234,7 +260,7 @@ importances = pd.Series(model.feature_importances_, index=X.columns).sort_values
 plt.figure(figsize=(8,5))
 sns.barplot(x=importances.values, y=importances.index)
 plt.title("Variables for Predicting Views")
-plt.show()
+# plt.show()
 
 # --- 10. Descriptive Benchmarks / Indicators ---
 benchmarks = {
@@ -263,15 +289,10 @@ for cutoff in cutoffs:
     plt.axvline(cutoff, color="red", linestyle="--")
 
 plt.tight_layout()
-plt.show()
+# plt.show()
 
 
 # --- 10F. Frozen Future Benchmark (for NEW videos) --------------------------
-# Defines what "OK" and "Great" mean going forward, using only past data.
-# - Primary score: CPSr = robust blend of log(views), VTR, ER
-# - Gates: floors for VTR, ER, and views so high CPSr can't happen with weak quality
-
-# 1) Choose the historical window (exclude very recent days to avoid leakage)
 AS_OF = pd.Timestamp.today().normalize()
 HOLDOUT_DAYS = 14      # ignore the most recent N days
 HIST_DAYS    = 365     # use the last 365 days before holdout
@@ -281,10 +302,8 @@ hist_start = hist_end - pd.Timedelta(days=HIST_DAYS)
 
 hist = df[(df["Publish_Date"] >= hist_start) & (df["Publish_Date"] < hist_end)].copy()
 if hist.empty:
-    # fallback: use all data strictly before holdout end
     hist = df[df["Publish_Date"] < hist_end].copy()
 
-# 2) Build core metrics on HISTORY ONLY
 for c in ["likes", "shares", "comments_added", "impressions", "views"]:
     if c not in hist.columns:
         hist[c] = 0
@@ -297,7 +316,6 @@ hist["views"] = hist["views"].fillna(0)
 hist["ER"]  = (hist["likes"] + hist["comments_added"] + hist["shares"]) / hist["impressions"]
 hist["VTR"] = hist["views"] / hist["impressions"]
 
-# Winsorize tails (robust)
 def _winsorize(s, p=0.01):
     lo, hi = s.quantile(p), s.quantile(1-p)
     return s.clip(lo, hi)
@@ -307,12 +325,11 @@ hist["ER_w"]    = _winsorize(hist["ER"])
 hist["VTR_w"]   = _winsorize(hist["VTR"])
 hist["log_views"] = np.log1p(hist["views_w"])
 
-# Robust params (median/MAD) so future scoring uses the same scale
 def _robust_params(s: pd.Series):
     med = float(np.nanmedian(s))
     mad = float(np.nanmedian(np.abs(s - med)))
     if not np.isfinite(mad) or mad == 0:
-        mad = np.nan  # flag for "flat" series
+        mad = np.nan
     return {"med": med, "mad": mad}
 
 rp_logv = _robust_params(hist["log_views"])
@@ -330,7 +347,6 @@ hist["CPSr_hist"] = (
     hist["ER_w"].apply(lambda x: _r_z(x, rp_er))
 ) / 3.0
 
-# 3) Freeze thresholds for FUTURE classification
 standard = {
     "as_of": AS_OF.date().isoformat(),
     "history_window": {"start": hist_start.date().isoformat(), "end": hist_end.date().isoformat()},
@@ -354,19 +370,13 @@ print(f"VTR floor (40th pct): {standard['gates']['vtr_floor']:.4f}")
 print(f"ER floor  (40th pct): {standard['gates']['er_floor']:.4f}")
 print(f"Views floor (25th pct): {standard['gates']['views_floor']}")
 
-# 4) Scorer for any NEW video (use totals at 1d/7d/28d as you prefer)
 def classify_future_video(metrics: dict, std: dict) -> dict:
-    """
-    metrics: {'impressions','views','likes','comments','shares'}
-    returns: {'CPSr','tier','VTR','ER','views'}
-    """
     imp = max(1.0, float(metrics.get("impressions", 0)))
     views = max(0.0, float(metrics.get("views", 0)))
     likes = float(metrics.get("likes", 0))
     comments = float(metrics.get("comments", 0))
     shares = float(metrics.get("shares", 0))
 
-    # same transforms as history
     log_views = np.log1p(views)
     VTR = views / imp
     ER  = (likes + comments + shares) / imp
@@ -390,7 +400,6 @@ def classify_future_video(metrics: dict, std: dict) -> dict:
 
     return {"CPSr": float(cpsr), "tier": tier, "VTR": float(VTR), "ER": float(ER), "views": int(views)}
 
-# 5) (Optional) Audit how the frozen rule would score the most recent videos we have
 recent = df[df["Publish_Date"] >= hist_end].copy()
 if not recent.empty:
     recent["ER"]  = (recent["likes"].fillna(0) + recent["comments_added"].fillna(0) + recent["shares"].fillna(0)) / recent["impressions"].clip(lower=1)
@@ -410,15 +419,12 @@ if not recent.empty:
     recent[["Tier_Frozen","CPSr_Frozen","VTR","ER"]] = recent.apply(_apply_row, axis=1)
     print("\nHow the frozen standard scores the most recent period (sanity check):")
     print(recent["Tier_Frozen"].value_counts())
-    
-    # --- 10G. Aspirational Top-Performer Benchmark (median-of-top cohort) ------
-# Goal: set a high bar using the median of your best historical posts.
 
-TOP_SHARE = 0.20     # top 20% define the "best" cohort
-MIN_TOP_N = 20       # ensure enough samples
-RELAX = 0.80         # 80% rule for "Aspirational OK"
+# --- 10G. Aspirational Top-Performer Benchmark (median-of-top cohort) ------
+TOP_SHARE = 0.20
+MIN_TOP_N = 20
+RELAX = 0.80
 
-# Reuse the 'hist' (historical window) and robust params from 10F; rebuild if missing
 if "hist" not in locals() or hist.empty:
     AS_OF = pd.Timestamp.today().normalize()
     HOLDOUT_DAYS, HIST_DAYS = 14, 365
@@ -455,7 +461,6 @@ def _r_z(x, rp):
     if not rp or not np.isfinite(rp["mad"]) or rp["mad"] == 0: return 0.0
     return 0.6745 * (x - rp["med"]) / rp["mad"]
 
-# Reuse params from 10F if available; otherwise compute
 if "rp_logv" not in locals(): rp_logv = _robust_params(hist["log_views"])
 if "rp_vtr"  not in locals(): rp_vtr  = _robust_params(hist["VTR_w"])
 if "rp_er"   not in locals(): rp_er   = _robust_params(hist["ER_w"])
@@ -466,7 +471,6 @@ hist["CPSr_hist"] = (
     hist["ER_w"].apply(lambda x: _r_z(x, rp_er))
 ) / 3.0
 
-# ----- define the "top cohort" and take MEDIANS as targets
 n_top = max(MIN_TOP_N, int(np.ceil(len(hist) * TOP_SHARE)))
 top = hist.nlargest(n_top, "CPSr_hist")
 
@@ -492,13 +496,7 @@ print("Targets  →  CPSr ≥ {cpsr_target:.2f},  VTR ≥ {vtr:.4f},  ER ≥ {er
               er=aspirational["targets"]["er_target"],
               views=aspirational["targets"]["views_target"]))
 
-# ----- classifier against the aspirational bar
 def classify_future_video_aspirational(metrics: dict, std: dict) -> dict:
-    """
-    'Great (Aspirational)'  = meets/exceeds top-cohort medians on CPSr, VTR, ER, Views
-    'OK (Aspirational)'     = meets >= RELAX * targets on all metrics
-    else 'Needs Work'
-    """
     imp = max(1.0, float(metrics.get("impressions", 0)))
     views = max(0.0, float(metrics.get("views", 0)))
     likes = float(metrics.get("likes", 0))
@@ -523,20 +521,11 @@ def classify_future_video_aspirational(metrics: dict, std: dict) -> dict:
     tier = "Great (Aspirational)" if great else ("OK (Aspirational)" if ok else "Needs Work")
     return {"tier": tier, "CPSr": float(cpsr), "VTR": float(VTR), "ER": float(ER), "views": int(views)}
 
-# Example:
-# new_vid = {"impressions": 60000, "views": 12000, "likes": 550, "comments": 80, "shares": 70}
-# print(classify_future_video_aspirational(new_vid, aspirational))
-
 # --- 10H. Graphs for Aspirational (Top-Performer) Benchmarks ----------------
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-
 # Guard: ensure required objects exist
 assert 'aspirational' in globals(), "Run 10G first to build 'aspirational'."
 assert 'hist' in globals() and 'top' in globals(), "Run 10G to create 'hist' and 'top'."
 
-# Targets and relaxed thresholds
 t = aspirational["targets"]
 relax = aspirational.get("relax", 0.80)
 
@@ -552,7 +541,8 @@ plt.axvline(cpsr_t, color="black", linestyle="--", label=f"CPSr target (median o
 plt.axvline(cpsr_t_rel, color="gray", linestyle="--", label=f"CPSr relaxed ({int(relax*100)}%) = {cpsr_t_rel:.2f}")
 plt.title("Aspirational CPSr Benchmark (Top-Performer Median)")
 plt.xlabel("CPSr (robust composite)"); plt.ylabel("Posts")
-plt.legend(); plt.tight_layout(); plt.show()
+plt.legend(); plt.tight_layout()
+# plt.show()
 
 # 2) VTR vs ER scatter with targets (highlight top cohort)
 plot_df = hist.copy()
@@ -565,7 +555,6 @@ sns.scatterplot(
     size=np.clip(plot_df["views_w"], 1, np.nanpercentile(plot_df["views_w"], 95)),
     sizes=(20, 120), alpha=0.6
 )
-# target lines
 plt.axvline(vtr_t, color="black", linestyle="--", label=f"VTR target = {vtr_t:.4f}")
 plt.axvline(vtr_t_rel, color="gray", linestyle="--", label=f"VTR relaxed = {vtr_t_rel:.4f}")
 plt.axhline(er_t, color="black", linestyle="--", label=f"ER target = {er_t:.4f}")
@@ -573,7 +562,8 @@ plt.axhline(er_t_rel, color="gray", linestyle="--", label=f"ER relaxed = {er_t_r
 plt.title("Aspirational Quality Targets — VTR vs ER (point size ~ views)")
 plt.xlabel("VTR (views / impressions)")
 plt.ylabel("ER  (likes+comments+shares / impressions)")
-plt.legend(title="Top cohort?"); plt.tight_layout(); plt.show()
+plt.legend(title="Top cohort?"); plt.tight_layout()
+# plt.show()
 
 # 3) Views histogram (winsorized) with target lines
 plt.figure(figsize=(9,4))
@@ -582,4 +572,10 @@ plt.axvline(views_t, color="black", linestyle="--", label=f"Views target = {view
 plt.axvline(views_t_rel, color="gray", linestyle="--", label=f"Views relaxed = {views_t_rel:,}")
 plt.title("Aspirational Reach Benchmark (Views, winsorized)")
 plt.xlabel("Views (winsorized)"); plt.ylabel("Posts")
-plt.legend(); plt.tight_layout(); plt.show()
+plt.legend(); plt.tight_layout()
+# plt.show()
+
+#  render ALL figures at once
+plt.show()
+
+
