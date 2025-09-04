@@ -83,7 +83,7 @@ def pct_to_float(val):
     except: return None
 
 # ---------- Extract ----------
-df = pd.read_csv("YOUTUBE - SUGARCANE CONTENT DATA.csv")
+df = pd.read_csv(r"C:\Sugarcane_Artist_Management\Youtube\YOUTUBE - SUGARCANE CONTENT DATA.csv")
 
 # ---------- Transform ----------
 # Parse publish time quietly (handles mixed formats; avoid warnings)

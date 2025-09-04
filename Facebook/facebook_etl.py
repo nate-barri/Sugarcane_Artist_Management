@@ -157,7 +157,9 @@ def ingest_data(file_path):
 
 if __name__ == "__main__":
     create_table()
-    ingest_data("1_year_data.csv")
+    ingest_data("Facebook/1_year_data.csv")
+
+
 
  
     
