@@ -19,7 +19,12 @@ def remove_emojis(text):
 
 # Function to load and clean CSV data
 def load_csv(file_path):
-    df = pd.read_csv(file_path)
+    try:
+        # Attempt to read the CSV with a different encoding (e.g., ISO-8859-1)
+        df = pd.read_csv(file_path, encoding='ISO-8859-1')  # or 'latin1'
+    except UnicodeDecodeError:
+        print(f"❌ Error reading {file_path}: Unable to decode the file.")
+        return None
     
     # Standardize column names
     df.columns = df.columns.str.lower().str.replace(r'[^a-z0-9_]', '_', regex=True)
@@ -52,7 +57,8 @@ def load_csv(file_path):
     
     for col in decimal_columns:
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(float).round(2)
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+            df[col] = df[col].fillna(0).astype(float).round(2)
     
     # Convert boolean fields
     boolean_columns = ['is_crosspost', 'is_share']
@@ -64,7 +70,16 @@ def load_csv(file_path):
     if 'post_type' in df.columns and 'reach' in df.columns:
         df['impressions'] = df.apply(lambda row: row['reach'] if row['post_type'] == 'photo' else None, axis=1)
     
-    return df
+    # Convert important numeric fields to NUMERIC (instead of VARCHAR)
+    numeric_columns = ['post_id', 'reach', 'shares', 'comments', 'reactions', 'impressions']
+    for col in numeric_columns:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+    
+    # Remove duplicate rows based on post_id before insert
+    df = df.drop_duplicates(subset=['post_id'], keep='last')
+    
+    return df  # Make sure this 'return' is inside the function
 
 # Insert data into PostgreSQL
 def insert_data(df, table_name):
@@ -87,9 +102,11 @@ def insert_data(df, table_name):
         # Keep only columns that exist in the table
         df = df[[col for col in df.columns if col in table_columns]]
         
+        # Insert data with explicit handling in SQL
         columns = ', '.join(df.columns)
         sql = f"""
-        INSERT INTO {table_name} ({columns}) VALUES %s
+        INSERT INTO {table_name} ({columns}) 
+        VALUES %s
         ON CONFLICT (post_id) DO UPDATE
         SET {', '.join([f'{col} = EXCLUDED.{col}' for col in df.columns if col != 'post_id'])};
         """
@@ -113,13 +130,13 @@ def create_table():
         
         create_table_sql = """
         CREATE TABLE IF NOT EXISTS facebook_data_set(
-            post_id BIGINT PRIMARY KEY,
+            post_id NUMERIC PRIMARY KEY,
             page_id VARCHAR,
             page_name TEXT,
             title TEXT,
             description TEXT,
             post_type TEXT,
-            duration_sec DECIMAL(10,2) DEFAULT 0,
+            duration_sec NUMERIC(10,2) DEFAULT 0,
             publish_time TIMESTAMP,
             year INTEGER,
             month INTEGER,
@@ -129,13 +146,13 @@ def create_table():
             is_crosspost BOOLEAN,
             is_share BOOLEAN,
             funded_content_status TEXT,
-            reach BIGINT,
-            shares BIGINT,
-            comments BIGINT,
-            reactions BIGINT,
-            seconds_viewed DECIMAL(10,2),
-            average_seconds_viewed DECIMAL(10,2) DEFAULT 0,
-            impressions BIGINT DEFAULT NULL
+            reach NUMERIC(20,2),
+            shares NUMERIC(20,2),
+            comments NUMERIC(20,2),
+            reactions NUMERIC(20,2),
+            seconds_viewed NUMERIC(10,2),
+            average_seconds_viewed NUMERIC(10,2) DEFAULT 0,
+            impressions NUMERIC(20,2) DEFAULT NULL
         );
         """
         
@@ -153,14 +170,9 @@ def create_table():
 def ingest_data(file_path):
     table_name = "facebook_data_set"
     df = load_csv(file_path)
-    insert_data(df, table_name)
+    if df is not None:
+        insert_data(df, table_name)
 
 if __name__ == "__main__":
     create_table()
-    ingest_data("Facebook/1_year_data.csv")
-
-
-
- 
-    
-    
+    ingest_data("Facebook/FULL_SET_FB.csv")
