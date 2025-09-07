@@ -213,7 +213,7 @@ export default function Sidebar() {
 
           <li className="mb-4">
             <a
-              href="#"
+              href=""
               onClick={(e) => {
                 e.preventDefault()
                 setPathname("/faq")
