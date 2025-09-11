@@ -4,12 +4,12 @@ import emoji
 from datetime import datetime
 from psycopg2.extras import execute_values
 
-# Database connection parameters
+# Database connection parameters for NeonDB
 db_params = {
-    'dbname': 'test1',
-    'user': 'postgres',
-    'password': 'admin',
-    'host': 'localhost',
+    'dbname': 'neondb',
+    'user': 'neondb_owner',
+    'password': 'npg_dGzvq4CJPRx7',
+    'host': 'ep-lingering-dawn-a410n0b8-pooler.us-east-1.aws.neon.tech',
     'port': '5432'
 }
 
@@ -81,7 +81,7 @@ def load_csv(file_path):
     
     return df  # Make sure this 'return' is inside the function
 
-# Insert data into PostgreSQL
+# Insert data into PostgreSQL (NeonDB)
 def insert_data(df, table_name):
     if df.empty:
         print("⚠️ No data to insert.")
@@ -121,7 +121,7 @@ def insert_data(df, table_name):
         if conn:
             conn.close()
 
-# Create table function
+# Create table function for NeonDB
 def create_table():
     conn = None
     try:
@@ -176,3 +176,4 @@ def ingest_data(file_path):
 if __name__ == "__main__":
     create_table()
     ingest_data("Facebook/FULL_SET_FB.csv")
+
