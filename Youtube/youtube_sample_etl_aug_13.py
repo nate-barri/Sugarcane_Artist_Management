@@ -5,7 +5,7 @@ from psycopg2.extras import execute_values
 import numpy as np
 import emoji  # pip install emoji
 
-# --- DB connection parameters ---
+# === DB connection parameters ===
 db_params = {
     'dbname': 'test1',
     'user': 'postgres',
@@ -13,6 +13,10 @@ db_params = {
     'host': 'localhost',
     'port': '5432'
 }
+
+# === Config ===
+CSV_PATH = r"C:\Sugarcane_Artist_Management\Youtube\final_full_set_yt.csv"
+ENSURE_TRIGGER = True  # reattach the statement-level trigger if the function exists
 
 # ---------- Helpers ----------
 def remove_emoji(text):
@@ -23,27 +27,21 @@ def remove_emoji(text):
 YOUTUBE_ID_RE = re.compile(r"(?:v=|/shorts/|/embed/|youtu\.be/|/watch\?v=)([A-Za-z0-9_-]{11})")
 
 def extract_video_id_from_any(row):
-    """Try to extract a real 11-char YouTube ID from common columns/URLs."""
-    candidate_id_cols = [
-        "Video ID","Video Id","VideoId",
-        "External video ID","External Video ID","External Video Id","External Video Id "
-    ]
-    candidate_url_cols = ["Video URL","URL","Watch Page","Watch URL","Video link","Link","Video"]
-    # direct id columns
-    for c in candidate_id_cols:
+    # Try ID columns then URL columns, then scan all strings
+    id_cols = ["Video ID","Video Id","VideoId","External video ID","External Video ID","External Video Id","External Video Id "]
+    url_cols = ["Video URL","URL","Watch Page","Watch URL","Video link","Link","Video"]
+    for c in id_cols:
         if c in row and pd.notna(row[c]):
             s = str(row[c]).strip()
             if len(s) == 11 and re.fullmatch(r"[A-Za-z0-9_-]{11}", s):
                 return s
             m = YOUTUBE_ID_RE.search(s)
             if m: return m.group(1)
-    # url-like columns
-    for c in candidate_url_cols:
+    for c in url_cols:
         if c in row and pd.notna(row[c]):
             s = str(row[c]).strip()
             m = YOUTUBE_ID_RE.search(s)
             if m: return m.group(1)
-    # scan all string fields
     for k, v in row.items():
         if isinstance(v, str):
             m = YOUTUBE_ID_RE.search(v)
@@ -51,7 +49,6 @@ def extract_video_id_from_any(row):
     return None
 
 def make_surrogate_id(row):
-    """Deterministic ID when real YouTube ID is missing (prevents duplicates)."""
     parts = [
         str(row.get("Video title") or "").strip().lower(),
         str(row.get("Publish_Year") or ""),
@@ -60,10 +57,9 @@ def make_surrogate_id(row):
         str(row.get("Duration") or "")
     ]
     key = "|".join(parts)
-    digest = hashlib.sha1(key.encode("utf-8")).hexdigest()[:20]
-    return f"s_{digest}"
+    return f"s_{hashlib.sha1(key.encode('utf-8')).hexdigest()[:20]}"
 
-def parse_duration(duration_str):
+def parse_duration_to_hms(duration_str):
     if not isinstance(duration_str, str):
         return 0, 0, 0
     try:
@@ -71,69 +67,91 @@ def parse_duration(duration_str):
         if len(parts) == 3: return parts[0], parts[1], parts[2]
         if len(parts) == 2: return 0, parts[0], parts[1]
         if len(parts) == 1: return 0, 0, parts[0]
-    except: pass
+    except:
+        pass
     return 0, 0, 0
 
 def pct_to_float(val):
-    if val is None or (isinstance(val, float) and np.isnan(val)):
-        return None
+    if val is None or (isinstance(val, float) and np.isnan(val)): return None
     s = str(val).strip()
     if s.endswith("%"): s = s[:-1]
-    try: return float(s) / 100.0
+    try: return float(s)/100.0
     except: return None
 
+def safe_div(a, b):
+    try:
+        if a is None or b in (None, 0): return None
+        return float(a) / float(b)
+    except:
+        return None
+
+def read_csv_robust(path):
+    for enc in ("utf-8-sig", "cp1252", "latin1"):
+        try:
+            df_local = pd.read_csv(path, encoding=enc, engine="python")
+            print(f"📄 Loaded CSV with encoding: {enc}")
+            return df_local
+        except UnicodeDecodeError:
+            continue
+    # final fallback with delimiter sniffing
+    df_local = pd.read_csv(path, encoding="latin1", engine="python", sep=None)
+    print("📄 Loaded CSV with fallback: latin1 + auto-delimiter")
+    return df_local
+
 # ---------- Extract ----------
-df = pd.read_csv(r"C:\Sugarcane_Artist_Management\Youtube\YOUTUBE - SUGARCANE CONTENT DATA.csv")
+df = read_csv_robust(CSV_PATH)
+# trim any stray spaces in headers
+df.columns = [c.strip() for c in df.columns]
 
 # ---------- Transform ----------
-# Parse publish time quietly (handles mixed formats; avoid warnings)
-df["Video publish time"] = df["Video publish time"].apply(
-    lambda x: pd.to_datetime(x, errors="coerce", utc=True)
-)
-
-# Date parts, drop raw datetime
+# Publish time → parts
+df["Video publish time"] = df["Video publish time"].apply(lambda x: pd.to_datetime(x, errors="coerce", utc=True))
 df["Publish_Day"] = df["Video publish time"].dt.day
 df["Publish_Month"] = df["Video publish time"].dt.month
 df["Publish_Year"] = df["Video publish time"].dt.year
 df.drop(columns=["Video publish time"], inplace=True)
 
-# Parse duration to H/M/S, drop original
+# Average view duration → H/M/S
 df["Avg_Dur_Hours"], df["Avg_Dur_Minutes"], df["Avg_Dur_Seconds"] = zip(
-    *df["Average view duration"].map(parse_duration)
+    *df["Average view duration"].map(parse_duration_to_hms)
 )
 df.drop(columns=["Average view duration"], inplace=True)
 
-# CTR to float 0–1 (create if missing to keep schema)
+# CTR % → 0..1
 if "Impressions click-through rate (%)" in df.columns:
     df["Impressions_ctr"] = df["Impressions click-through rate (%)"].map(pct_to_float)
 else:
     df["Impressions_ctr"] = None
 
-# Derive Video_ID; fallback to deterministic surrogate if missing
+# Real YouTube ID or surrogate
 df["Video_ID_real"] = df.apply(extract_video_id_from_any, axis=1)
 missing_real = df["Video_ID_real"].isna().sum()
 if missing_real:
-    print(f"Info: {missing_real} rows lack a real YouTube ID; generating surrogate IDs.")
+    print(f"ℹ️ {missing_real} rows lack a real YouTube ID; generating surrogate IDs.")
 df["Video_ID"] = df["Video_ID_real"]
 df.loc[df["Video_ID"].isna(), "Video_ID"] = df[df["Video_ID"].isna()].apply(make_surrogate_id, axis=1)
 
-# Emoji strip on all text/object cols
+# Compute Average views per viewer if not provided: Views / Unique viewers
+if "Average views per viewer" not in df.columns:
+    df["Average views per viewer"] = df.apply(
+        lambda r: safe_div(r.get("Views"), r.get("Unique viewers")),
+        axis=1
+    )
+
+# Emoji strip on all text columns (incl. Category, Content, Video title)
 for col in df.select_dtypes(include=["object"]).columns:
     df[col] = df[col].apply(remove_emoji)
 
-# Nulls for Postgres
+# Replace pandas NA with None for Postgres
 df = df.replace({np.nan: None, pd.NaT: None})
 
-# ---------- Load ----------
+# ---------- Load (landing) ----------
 conn = psycopg2.connect(**db_params)
-cursor = conn.cursor()
+cur = conn.cursor()
 
-# Recreate table to ensure correct schema (avoids 'video_id does not exist')
-cursor.execute("DROP TABLE IF EXISTS yt_video_etl;")
-conn.commit()
-
-cursor.execute("""
-CREATE TABLE yt_video_etl (
+# Ensure table exists (same datatypes as before)
+cur.execute("""
+CREATE TABLE IF NOT EXISTS yt_video_etl (
     video_id TEXT PRIMARY KEY,
     content TEXT,
     video_title TEXT,
@@ -159,55 +177,94 @@ CREATE TABLE yt_video_etl (
 """)
 conn.commit()
 
-insert_query = """
+# Add new columns for your new dataset (no changes to existing types)
+cur.execute("ALTER TABLE yt_video_etl ADD COLUMN IF NOT EXISTS dislikes BIGINT;")
+cur.execute("ALTER TABLE yt_video_etl ADD COLUMN IF NOT EXISTS unique_viewers BIGINT;")
+cur.execute("ALTER TABLE yt_video_etl ADD COLUMN IF NOT EXISTS category TEXT;")
+conn.commit()
+
+# Ensure the statement-level trigger is attached (if the trigger function exists)
+if ENSURE_TRIGGER:
+    cur.execute("""
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+        WHERE n.nspname='dw' AND p.proname='trg_yt_sync_stmt'
+      ) THEN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_trigger t
+          JOIN pg_class c ON c.oid=t.tgrelid
+          JOIN pg_namespace ns ON ns.oid=c.relnamespace
+          WHERE ns.nspname='public' AND c.relname='yt_video_etl' AND t.tgname='yt_sync_stmt_insupd'
+        ) THEN
+          EXECUTE 'CREATE TRIGGER yt_sync_stmt_insupd
+                   AFTER INSERT OR UPDATE ON public.yt_video_etl
+                   FOR EACH STATEMENT
+                   EXECUTE FUNCTION dw.trg_yt_sync_stmt()';
+        END IF;
+      ELSE
+        RAISE NOTICE 'dw.trg_yt_sync_stmt() not found; skipping trigger creation.';
+      END IF;
+    END$$;
+    """)
+    conn.commit()
+
+# Fresh load while keeping the trigger
+cur.execute("TRUNCATE TABLE yt_video_etl;")
+conn.commit()
+
+insert_sql = """
 INSERT INTO yt_video_etl (
     video_id, content, video_title,
     publish_day, publish_month, publish_year,
     duration, impressions, impressions_ctr,
     avg_views_per_viewer, new_viewers,
-    subscribers_gained, subscribers_lost, likes, shares,
-    comments_added, views, watch_time_hours,
+    subscribers_gained, subscribers_lost,
+    likes, dislikes, shares, comments_added, views,
+    watch_time_hours, unique_viewers, category,
     avg_dur_hours, avg_dur_minutes, avg_dur_seconds
 ) VALUES %s
 ON CONFLICT (video_id) DO NOTHING;
 """
 
-def get(row, name): return row.get(name)
+def g(row, name): return row.get(name)
 
-data_tuples = [
-    (
-        get(row, "Video_ID"),
-        get(row, "Content"),
-        get(row, "Video title"),
-        get(row, "Publish_Day"),
-        get(row, "Publish_Month"),
-        get(row, "Publish_Year"),
-        get(row, "Duration"),
-        get(row, "Impressions"),
-        get(row, "Impressions_ctr"),
-        get(row, "Average views per viewer"),
-        get(row, "New viewers"),
-        get(row, "Subscribers gained"),
-        get(row, "Subscribers lost"),
-        get(row, "Likes"),
-        get(row, "Shares"),
-        get(row, "Comments added"),
-        get(row, "Views"),
-        get(row, "Watch time (hours)"),
-        get(row, "Avg_Dur_Hours"),
-        get(row, "Avg_Dur_Minutes"),
-        get(row, "Avg_Dur_Seconds"),
-    )
-    for _, row in df.iterrows()
-]
+records = []
+for _, r in df.iterrows():
+    records.append((
+        g(r,"Video_ID"),
+        g(r,"Content"),
+        g(r,"Video title"),
+        g(r,"Publish_Day"), g(r,"Publish_Month"), g(r,"Publish_Year"),
+        g(r,"Duration"),
+        g(r,"Impressions"),
+        g(r,"Impressions_ctr"),
+        g(r,"Average views per viewer"),
+        None,                  # new_viewers (not in this dataset)
+        None,                  # subscribers_gained
+        None,                  # subscribers_lost
+        g(r,"Likes"),
+        g(r,"Dislikes"),
+        g(r,"Shares"),
+        g(r,"Comments added"),
+        g(r,"Views"),
+        g(r,"Watch time (hours)"),
+        g(r,"Unique viewers"),
+        g(r,"Category"),
+        g(r,"Avg_Dur_Hours"),
+        g(r,"Avg_Dur_Minutes"),
+        g(r,"Avg_Dur_Seconds"),
+    ))
 
-if data_tuples:
-    execute_values(cursor, insert_query, data_tuples)
+if records:
+    execute_values(cur, insert_sql, records, page_size=1000)
     conn.commit()
+    print(f"✅ Inserted {len(records)} rows into landing table (yt_video_etl).")
 else:
-    print("No rows to insert.")
+    print("⚠️ No rows to insert.")
 
-cursor.close()
+cur.close()
 conn.close()
 
-print("ETL complete: table recreated, emojis removed, CTR converted, real/surrogate Video_ID used, duplicates skipped (ON CONFLICT video_id).")
+print("ETL complete: encoding-robust CSV load, new columns handled, CTR converted to 0–1, IDs extracted/surrogated, trigger will auto-sync DW after the bulk INSERT.")
