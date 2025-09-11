@@ -1,14 +1,18 @@
 "use client"
 
 import type React from "react"
-
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { apiService } from "@/lib/api"
 
 interface User {
   id: string
-  name: string
   email: string
+  username: string
+  full_name: string
+  artist_name?: string
+  bio?: string
+  is_verified: boolean
 }
 
 interface AuthContextType {
@@ -17,6 +21,7 @@ interface AuthContextType {
   signup: (name: string, email: string, password: string) => Promise<boolean>
   logout: () => void
   loading: boolean
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -27,86 +32,93 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
-    // Check if user is logged in on mount
+    checkAuthStatus()
+  }, [])
+
+  const checkAuthStatus = async () => {
     const token = localStorage.getItem("authToken")
     const userData = localStorage.getItem("currentUser")
 
     if (token && userData) {
       try {
-        setUser(JSON.parse(userData))
-        // Set cookie for middleware
-        document.cookie = `authToken=${token}; path=/`
+        // Verify token with backend
+        const response = await apiService.getProfile()
+        if (response.data) {
+          setUser(response.data)
+        } else {
+          // Token is invalid, clear local storage
+          apiService.clearToken()
+        }
       } catch (error) {
-        // Clear invalid data
-        localStorage.removeItem("authToken")
-        localStorage.removeItem("currentUser")
+        console.error("Auth check failed:", error)
+        apiService.clearToken()
       }
     }
     setLoading(false)
-  }, [])
+  }
+
+  const refreshUser = async () => {
+    try {
+      const response = await apiService.getProfile()
+      if (response.data) {
+        setUser(response.data)
+      }
+    } catch (error) {
+      console.error("Failed to refresh user:", error)
+    }
+  }
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const users = JSON.parse(localStorage.getItem("users") || "[]")
-      const foundUser = users.find((u: any) => u.email === email && u.password === password)
+      const response = await apiService.login(email, password)
 
-      if (foundUser) {
-        setUser(foundUser)
-        localStorage.setItem("authToken", "authenticated")
-        localStorage.setItem("currentUser", JSON.stringify(foundUser))
-        // Set cookie for middleware
-        document.cookie = "authToken=authenticated; path=/"
+      if (response.data) {
+        setUser(response.data.user)
         return true
+      } else {
+        console.error("Login failed:", response.error)
+        return false
       }
-      return false
     } catch (error) {
+      console.error("Login error:", error)
       return false
     }
   }
 
   const signup = async (name: string, email: string, password: string): Promise<boolean> => {
     try {
-      const users = JSON.parse(localStorage.getItem("users") || "[]")
+      const response = await apiService.register({
+        email,
+        username: email.split("@")[0], // Generate username from email
+        full_name: name,
+        password,
+        password_confirm: password,
+      })
 
-      // Check if user already exists
-      if (users.find((u: any) => u.email === email)) {
+      if (response.data) {
+        setUser(response.data.user)
+        return true
+      } else {
+        console.error("Signup failed:", response.error)
         return false
       }
-
-      const newUser = {
-        id: Date.now().toString(),
-        name,
-        email,
-        password,
-        createdAt: new Date().toISOString(),
-      }
-
-      users.push(newUser)
-      localStorage.setItem("users", JSON.stringify(users))
-
-      // Auto login after signup
-      setUser(newUser)
-      localStorage.setItem("authToken", "authenticated")
-      localStorage.setItem("currentUser", JSON.stringify(newUser))
-      // Set cookie for middleware
-      document.cookie = "authToken=authenticated; path=/"
-
-      return true
     } catch (error) {
+      console.error("Signup error:", error)
       return false
     }
   }
 
-  const logout = () => {
+  const logout = async () => {
+    await apiService.logout()
     setUser(null)
-    localStorage.removeItem("authToken")
-    localStorage.removeItem("currentUser")
-    // Clear cookie
-    document.cookie = "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT"
     router.push("/login")
   }
 
-  return <AuthContext.Provider value={{ user, login, signup, logout, loading }}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={{ user, login, signup, logout, loading, refreshUser }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {

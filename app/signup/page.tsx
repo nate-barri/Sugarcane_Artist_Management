@@ -1,10 +1,10 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useAuth } from "@/components/auth-provider"
 
 export default function SignupPage() {
   const [email, setEmail] = useState("")
@@ -14,6 +14,7 @@ export default function SignupPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const { signup } = useAuth()
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,36 +40,11 @@ export default function SignupPage() {
       return
     }
 
-    try {
-      // Get existing users
-      const users = JSON.parse(localStorage.getItem("users") || "[]")
+    const success = await signup(name, email, password)
 
-      // Check if user already exists
-      if (users.find((u: any) => u.email === email)) {
-        setError("User with this email already exists")
-        setLoading(false)
-        return
-      }
-
-      // Create new user
-      const newUser = {
-        id: Date.now().toString(),
-        name,
-        email,
-        password,
-        createdAt: new Date().toISOString(),
-      }
-
-      // Save user
-      users.push(newUser)
-      localStorage.setItem("users", JSON.stringify(users))
-
-      // Auto login
-      localStorage.setItem("authToken", "authenticated")
-      localStorage.setItem("currentUser", JSON.stringify(newUser))
-
+    if (success) {
       router.push("/")
-    } catch (err) {
+    } else {
       setError("Signup failed. Please try again.")
     }
 
@@ -93,7 +69,7 @@ export default function SignupPage() {
                 name="name"
                 type="text"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#123458] focus:border-[#123458] sm:text-sm"
                 placeholder="Enter your full name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -109,7 +85,7 @@ export default function SignupPage() {
                 type="email"
                 autoComplete="email"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#123458] focus:border-[#123458] sm:text-sm"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -124,7 +100,7 @@ export default function SignupPage() {
                 name="password"
                 type="password"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#123458] focus:border-[#123458] sm:text-sm"
                 placeholder="Create a password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -139,7 +115,7 @@ export default function SignupPage() {
                 name="confirmPassword"
                 type="password"
                 required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#123458] focus:border-[#123458] sm:text-sm"
                 placeholder="Confirm your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -153,7 +129,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#123458] hover:bg-[#0e2742] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#123458] disabled:opacity-50"
             >
               {loading ? "Creating account..." : "Create account"}
             </button>
@@ -162,7 +138,7 @@ export default function SignupPage() {
           <div className="text-center">
             <span className="text-sm text-gray-600">
               Already have an account?{" "}
-              <Link href="/login" className="font-medium text-red-600 hover:text-red-500">
+              <Link href="/login" className="font-medium text-[#123458] hover:text-[#0e2742]">
                 Sign in
               </Link>
             </span>

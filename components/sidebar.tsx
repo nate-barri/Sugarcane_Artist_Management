@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -57,8 +56,7 @@ export default function Sidebar() {
     { href: "/tiktok", label: "TikTok" },
   ]
 
-  const isDashboardActive =
-    pathname === "/" || dashboardPages.some((page) => pathname.includes(page.href))
+  const isDashboardActive = pathname === "/" || dashboardPages.some((page) => pathname.includes(page.href))
 
   return (
     <aside
@@ -68,10 +66,7 @@ export default function Sidebar() {
     >
       <div className="mb-8 flex items-center justify-between logo-container">
         {/* Hamburger Icon */}
-        <button
-          onClick={toggleSidebar}
-          className="text-white focus:outline-none p-2 rounded-lg hover:bg-gray-700"
-        >
+        <button onClick={toggleSidebar} className="text-white focus:outline-none p-2 rounded-lg hover:bg-gray-700">
           <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
             <path
               fillRule="evenodd"
@@ -83,11 +78,7 @@ export default function Sidebar() {
 
         {/* Logo */}
         {!isCollapsed && (
-          <img
-            src="/SUGARCANE-LOGO.png"
-            alt="Sugarcane Logo"
-            className="h-8 w-auto rounded logo-text"
-          />
+          <img src="/SUGARCANE-LOGO.png" alt="Sugarcane Logo" className="h-8 w-auto rounded logo-text" />
         )}
       </div>
 
@@ -95,7 +86,7 @@ export default function Sidebar() {
         <div className="mb-6 p-3 bg-gray-700 rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user.name}</p>
+              <p className="text-sm font-medium text-white truncate">{user.full_name || user.username}</p>
               <p className="text-xs text-gray-300 truncate">{user.email}</p>
             </div>
             <button
@@ -123,9 +114,7 @@ export default function Sidebar() {
               href="/"
               onClick={toggleDashboard}
               className={`flex items-center p-3 rounded-lg font-semibold shadow-sm cursor-pointer nav-item transition-colors duration-200 ${
-                isDashboardActive
-                  ? "bg-[#123458] text-white"
-                  : "text-white hover:bg-gray-700"
+                isDashboardActive ? "bg-[#123458] text-white" : "text-white hover:bg-gray-700"
               }`}
             >
               <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
@@ -151,11 +140,7 @@ export default function Sidebar() {
             </Link>
 
             {!isCollapsed && (
-              <ul
-                className={`submenu pl-8 pt-2 transition-all duration-200 ${
-                  isDashboardOpen ? "active" : "hidden"
-                }`}
-              >
+              <ul className={`submenu pl-8 pt-2 transition-all duration-200 ${isDashboardOpen ? "active" : "hidden"}`}>
                 {dashboardPages.map((page) => (
                   <li key={page.href} className="mb-2">
                     <Link
@@ -211,9 +196,7 @@ export default function Sidebar() {
             <Link
               href="/faq"
               className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
-                isActiveLink("/faq")
-                  ? "bg-[#123458] text-white font-semibold"
-                  : "text-white hover:bg-gray-700"
+                isActiveLink("/faq") ? "bg-[#123458] text-white font-semibold" : "text-white hover:bg-gray-700"
               }`}
             >
               <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
@@ -252,15 +235,27 @@ export default function Sidebar() {
             <Link
               href="/import"
               className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
-                isActiveLink("/import")
-                  ? "bg-[#123458] text-white font-semibold"
-                  : "text-white hover:bg-gray-700"
+                isActiveLink("/import") ? "bg-[#123458] text-white font-semibold" : "text-white hover:bg-gray-700"
               }`}
             >
               <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
               {!isCollapsed && <span className="nav-text">Import</span>}
+            </Link>
+          </li>
+
+          <li className="mb-4">
+            <Link
+              href="/integrations"
+              className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
+                isActiveLink("/integrations") ? "bg-[#123458] text-white font-semibold" : "text-white hover:bg-gray-700"
+              }`}
+            >
+              <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"></path>
+              </svg>
+              {!isCollapsed && <span className="nav-text">Integrations</span>}
             </Link>
           </li>
         </ul>

@@ -1,4 +1,3 @@
-// utils/reportGenerator.js
 import { jsPDF } from "jspdf";
 
 export function generateReport(platform) {

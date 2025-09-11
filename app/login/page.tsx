@@ -4,35 +4,33 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useAuth } from "@/components/auth-provider"
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const { login } = useAuth()
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError("")
 
-    if (!username || !password) {
+    if (!email || !password) {
       setError("Please fill in all fields")
       setLoading(false)
       return
     }
 
-    // temporary login 
-    const validUsername = "capstone"
-    const validPassword = "sugarcane"
+    const success = await login(email, password)
 
-    if (username === validUsername && password === validPassword) {
-      localStorage.setItem("authToken", "authenticated")
-      localStorage.setItem("currentUser", JSON.stringify({ username }))
+    if (success) {
       router.push("/")
     } else {
-      setError("Invalid username or password")
+      setError("Invalid email or password")
     }
 
     setLoading(false)
@@ -47,18 +45,18 @@ export default function LoginPage() {
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
-              <label htmlFor="username" className="sr-only">
-                Username
+              <label htmlFor="email" className="sr-only">
+                Email
               </label>
               <input
-                id="username"
-                name="username"
-                type="text"
+                id="email"
+                name="email"
+                type="email"
                 required
                 className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-[#123458] focus:border-[#123458] focus:z-10 sm:text-sm"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div>
@@ -92,7 +90,16 @@ export default function LoginPage() {
 
           <div className="text-center">
             <span className="text-sm text-gray-600">
-              For now use: <strong>capstone</strong> / <strong>sugarcane</strong>
+              Demo: <strong>demo@sugarcane.com</strong> / <strong>demo123</strong>
+            </span>
+          </div>
+
+          <div className="text-center">
+            <span className="text-sm text-gray-600">
+              Don't have an account?{" "}
+              <Link href="/signup" className="font-medium text-[#123458] hover:text-[#0e2742]">
+                Sign up
+              </Link>
             </span>
           </div>
         </form>

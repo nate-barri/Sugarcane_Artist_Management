@@ -1,34 +1,24 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Sidebar from "@/components/sidebar"
 import { generateReport } from "@/utils/reportGenerator"
+import { useAuth } from "@/components/auth-provider"
+import { useDashboardData } from "@/hooks/use-api"
 
 export default function Dashboard() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const { user, loading: authLoading } = useAuth()
+  const { data: dashboardData, isLoading: dataLoading, error, refresh } = useDashboardData()
   const router = useRouter()
 
   useEffect(() => {
-    console.log("[v0] Authentication check starting...")
-    const authToken = localStorage.getItem("authToken")
-    console.log("[v0] AuthToken found:", authToken)
-
-    if (!authToken) {
-      console.log("[v0] No auth token, redirecting to login...")
+    if (!authLoading && !user) {
       router.push("/login")
-    } else {
-      console.log("[v0] Auth token exists, setting authenticated to true")
-      setIsAuthenticated(true)
     }
-    setLoading(false)
-    console.log("[v0] Loading set to false")
-  }, [router])
+  }, [user, authLoading, router])
 
-  console.log("[v0] Render - Loading:", loading, "Authenticated:", isAuthenticated)
-
-  if (loading) {
+  if (authLoading || dataLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-xl text-gray-600">Loading...</div>
@@ -36,9 +26,25 @@ export default function Dashboard() {
     )
   }
 
-  if (!isAuthenticated) {
-    console.log("[v0] Not authenticated, returning null")
+  if (!user) {
     return null
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-xl text-red-600">Error loading dashboard data</div>
+      </div>
+    )
+  }
+
+  const metrics = dashboardData || {
+    total_subscribers: 0,
+    total_views: 0,
+    total_watch_time: 0,
+    total_spotify_streams: 0,
+    audience_growth: 0,
+    top_performing_platform: "N/A",
   }
 
   return (
@@ -49,32 +55,37 @@ export default function Dashboard() {
       <main className="flex-1 p-8">
         <header className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-[#FFFFFF]">Dashboard Overview</h1>
+          <button
+            onClick={() => refresh()}
+            className="bg-[#0f2946] hover:bg-[#001F3F] text-[#FFFFFF] font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+          >
+            Refresh Data
+          </button>
         </header>
 
         {/* Key Metrics Section */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
             <h2 className="text-lg font-medium text-[#123458]">Total Subscribers</h2>
-            <p className="text-3xl font-bold text-gray-900">000,000.00</p>
+            <p className="text-3xl font-bold text-gray-900">{metrics.total_subscribers.toLocaleString()}</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
             <h2 className="text-lg font-medium text-[#123458]">Total Views</h2>
-            <p className="text-3xl font-bold text-gray-900">000,000.00</p>
+            <p className="text-3xl font-bold text-gray-900">{metrics.total_views.toLocaleString()}</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
             <h2 className="text-lg font-medium text-[#123458]">Total Watch time</h2>
-            <p className="text-3xl font-bold text-gray-900">0 HRS</p>
+            <p className="text-3xl font-bold text-gray-900">{metrics.total_watch_time.toLocaleString()} HRS</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
             <h2 className="text-lg font-medium text-[#123458]">Total Spotify Streams</h2>
-            <p className="text-3xl font-bold text-gray-900">000,000.00</p>
+            <p className="text-3xl font-bold text-gray-900">{metrics.total_spotify_streams.toLocaleString()}</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
             <h2 className="text-lg font-medium text-[#123458]">Audience Growth</h2>
-            <p className="text-3xl font-bold text-gray-900">0%</p>
+            <p className="text-3xl font-bold text-gray-900">{metrics.audience_growth}%</p>
           </div>
         </section>
-
 
         {/* Charts Section */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -133,7 +144,7 @@ export default function Dashboard() {
         {/* Top Performing Platform Section */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-xl font-semibold mb-4">Top Performing Platform</h2>
-          <p className="text-2xl font-bold text-gray-900">Spotify</p>
+          <p className="text-2xl font-bold text-gray-900">{metrics.top_performing_platform}</p>
         </section>
 
         {/* Generate Report Button */}
