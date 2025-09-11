@@ -7,10 +7,10 @@ import emoji  # pip install emoji
 
 # === DB connection parameters ===
 db_params = {
-    'dbname': 'test1',
-    'user': 'postgres',
-    'password': 'admin',
-    'host': 'localhost',
+    'dbname': 'neondb',
+    'user': 'neondb_owner',
+    'password': 'npg_dGzvq4CJPRx7',
+    'host': 'ep-lingering-dawn-a410n0b8-pooler.us-east-1.aws.neon.tech',
     'port': '5432'
 }
 
@@ -150,7 +150,7 @@ conn = psycopg2.connect(**db_params)
 cur = conn.cursor()
 
 # Ensure table exists (same datatypes as before)
-cur.execute("""
+cur.execute(""" 
 CREATE TABLE IF NOT EXISTS yt_video_etl (
     video_id TEXT PRIMARY KEY,
     content TEXT,
@@ -162,25 +162,22 @@ CREATE TABLE IF NOT EXISTS yt_video_etl (
     impressions BIGINT,
     impressions_ctr FLOAT,
     avg_views_per_viewer FLOAT,
-    new_viewers BIGINT,
-    subscribers_gained BIGINT,
-    subscribers_lost BIGINT,
     likes BIGINT,
+    dislikes BIGINT,
     shares BIGINT,
     comments_added BIGINT,
     views BIGINT,
     watch_time_hours FLOAT,
     avg_dur_hours INT,
     avg_dur_minutes INT,
-    avg_dur_seconds INT
+    avg_dur_seconds INT,
+    category TEXT
 );
 """)
 conn.commit()
 
 # Add new columns for your new dataset (no changes to existing types)
-cur.execute("ALTER TABLE yt_video_etl ADD COLUMN IF NOT EXISTS dislikes BIGINT;")
 cur.execute("ALTER TABLE yt_video_etl ADD COLUMN IF NOT EXISTS unique_viewers BIGINT;")
-cur.execute("ALTER TABLE yt_video_etl ADD COLUMN IF NOT EXISTS category TEXT;")
 conn.commit()
 
 # Ensure the statement-level trigger is attached (if the trigger function exists)
@@ -219,9 +216,7 @@ INSERT INTO yt_video_etl (
     video_id, content, video_title,
     publish_day, publish_month, publish_year,
     duration, impressions, impressions_ctr,
-    avg_views_per_viewer, new_viewers,
-    subscribers_gained, subscribers_lost,
-    likes, dislikes, shares, comments_added, views,
+    avg_views_per_viewer, likes, dislikes, shares, comments_added, views,
     watch_time_hours, unique_viewers, category,
     avg_dur_hours, avg_dur_minutes, avg_dur_seconds
 ) VALUES %s
@@ -241,9 +236,6 @@ for _, r in df.iterrows():
         g(r,"Impressions"),
         g(r,"Impressions_ctr"),
         g(r,"Average views per viewer"),
-        None,                  # new_viewers (not in this dataset)
-        None,                  # subscribers_gained
-        None,                  # subscribers_lost
         g(r,"Likes"),
         g(r,"Dislikes"),
         g(r,"Shares"),
@@ -257,6 +249,7 @@ for _, r in df.iterrows():
         g(r,"Avg_Dur_Seconds"),
     ))
 
+# Execute the insertion logic for the updated records
 if records:
     execute_values(cur, insert_sql, records, page_size=1000)
     conn.commit()
