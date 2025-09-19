@@ -101,7 +101,7 @@ export default function Sidebar() {
               <Link
                 href="/"
                 onClick={toggleDashboard}
-                className={`flex items-center justify-between p-3 rounded-lg font-semibold shadow-sm cursor-pointer nav-item transition-colors duration-200 ${
+                className={`flex items-center justify-between p-2 rounded-lg font-semibold shadow-sm cursor-pointer nav-item transition-colors duration-200 ${
                   isDashboardActive
                     ? "bg-[#123458] text-white"
                     : "text-white hover:bg-gray-700"
@@ -111,7 +111,7 @@ export default function Sidebar() {
                   <svg
                     className={`w-5 h-5 ${!isCollapsed ? "mr-3" : "mx-auto"}`}
                     fill="currentColor"
-                    viewBox="0 0 20 20"
+                    viewBox="0 0 24 24"
                   >
                     <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
                   </svg>
@@ -163,7 +163,7 @@ export default function Sidebar() {
             <li className="mb-4">
               <Link
                 href="/predictive-analytics"
-                className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
+                className={`flex items-center p-2 rounded-lg transition-colors duration-200 nav-item ${
                   isActiveLink("/predictive-analytics")
                     ? "bg-[#123458] text-white font-semibold"
                     : "text-white hover:bg-gray-700"
@@ -173,7 +173,7 @@ export default function Sidebar() {
                 <svg
                   className={`w-5 h-5 ${!isCollapsed ? "mr-3" : "mx-auto"}`}
                   fill="currentColor"
-                  viewBox="0 0 20 20"
+                  viewBox="0 0 24 24"
                 >
                   <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
@@ -185,7 +185,7 @@ export default function Sidebar() {
             <li className="mb-4">
               <Link
                 href="/notifications"
-                className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
+                className={`flex items-center p-2 rounded-lg transition-colors duration-200 nav-item ${
                   isActiveLink("/notifications")
                     ? "bg-[#123458] text-white font-semibold"
                     : "text-white hover:bg-gray-700"
@@ -195,7 +195,7 @@ export default function Sidebar() {
                 <svg
                   className={`w-5 h-5 ${!isCollapsed ? "mr-3" : "mx-auto"}`}
                   fill="currentColor"
-                  viewBox="0 0 20 20"
+                  viewBox="0 0 24 24"
                 >
                   <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path>
                 </svg>
@@ -207,7 +207,7 @@ export default function Sidebar() {
             <li className="mb-4">
               <Link
                 href="/faq"
-                className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
+                className={`flex items-center p-2 rounded-lg transition-colors duration-200 nav-item ${
                   isActiveLink("/faq")
                     ? "bg-[#123458] text-white font-semibold"
                     : "text-white hover:bg-gray-700"
@@ -217,11 +217,11 @@ export default function Sidebar() {
                 <svg
                   className={`w-5 h-5 ${!isCollapsed ? "mr-3" : "mx-auto"}`}
                   fill="currentColor"
-                  viewBox="0 0 20 20"
+                  viewBox="0 0 24 24"   
                 >
                   <path
                     fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5L6 11H5a1 1 0 100 2h1a1 1 0 00.867.5L10 13h1a1 1 0 000-2h-1a1 1 0 00-.867-.5z"
+                    d="M12 2C6.477 2 2 6.477 2 12c0 1.93.53 3.727 1.447 5.243L3 22l4.928-1.387A9.953 9.953 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"
                     clipRule="evenodd"
                   ></path>
                 </svg>
@@ -233,7 +233,7 @@ export default function Sidebar() {
             <li className="mb-4">
               <Link
                 href="/cross-platform"
-                className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
+                className={`flex items-center p-2 rounded-lg transition-colors duration-200 nav-item ${
                   isActiveLink("/cross-platform")
                     ? "bg-[#123458] text-white font-semibold"
                     : "text-white hover:bg-gray-700"
@@ -243,7 +243,7 @@ export default function Sidebar() {
                 <svg
                   className={`w-5 h-5 ${!isCollapsed ? "mr-3" : "mx-auto"}`}
                   fill="currentColor"
-                  viewBox="0 0 20 20"
+                  viewBox="0 0 24 24"
                 >
                   <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
                   <path
@@ -252,7 +252,7 @@ export default function Sidebar() {
                     clipRule="evenodd"
                   ></path>
                 </svg>
-                {!isCollapsed && <span className="nav-text">Cross-platform</span>}
+                {!isCollapsed && <span className="nav-text">Cross-Platform</span>}
                 </div>
               </Link>
             </li>
@@ -260,7 +260,7 @@ export default function Sidebar() {
             <li className="mb-4">
               <Link 
                 href="/import"
-                className={`flex items-center p-3 rounded-lg transition-colors duration-200 nav-item ${
+                className={`flex items-center p-2 rounded-lg transition-colors duration-200 nav-item ${
                   isActiveLink("/import")
                     ? "bg-[#123458] text-white font-semibold"
                     : "text-white hover:bg-gray-700"
@@ -270,7 +270,7 @@ export default function Sidebar() {
                 <svg
                   className={`w-5 h-5 ${!isCollapsed ? "mr-3" : "mx-auto"}`}
                   fill="currentColor"
-                  viewBox="0 0 20 20"
+                  viewBox="0 0 24 24"
                 >
                   <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
@@ -286,12 +286,12 @@ export default function Sidebar() {
       <div className="mb-4">
         <button
           onClick={logout}
-          className="flex items-center w-full p-3 rounded-lg text-white hover:bg-gray-700 transition-colors duration-200"
+          className="flex items-center w-full p-2 rounded-lg text-white hover:bg-gray-700 transition-colors duration-200"
         >
           <svg
             className="w-5 h-5"
             fill="currentColor"
-            viewBox="0 0 20 20"
+            viewBox="0 0 24 24"
           >
             <path
               fillRule="evenodd"
