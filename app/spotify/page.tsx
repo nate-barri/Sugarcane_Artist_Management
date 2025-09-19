@@ -35,7 +35,7 @@ export default function SpotifyDashboard() {
         {/* Charts Section for Spotify */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4 text-[#123458]">Streams Over Time</h2>
+            <h2 className="text-xl font-semibold mb-4 text-[#123458]">Streams Overtime</h2>
             <div className="flex justify-center items-center h-48 bg-[#FFFFFF]">
               <img
                 src="https://placehold.co/250x150/123458/ffffff?text=Line+Chart"
