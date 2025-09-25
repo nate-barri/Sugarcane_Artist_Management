@@ -4,7 +4,7 @@ import seaborn as sns
 import tkinter
 
 # Load the data
-df = pd.read_csv("1_year_data.csv")
+df = pd.read_csv("Facebook/1_year_data.csv")
 df['publish_time'] = pd.to_datetime(df['publish_time'], errors='coerce')
 df['month'] = df['publish_time'].dt.month_name()
 df_sorted = df.sort_values('publish_time')
