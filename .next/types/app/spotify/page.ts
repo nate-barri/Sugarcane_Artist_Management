@@ -1,4 +1,4 @@
-// File: C:\Users\Acunin\Documents\GitHub\Sugarcane_Artist_Management\app\spotify\page.tsx
+// File: C:\Users\Luis\Desktop\COLLEGE\CAPSTONE\Sugarcane_Artist_Management\app\spotify\page.tsx
 import * as entry from '../../../../app/spotify/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

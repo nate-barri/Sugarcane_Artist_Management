@@ -1,4 +1,4 @@
-// File: C:\Users\Acunin\Documents\GitHub\Sugarcane_Artist_Management\app\instagram\page.tsx
+// File: C:\Users\Luis\Desktop\COLLEGE\CAPSTONE\Sugarcane_Artist_Management\app\instagram\page.tsx
 import * as entry from '../../../../app/instagram/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
