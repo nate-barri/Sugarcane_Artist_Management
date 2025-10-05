@@ -1,9 +1,4 @@
 {
-  "/import/page": "app/import/page.js",
-  "/youtube/page": "app/youtube/page.js",
-  "/page": "app/page.js",
-  "/facebook/page": "app/facebook/page.js",
-  "/instagram/page": "app/instagram/page.js",
-  "/spotify/page": "app/spotify/page.js",
-  "/tiktok/page": "app/tiktok/page.js"
+  "/login/page": "app/login/page.js",
+  "/import/page": "app/import/page.js"
 }
