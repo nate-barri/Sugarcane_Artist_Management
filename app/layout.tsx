@@ -4,6 +4,7 @@ import { StackProvider, StackTheme } from "@stackframe/stack"
 import { stackServerApp } from "@/stack"
 import { AuthProvider } from "@/components/auth-provider"
 import type React from "react"
+import { Suspense } from "react"
 import "./globals.css"
 
 const inter = Inter({
@@ -21,6 +22,10 @@ export const metadata: Metadata = {
   description: "Social Media Analytics Dashboard",
 }
 
+function AuthProviderFallback() {
+  return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,10 +33,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${robotoMono.variable}`}>
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
         <StackProvider app={stackServerApp}>
           <StackTheme>
-            <AuthProvider>{children}</AuthProvider>
+            <Suspense fallback={<AuthProviderFallback />}>
+              <AuthProvider>{children}</AuthProvider>
+            </Suspense>
           </StackTheme>
         </StackProvider>
       </body>

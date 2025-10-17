@@ -1,23 +1,32 @@
 "use client"
 
 import { createContext, useContext, type ReactNode } from "react"
+import { useRouter } from "next/navigation"
 import { useUser as useStackUser } from "@stackframe/stack"
 
 interface AuthContextType {
   user: any | null
   isLoading: boolean
-  signOut: () => Promise<void>
+  logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const user = useStackUser()
+  const router = useRouter()
 
-  const signOut = async () => {
-    // Stack Auth handles sign out through its own methods
-    if (user) {
-      await user.signOut()
+  const logout = async () => {
+    try {
+      if (user) {
+        await user.signOut()
+      }
+      // Redirect to login page after successful logout
+      router.push("/login")
+    } catch (error) {
+      console.error("Logout error:", error)
+      // Still redirect even if there's an error
+      router.push("/login")
     }
   }
 
@@ -26,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user: user || null,
         isLoading: false,
-        signOut,
+        logout,
       }}
     >
       {children}

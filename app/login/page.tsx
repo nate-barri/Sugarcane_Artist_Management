@@ -44,13 +44,40 @@ export default function LoginPage() {
       if (isSignUp) {
         // Sign up new user
         await app.signUpWithCredential({ email, password })
+        router.push("/import")
       } else {
-        // Sign in existing user
-        await app.signInWithCredential({ email, password })
+        try {
+          await app.signInWithCredential({ email, password })
+          router.push("/import")
+        } catch (signInError: any) {
+          console.log("[v0] Sign in error:", signInError)
+          const errorMessage = signInError?.message || ""
+          if (
+            errorMessage.toLowerCase().includes("not found") ||
+            errorMessage.toLowerCase().includes("invalid") ||
+            errorMessage.toLowerCase().includes("unauthorized") ||
+            errorMessage.toLowerCase().includes("user does not exist")
+          ) {
+            setError(
+              "User not found or invalid credentials. Please contact your administrator if you need to create an account.",
+            )
+            setLoading(false)
+            return
+          }
+          throw signInError
+        }
       }
-      router.push("/import")
     } catch (err: any) {
-      setError(err.message || "Authentication failed. Please try again.")
+      console.log("[v0] Auth error:", err)
+      const errorMsg = err?.message || "Authentication failed. Please try again."
+
+      if (errorMsg.toLowerCase().includes("not found") || errorMsg.toLowerCase().includes("does not exist")) {
+        setError("This account is not registered. Please contact your administrator.")
+      } else if (errorMsg.toLowerCase().includes("invalid") || errorMsg.toLowerCase().includes("unauthorized")) {
+        setError("Invalid email or password. Please contact your administrator if you need assistance.")
+      } else {
+        setError(errorMsg)
+      }
     } finally {
       setLoading(false)
     }
@@ -100,7 +127,11 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {error && <div className="text-red-600 text-sm text-center">{error}</div>}
+          {error && (
+            <div className="rounded-md bg-red-50 p-4">
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          )}
 
           <div>
             <button
