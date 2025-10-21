@@ -31,10 +31,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const projectId = process.env.NEXT_PUBLIC_STACK_PROJECT_ID
+  const publishableClientKey = process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY
+
   return (
     <html lang="en" className={`${inter.variable} ${robotoMono.variable}`}>
       <body className="antialiased" suppressHydrationWarning>
-        <StackProvider app={stackServerApp}>
+        <StackProvider app={stackServerApp} projectId={projectId} publishableClientKey={publishableClientKey}>
           <StackTheme>
             <Suspense fallback={<AuthProviderFallback />}>
               <AuthProvider>{children}</AuthProvider>

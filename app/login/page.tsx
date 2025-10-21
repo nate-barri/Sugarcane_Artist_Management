@@ -47,7 +47,32 @@ export default function LoginPage() {
         router.push("/import")
       } else {
         try {
-          await app.signInWithCredential({ email, password })
+          console.log("[v0] Attempting sign in with email:", email)
+          const result = await app.signInWithCredential({ email, password })
+          console.log("[v0] Sign in result:", result)
+
+          const validateResponse = await fetch("/api/auth/validate-user", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          })
+
+          console.log("[v0] Validation response status:", validateResponse.status)
+          const validationData = await validateResponse.json()
+          console.log("[v0] Validation data:", validationData)
+
+          if (!validateResponse.ok || !validationData.exists) {
+            console.log("[v0] User not found in Neon database, signing out")
+            if (result?.user) {
+              await result.user.signOut()
+            }
+            setError("User not registered in the system. Please contact your administrator.")
+            setLoading(false)
+            return
+          }
+
+          console.log("[v0] User validated in Neon database, redirecting to import")
+          localStorage.setItem("authToken", email)
           router.push("/import")
         } catch (signInError: any) {
           console.log("[v0] Sign in error:", signInError)
