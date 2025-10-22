@@ -62,12 +62,13 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`sidebar bg-[#0f2946] shadow-lg px-6 pt-6 flex flex-col rounded-r-lg transition-all duration-300 ease-in-out h-screen justify-between ${
+      // 🔑 KEY CHANGES: 'fixed', 'h-screen', and 'z-50' fix the sidebar to the viewport.
+      className={`sidebar bg-[#0f2946] shadow-lg px-6 pt-6 flex flex-col rounded-r-lg transition-all duration-300 ease-in-out **fixed h-screen z-50** ${
         isCollapsed ? "w-20" : "w-64"
       }`}
     >
-      {/* Top Section (Logo + Nav) */}
-      <div>
+      {/* Top Section (Logo + Nav) - Wrapped in flex-1 to allow scrolling for navigation and push logout to bottom */}
+      <div className="**flex-1 overflow-y-auto pb-4**">
         <div className="mb-8 flex items-center justify-between logo-container">
           {/* Hamburger Icon */}
           <button
@@ -94,7 +95,7 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1">
+        <nav>
           <ul>
             {/* Dashboard */}
             <li className="mb-4">
@@ -217,7 +218,7 @@ export default function Sidebar() {
                 <svg
                   className={`w-5 h-5 ${!isCollapsed ? "mr-3" : "mx-auto"}`}
                   fill="currentColor"
-                  viewBox="0 0 24 24"   
+                  viewBox="0 0 24 24"  
                 >
                   <path
                     fillRule="evenodd"
@@ -282,8 +283,8 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      {/* Logout Button at Bottom */}
-      <div className="mb-4">
+      {/* Logout Button - 'mt-auto' pushes it to the bottom of the flex container */}
+      <div className="**mt-auto mb-4 border-t border-gray-700 pt-4**">
         <button
           onClick={logout}
           className="flex items-center w-full p-2 rounded-lg text-white hover:bg-gray-700 transition-colors duration-200"

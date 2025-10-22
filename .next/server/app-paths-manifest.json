@@ -1,4 +1,14 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/login/page": "app/login/page.js"
+  "/page": "app/page.js",
+  "/youtube/page": "app/youtube/page.js",
+  "/facebook/page": "app/facebook/page.js",
+  "/predictive-analytics/page": "app/predictive-analytics/page.js",
+  "/notifications/page": "app/notifications/page.js",
+  "/faq/page": "app/faq/page.js",
+  "/cross-platform/page": "app/cross-platform/page.js",
+  "/import/page": "app/import/page.js",
+  "/tiktok/page": "app/tiktok/page.js",
+  "/login/page": "app/login/page.js",
+  "/instagram/page": "app/instagram/page.js",
+  "/spotify/page": "app/spotify/page.js"
 }

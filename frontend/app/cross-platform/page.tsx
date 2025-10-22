@@ -8,8 +8,8 @@ export default function CrossPlatformDashboard() {
     <div className="flex min-h-screen bg-[#123458] text-[#123458]">
       <Sidebar />
 
-      {/* Main Content Area for Cross-Platform Dashboard */}
-      <main className="flex-1 p-8">
+      {/* 🔑 KEY CHANGE: Added 'ml-64' to shift main content right, making space for the fixed sidebar (w-64). */}
+      <main className="flex-1 p-8 **ml-64**">
         <header className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-[#FFFFFF]">Cross-Platform Analytics</h1>
         </header>
