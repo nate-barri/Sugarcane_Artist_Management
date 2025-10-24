@@ -339,43 +339,38 @@ class YouTubeDescriptiveAnalytics:
         plt.show()
     
     def plot_content_type_performance(self):
-        """Plot content type performance comparison"""
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
-        
-        # Average views by content type
+        """Plot content type performance as two separate charts (no subplots)."""
+
+        # --- Figure 1: Average views by content type ---
+        plt.figure(figsize=(12, 6))
         content_type_views = self.df.groupby('content_type')['views'].mean().sort_values(ascending=False)
         colors1 = plt.cm.Set3(range(len(content_type_views)))
-        
-        bars1 = ax1.bar(range(len(content_type_views)), content_type_views.values, color=colors1)
-        ax1.set_title('Average Views by Content Type', fontsize=14, fontweight='bold')
-        ax1.set_xticks(range(len(content_type_views)))
-        ax1.set_xticklabels(content_type_views.index, rotation=45, ha='right')
-        ax1.set_ylabel('Average Views')
-        ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x/1e6:.1f}M' if x >= 1e6 else f'{x/1e3:.0f}K'))
-        
-        # Add value labels
+        bars1 = plt.bar(range(len(content_type_views)), content_type_views.values, color=colors1)
+        plt.title('Average Views by Content Type', fontsize=14, fontweight='bold')
+        plt.xticks(range(len(content_type_views)), content_type_views.index, rotation=45, ha='right')
+        plt.ylabel('Average Views')
+        plt.gca().yaxis.set_major_formatter(
+            plt.FuncFormatter(lambda x, p: f'{x/1e6:.1f}M' if x >= 1e6 else f'{x/1e3:.0f}K')
+        )
         for bar in bars1:
-            height = bar.get_height()
-            ax1.text(bar.get_x() + bar.get_width()/2., height + height*0.01,
-                    f'{height/1e6:.1f}M' if height >= 1e6 else f'{height/1e3:.0f}K',
-                    ha='center', va='bottom', fontsize=9)
-        
-        # Engagement rate by content type
+            h = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2., h + (h*0.01 if h else 1),
+                     f'{h/1e6:.1f}M' if h >= 1e6 else f'{h/1e3:.0f}K',
+                     ha='center', va='bottom', fontsize=9)
+        plt.tight_layout()
+        plt.show()
+
+        # --- Figure 2: Average engagement rate by content type ---
+        plt.figure(figsize=(12, 6))
         content_type_engagement = self.df.groupby('content_type')['engagement_rate'].mean().sort_values(ascending=False)
         colors2 = plt.cm.plasma(np.linspace(0, 1, len(content_type_engagement)))
-        
-        bars2 = ax2.bar(range(len(content_type_engagement)), content_type_engagement.values * 100, color=colors2)
-        ax2.set_title('Average Engagement Rate by Content Type', fontsize=14, fontweight='bold')
-        ax2.set_xticks(range(len(content_type_engagement)))
-        ax2.set_xticklabels(content_type_engagement.index, rotation=45, ha='right')
-        ax2.set_ylabel('Engagement Rate (%)')
-        
-        # Add value labels
+        bars2 = plt.bar(range(len(content_type_engagement)), content_type_engagement.values * 100, color=colors2)
+        plt.title('Average Engagement Rate by Content Type', fontsize=14, fontweight='bold')
+        plt.xticks(range(len(content_type_engagement)), content_type_engagement.index, rotation=45, ha='right')
+        plt.ylabel('Engagement Rate (%)')
         for bar in bars2:
-            height = bar.get_height()
-            ax2.text(bar.get_x() + bar.get_width()/2., height + 0.1,
-                    f'{height:.2f}%', ha='center', va='bottom', fontsize=9)
-        
+            h = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2., h + 0.1, f'{h:.2f}%', ha='center', va='bottom', fontsize=9)
         plt.tight_layout()
         plt.show()
     
@@ -430,7 +425,9 @@ class YouTubeDescriptiveAnalytics:
         cbar.set_label('Engagement Rate (%)', fontsize=11)
         
         # Format y-axis
-        plt.gca().yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x/1e6:.1f}M' if x >= 1e6 else f'{x/1e3:.0f}K'))
+        plt.gca().yaxis.set_major_formatter(
+            plt.FuncFormatter(lambda x, p: f'{x/1e6:.1f}M' if x >= 1e6 else f'{x/1e3:.0f}K')
+        )
         
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
@@ -463,124 +460,99 @@ class YouTubeDescriptiveAnalytics:
         # Create legend for categories
         legend_elements = [plt.Rectangle((0,0),1,1, facecolor=color_map[cat], label=cat) 
                           for cat in unique_cats]
-        plt.legend(handles=legend_elements, loc='lower right', fontsize=10)
+        plt.legend(handles=legend_elements, loc='upper right', fontsize=10)
         
         plt.tight_layout()
         plt.show()
     
     def plot_posting_day_analysis(self):
-        """Plot posting day analysis with disclaimer"""
-        plt.figure(figsize=(14, 8))
-        
-        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        day_stats = self.df.groupby('day_of_week').agg({
+        """Posting day analysis as two separate charts."""
+        day_order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+        stats = self.df.groupby('day_of_week').agg({
             'views': ['count', 'mean', 'median'],
             'total_engagement': ['mean', 'median']
         })
-        
-        day_stats.columns = ['_'.join(col) for col in day_stats.columns]
-        day_stats = day_stats.reindex(day_order, fill_value=0)
-        
+        stats.columns = ['_'.join(col) for col in stats.columns]
+        stats = stats.reindex(day_order, fill_value=0)
         x = range(len(day_order))
-        width = 0.35
-        
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
-        
-        # Plot 1: Mean vs Median Engagement
-        bars1 = ax1.bar([i - width/2 for i in x], day_stats['total_engagement_mean'], 
-                       width, label='Mean Engagement', color='lightblue', alpha=0.8)
-        bars2 = ax1.bar([i + width/2 for i in x], day_stats['total_engagement_median'], 
-                       width, label='Median Engagement', color='darkblue', alpha=0.8)
-        
-        ax1.set_title(' POSTING DAY PERFORMANCE (Cumulative Performance, NOT Audience Activity)', 
-                     fontsize=14, fontweight='bold', color='red')
-        ax1.set_xticks(x)
-        ax1.set_xticklabels(day_order)
-        ax1.set_ylabel('Total Engagement')
-        ax1.legend()
-        ax1.grid(axis='x', alpha=0.3)
-        
-        # Plot 2: Video Count and Average Views
-        ax2_twin = ax2.twinx()
-        
-        bars3 = ax2.bar([i - width/2 for i in x], day_stats['views_count'], 
-                       width, label='Video Count', color='orange', alpha=0.8)
-        line1 = ax2_twin.plot(x, day_stats['views_mean']/1e3, 'ro-', 
-                             label='Avg Views (K)', linewidth=2, markersize=8)
-        
-        ax2.set_xlabel('Day of Week')
-        ax2.set_ylabel('Number of Videos', color='orange')
-        ax2_twin.set_ylabel('Average Views (thousands)', color='red')
-        ax2.set_xticks(x)
-        ax2.set_xticklabels(day_order)
-        
-        # Add warning text
-        ax2.text(0.5, 0.95, '', 
-                transform=ax2.transAxes, ha='center', va='top', 
-                bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.8),
-                fontsize=10, fontweight='bold')
-        
-        lines = [bars3[0]] + line1
-        labels = ['Video Count', 'Avg Views (K)']
-        ax2.legend(lines, labels, loc='upper left')
-        
+
+        # --- Figure 1: Mean vs Median Engagement ---
+        plt.figure(figsize=(12, 6))
+        width = 0.4
+        plt.bar([i - width/2 for i in x], stats['total_engagement_mean'], width, label='Mean Engagement', color='lightblue', alpha=0.85)
+        plt.bar([i + width/2 for i in x], stats['total_engagement_median'], width, label='Median Engagement', color='steelblue', alpha=0.85)
+        plt.title('POSTING DAY PERFORMANCE (Cumulative Performance, NOT Audience Activity)', fontsize=13, fontweight='bold')
+        plt.xticks(x, day_order)
+        plt.ylabel('Total Engagement')
+        plt.legend()
+        plt.grid(axis='y', alpha=0.3)
+        plt.tight_layout()
+        plt.show()
+
+        # --- Figure 2: Video Count (bars) + Avg Views (line) ---
+        fig = plt.figure(figsize=(12, 6))
+        ax = fig.add_subplot(111)
+        ax2 = ax.twinx()
+
+        bars = ax.bar(x, stats['views_count'], width=0.6, color='orange', alpha=0.85, label='Video Count')
+        line, = ax2.plot(x, stats['views_mean']/1e3, 'ro-', linewidth=2, markersize=6, label='Avg Views (K)')
+
+        ax.set_title('Posting Day: Volume vs Average Views')
+        ax.set_xticks(x)
+        ax.set_xticklabels(day_order)
+        ax.set_ylabel('Number of Videos', color='orange')
+        ax2.set_ylabel('Average Views (thousands)', color='red')
+
+        ax.legend([bars, line], ['Video Count', 'Avg Views (K)'], loc='upper left')
         plt.tight_layout()
         plt.show()
     
     def plot_duration_engagement(self):
-        """Plot duration vs engagement analysis"""
-        plt.figure(figsize=(12, 8))
-        
-        # Create duration bins for analysis
-        self.df['duration_bin'] = pd.cut(self.df['duration_minutes'], 
-                                        bins=[0, 2, 3, 4, 5, 6, float('inf')], 
-                                        labels=['<2min', '2-3min', '3-4min', '4-5min', '5-6min', '>6min'])
-        
-        duration_stats = self.df.groupby('duration_bin').agg({
+        """Duration vs engagement as two separate charts."""
+        self.df['duration_bin'] = pd.cut(
+            self.df['duration_minutes'],
+            bins=[0, 2, 3, 4, 5, 6, float('inf')],
+            labels=['<2min','2-3min','3-4min','4-5min','5-6min','>6min']
+        )
+        d = self.df.groupby('duration_bin').agg({
             'views': ['count', 'mean'],
             'engagement_rate': 'mean',
             'total_engagement': 'mean'
         })
-        
-        duration_stats.columns = ['_'.join(col) for col in duration_stats.columns]
-        duration_stats = duration_stats.dropna()
-        
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
-        
-        # Plot 1: Video count and average views by duration
-        x = range(len(duration_stats))
-        ax1_twin = ax1.twinx()
-        
-        bars = ax1.bar(x, duration_stats['views_count'], alpha=0.7, color='lightcoral', label='Video Count')
-        line = ax1_twin.plot(x, duration_stats['views_mean']/1e3, 'bo-', 
-                            linewidth=2, markersize=8, label='Avg Views (K)')
-        
-        ax1.set_title('Video Count vs Average Views by Duration', fontsize=14, fontweight='bold')
-        ax1.set_xticks(x)
-        ax1.set_xticklabels(duration_stats.index)
-        ax1.set_ylabel('Number of Videos', color='red')
-        ax1_twin.set_ylabel('Average Views (thousands)', color='blue')
-        
-        # Plot 2: Engagement rate by duration
-        bars2 = ax2.bar(x, duration_stats['engagement_rate_mean'] * 100, 
-                       color=plt.cm.viridis(np.linspace(0, 1, len(duration_stats))), alpha=0.8)
-        
-        ax2.set_title('Average Engagement Rate by Duration', fontsize=14, fontweight='bold')
-        ax2.set_xticks(x)
-        ax2.set_xticklabels(duration_stats.index)
-        ax2.set_ylabel('Engagement Rate (%)')
-        
-        # Add value labels
-        for i, bar in enumerate(bars2):
-            height = bar.get_height()
-            ax2.text(bar.get_x() + bar.get_width()/2., height + 0.05,
-                    f'{height:.2f}%', ha='center', va='bottom', fontsize=9)
-        
+        d.columns = ['_'.join(col) for col in d.columns]
+        d = d.dropna()
+        x = range(len(d))
+
+        # --- Figure 1: Video count (bars) + Avg Views (line) ---
+        fig = plt.figure(figsize=(12, 6))
+        ax = fig.add_subplot(111)
+        ax2 = ax.twinx()
+
+        bars = ax.bar(x, d['views_count'], color='lightcoral', alpha=0.85)
+        line, = ax2.plot(x, d['views_mean']/1e3, 'bo-', linewidth=2, markersize=6)
+
+        ax.set_title('Video Count vs Average Views by Duration', fontsize=14, fontweight='bold')
+        ax.set_xticks(x); ax.set_xticklabels(d.index)
+        ax.set_ylabel('Number of Videos', color='red')
+        ax2.set_ylabel('Average Views (thousands)', color='blue')
+        ax.legend([bars, line], ['Video Count', 'Avg Views (K)'], loc='upper left')
+        plt.tight_layout()
+        plt.show()
+
+        # --- Figure 2: Avg Engagement Rate by Duration ---
+        plt.figure(figsize=(12, 6))
+        bars2 = plt.bar(x, d['engagement_rate_mean'] * 100, color=plt.cm.viridis(np.linspace(0, 1, len(d))), alpha=0.9)
+        plt.title('Average Engagement Rate by Duration', fontsize=14, fontweight='bold')
+        plt.xticks(x, d.index)
+        plt.ylabel('Engagement Rate (%)')
+        for b in bars2:
+            h = b.get_height()
+            plt.text(b.get_x() + b.get_width()/2., h + 0.05, f'{h:.2f}%', ha='center', va='bottom', fontsize=9)
         plt.tight_layout()
         plt.show()
     
     def plot_monthly_trends(self):
-        """Plot monthly performance trends"""
+        """Monthly performance trends as two separate charts."""
         monthly_stats = self.df.groupby('year_month').agg({
             'views': ['count', 'sum', 'mean'],
             'total_engagement': ['sum', 'mean'],
@@ -589,51 +561,33 @@ class YouTubeDescriptiveAnalytics:
         
         monthly_stats.columns = ['_'.join(col) for col in monthly_stats.columns]
         monthly_stats.index = monthly_stats.index.astype(str)
-        
-        fig, axes = plt.subplots(2, 1, figsize=(16, 12))
-        
-        # Plot 1: Upload volume and total performance
-        ax1_twin = axes[0].twinx()
-        
-        line1 = axes[0].plot(monthly_stats.index, monthly_stats['views_count'], 
-                            marker='o', color='blue', linewidth=2, markersize=6, label='Videos Uploaded')
-        line2 = ax1_twin.plot(monthly_stats.index, monthly_stats['views_sum']/1e6, 
-                             marker='s', color='red', linewidth=2, markersize=6, label='Total Views (M)')
-        
-        axes[0].set_title('Monthly Upload Volume vs Total Views', fontsize=16, fontweight='bold')
-        axes[0].set_ylabel('Number of Videos', color='blue', fontsize=12)
-        ax1_twin.set_ylabel('Total Views (Millions)', color='red', fontsize=12)
-        axes[0].tick_params(axis='x', rotation=45, labelsize=10)
-        axes[0].tick_params(axis='y', labelcolor='blue')
-        ax1_twin.tick_params(axis='y', labelcolor='red')
-        axes[0].grid(True, alpha=0.3)
-        
-        # Combine legends
-        lines = line1 + line2
-        labels = [l.get_label() for l in lines]
-        axes[0].legend(lines, labels, loc='upper left')
-        
-        # Plot 2: Quality metrics over time
-        line3 = axes[1].plot(monthly_stats.index, monthly_stats['views_mean']/1e3, 
-                            marker='o', color='green', linewidth=2, markersize=6, label='Avg Views (K)')
-        ax2_twin = axes[1].twinx()
-        line4 = ax2_twin.plot(monthly_stats.index, monthly_stats['engagement_rate_mean']*100, 
-                             marker='^', color='purple', linewidth=2, markersize=6, label='Avg Engagement Rate (%)')
-        
-        axes[1].set_title('Monthly Average Performance Quality', fontsize=16, fontweight='bold')
-        axes[1].set_ylabel('Average Views (thousands)', color='green', fontsize=12)
-        ax2_twin.set_ylabel('Engagement Rate (%)', color='purple', fontsize=12)
-        axes[1].set_xlabel('Month', fontsize=12)
-        axes[1].tick_params(axis='x', rotation=45, labelsize=10)
-        axes[1].tick_params(axis='y', labelcolor='green')
-        ax2_twin.tick_params(axis='y', labelcolor='purple')
-        axes[1].grid(True, alpha=0.3)
-        
-        # Combine legends
-        lines2 = line3 + line4
-        labels2 = [l.get_label() for l in lines2]
-        axes[1].legend(lines2, labels2, loc='upper left')
-        
+
+        # --- Figure 1: Upload volume vs total views ---
+        fig = plt.figure(figsize=(14, 6))
+        ax = fig.add_subplot(111)
+        ax2 = ax.twinx()
+        l1, = ax.plot(monthly_stats.index, monthly_stats['views_count'], marker='o', linewidth=2, label='Videos Uploaded')
+        l2, = ax2.plot(monthly_stats.index, monthly_stats['views_sum']/1e6, marker='s', linewidth=2, label='Total Views (M)', color='red')
+        ax.set_title('Monthly Upload Volume vs Total Views', fontsize=16, fontweight='bold')
+        ax.set_ylabel('Number of Videos'); ax2.set_ylabel('Total Views (Millions)', color='red')
+        ax.tick_params(axis='x', rotation=45)
+        ax.legend([l1, l2], ['Videos Uploaded', 'Total Views (M)'], loc='upper left')
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.show()
+
+        # --- Figure 2: Avg views vs Avg engagement rate ---
+        fig = plt.figure(figsize=(14, 6))
+        ax = fig.add_subplot(111)
+        ax2 = ax.twinx()
+        l3, = ax.plot(monthly_stats.index, monthly_stats['views_mean']/1e3, marker='o', linewidth=2, label='Avg Views (K)', color='green')
+        l4, = ax2.plot(monthly_stats.index, monthly_stats['engagement_rate_mean']*100, marker='^', linewidth=2, label='Avg Engagement Rate (%)', color='purple')
+        ax.set_title('Monthly Average Performance Quality', fontsize=16, fontweight='bold')
+        ax.set_ylabel('Average Views (thousands)', color='green')
+        ax2.set_ylabel('Engagement Rate (%)', color='purple')
+        ax.tick_params(axis='x', rotation=45)
+        ax.legend([l3, l4], ['Avg Views (K)', 'Avg Engagement Rate (%)'], loc='upper left')
+        ax.grid(True, alpha=0.3)
         plt.tight_layout()
         plt.show()
     
@@ -690,7 +644,7 @@ class YouTubeDescriptiveAnalytics:
         
         scatter = plt.scatter(x, y, s=sizes, c=colors, alpha=0.7, edgecolors='black', linewidth=1)
         
-        plt.title('Category Performance Matrix\\n(Bubble size = Total Views)', fontsize=16, fontweight='bold', pad=20)
+        plt.title('Category Performance Matrix\n(Bubble size = Total Views)', fontsize=16, fontweight='bold', pad=20)
         plt.xlabel('Average Views (thousands)', fontsize=12)
         plt.ylabel('Average Engagement Rate (%)', fontsize=12)
         
@@ -714,155 +668,44 @@ class YouTubeDescriptiveAnalytics:
         pass
     
     def create_trends_chart(self):
-        """This method is now integrated into plot_monthly_trends()"""
-        pass
-        day_views = self.df.groupby('day_of_week')['views'].mean().reindex(day_order, fill_value=0)
-        
-        x = range(len(day_order))
-        width = 0.35
-        
-        bars1 = axes[0,0].bar([i - width/2 for i in x], day_engagement, width, 
-                             label='Avg Engagement', color='lightblue', alpha=0.8)
-        ax_twin = axes[0,0].twinx()
-        bars2 = ax_twin.bar([i + width/2 for i in x], day_views/1000, width, 
-                           label='Avg Views (K)', color='orange', alpha=0.8)
-        
-        axes[0,0].set_title('⚠️ Posting Day Performance\n(Cumulative, not audience activity)', fontsize=10)
-        axes[0,0].set_xticks(x)
-        axes[0,0].set_xticklabels(day_order, rotation=45)
-        axes[0,0].set_ylabel('Average Engagement', color='blue')
-        ax_twin.set_ylabel('Average Views (thousands)', color='orange')
-        axes[0,0].tick_params(axis='y', labelcolor='blue')
-        ax_twin.tick_params(axis='y', labelcolor='orange')
-        
-        # 2. Duration vs Engagement Rate
-        valid_duration = self.df['duration_minutes'].dropna()
-        valid_engagement = self.df.loc[valid_duration.index, 'engagement_rate'].dropna()
-        
-        # Filter out extreme outliers for better visualization
-        duration_clean = valid_duration[valid_duration <= 10]  # Remove very long videos
-        engagement_clean = valid_engagement.loc[duration_clean.index]
-        
-        axes[0,1].scatter(duration_clean, engagement_clean * 100, alpha=0.6, color='green')
-        axes[0,1].set_title('Duration vs Engagement Rate')
-        axes[0,1].set_xlabel('Duration (minutes)')
-        axes[0,1].set_ylabel('Engagement Rate (%)')
-        
-        # Add trend line
-        if len(duration_clean) > 1:
-            z = np.polyfit(duration_clean, engagement_clean * 100, 1)
-            p = np.poly1d(z)
-            axes[0,1].plot(sorted(duration_clean), p(sorted(duration_clean)), 
-                          "r--", alpha=0.8, label=f'Trend: {z[0]:.2f}x + {z[1]:.2f}')
-            axes[0,1].legend()
-        
-        # 3. Top Categories - Detailed Performance
-        top_cats = self.df.groupby('category').agg({
-            'views': ['sum', 'mean'],
-            'total_engagement': 'mean',
-            'engagement_rate': 'mean'
-        }).round(2)
-        top_cats.columns = ['total_views', 'avg_views', 'avg_engagement', 'avg_eng_rate']
-        top_cats = top_cats.sort_values('total_views', ascending=False).head(8)
-        
-        # Create stacked bar chart
-        x_pos = range(len(top_cats))
-        axes[1,0].bar(x_pos, top_cats['avg_views']/1e6, color='lightcoral', alpha=0.8, 
-                     label='Avg Views (M)')
-        
-        # Add engagement rate as line on secondary axis
-        ax2 = axes[1,0].twinx()
-        ax2.plot(x_pos, top_cats['avg_eng_rate'] * 100, 'go-', label='Engagement Rate (%)')
-        
-        axes[1,0].set_title('Category Performance: Views vs Engagement')
-        axes[1,0].set_xticks(x_pos)
-        axes[1,0].set_xticklabels(top_cats.index, rotation=45, ha='right')
-        axes[1,0].set_ylabel('Average Views (Millions)', color='red')
-        ax2.set_ylabel('Engagement Rate (%)', color='green')
-        axes[1,0].tick_params(axis='y', labelcolor='red')
-        ax2.tick_params(axis='y', labelcolor='green')
-        
-        # 4. Content Type Distribution (Pie Chart)
-        content_dist = self.df['content_type'].value_counts()
-        colors_pie = plt.cm.Set3(range(len(content_dist)))
-        
-        wedges, texts, autotexts = axes[1,1].pie(content_dist.values, labels=content_dist.index, 
-                                                autopct='%1.1f%%', colors=colors_pie, startangle=90)
-        axes[1,1].set_title('Content Type Distribution')
-        
-        # Make percentage text more readable
-        for autotext in autotexts:
-            autotext.set_color('white')
-            autotext.set_fontweight('bold')
-        
-        plt.tight_layout()
-        plt.show()
-        
-        # Create performance trends chart
-        self.create_trends_chart()
-    
-    def create_trends_chart(self):
-        """Create time-based trends chart"""
-        fig, axes = plt.subplots(2, 1, figsize=(14, 10))
-        fig.suptitle('YouTube Performance Trends Over Time', fontsize=14, fontweight='bold')
-        
-        # Monthly trends
+        """Create time-based trends chart (kept for compatibility, already covered in plot_monthly_trends)."""
+        # Same logic as plot_monthly_trends but kept as one call site if you still use it elsewhere.
         monthly_stats = self.df.groupby('year_month').agg({
             'views': ['count', 'sum', 'mean'],
             'total_engagement': ['sum', 'mean'],
             'engagement_rate': 'mean'
         }).round(2)
-        
         monthly_stats.columns = ['_'.join(col) for col in monthly_stats.columns]
         monthly_stats.index = monthly_stats.index.astype(str)
-        
-        # Plot 1: Upload volume and total performance
-        ax1_twin = axes[0].twinx()
-        
-        line1 = axes[0].plot(monthly_stats.index, monthly_stats['views_count'], 
-                            marker='o', color='blue', linewidth=2, label='Videos Uploaded')
-        line2 = ax1_twin.plot(monthly_stats.index, monthly_stats['views_sum']/1e6, 
-                             marker='s', color='red', linewidth=2, label='Total Views (M)')
-        
-        axes[0].set_title('Monthly Upload Volume vs Total Views')
-        axes[0].set_ylabel('Number of Videos', color='blue')
-        ax1_twin.set_ylabel('Total Views (Millions)', color='red')
-        axes[0].tick_params(axis='x', rotation=45, labelsize=8)
-        axes[0].tick_params(axis='y', labelcolor='blue')
-        ax1_twin.tick_params(axis='y', labelcolor='red')
-        axes[0].grid(True, alpha=0.3)
-        
-        # Combine legends
-        lines = line1 + line2
-        labels = [l.get_label() for l in lines]
-        axes[0].legend(lines, labels, loc='upper left')
-        
-        # Plot 2: Quality metrics over time
-        line3 = axes[1].plot(monthly_stats.index, monthly_stats['views_mean']/1e3, 
-                            marker='o', color='green', linewidth=2, label='Avg Views (K)')
-        ax2_twin = axes[1].twinx()
-        line4 = ax2_twin.plot(monthly_stats.index, monthly_stats['engagement_rate_mean']*100, 
-                             marker='^', color='purple', linewidth=2, label='Avg Engagement Rate (%)')
-        
-        axes[1].set_title('Monthly Average Performance Quality')
-        axes[1].set_ylabel('Average Views (thousands)', color='green')
-        ax2_twin.set_ylabel('Engagement Rate (%)', color='purple')
-        axes[1].set_xlabel('Month')
-        axes[1].tick_params(axis='x', rotation=45, labelsize=8)
-        axes[1].tick_params(axis='y', labelcolor='green')
-        ax2_twin.tick_params(axis='y', labelcolor='purple')
-        axes[1].grid(True, alpha=0.3)
-        
-        # Combine legends
-        lines2 = line3 + line4
-        labels2 = [l.get_label() for l in lines2]
-        axes[1].legend(lines2, labels2, loc='upper left')
-        
+
+        # Figure 1
+        fig = plt.figure(figsize=(14, 6))
+        ax = fig.add_subplot(111)
+        ax2 = ax.twinx()
+        l1, = ax.plot(monthly_stats.index, monthly_stats['views_count'], marker='o', linewidth=2, label='Videos Uploaded')
+        l2, = ax2.plot(monthly_stats.index, monthly_stats['views_sum']/1e6, marker='s', linewidth=2, label='Total Views (M)', color='red')
+        ax.set_title('Monthly Upload Volume vs Total Views')
+        ax.set_ylabel('Number of Videos'); ax2.set_ylabel('Total Views (Millions)', color='red')
+        ax.tick_params(axis='x', rotation=45)
+        ax.legend([l1, l2], ['Videos Uploaded', 'Total Views (M)'], loc='upper left')
+        ax.grid(True, alpha=0.3)
         plt.tight_layout()
         plt.show()
-        
-        # Create additional visualizations
-        self.create_additional_charts()
+
+        # Figure 2
+        fig = plt.figure(figsize=(14, 6))
+        ax = fig.add_subplot(111)
+        ax2 = ax.twinx()
+        l3, = ax.plot(monthly_stats.index, monthly_stats['views_mean']/1e3, marker='o', linewidth=2, label='Avg Views (K)', color='green')
+        l4, = ax2.plot(monthly_stats.index, monthly_stats['engagement_rate_mean']*100, marker='^', linewidth=2, label='Avg Engagement Rate (%)', color='purple')
+        ax.set_title('Monthly Average Performance Quality')
+        ax.set_ylabel('Average Views (thousands)', color='green')
+        ax2.set_ylabel('Engagement Rate (%)', color='purple')
+        ax.tick_params(axis='x', rotation=45)
+        ax.legend([l3, l4], ['Avg Views (K)', 'Avg Engagement Rate (%)'], loc='upper left')
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.show()
     
     def generate_full_report(self):
         """Generate comprehensive descriptive analytics report"""
@@ -949,10 +792,7 @@ def main():
         # Create visualizations
         analytics.create_visualizations()
         
-        # You can also access individual analysis methods:
-        # overview = analytics.generate_overview_stats()
-        # top_categories = analytics.content_performance_by_category()
-        # etc.
+        # You can also access individual analysis methods as needed.
 
 if __name__ == "__main__":
     main()

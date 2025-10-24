@@ -48,6 +48,22 @@ def to_int_or_none(x):
     except:
         return None
 
+def normalize_post_type(pt):
+    """Normalize post_type to lowercase and unify variations"""
+    if pt is None or (isinstance(pt, float) and np.isnan(pt)):
+        return None
+    pt = str(pt).lower().strip()
+    if pt == "":
+        return None
+    
+    # Unify variations
+    if pt in ['photos', 'pictures', 'picture']:
+        return 'photo'
+    elif pt in ['videos']:
+        return 'video'
+    
+    return pt
+
 def parse_duration_to_hms(s):
     """
     Accepts 'hh:mm:ss', 'mm:ss', 'ss', or things like '15s', '1m30s'.
@@ -129,9 +145,14 @@ work = pd.DataFrame()
 work["video_id"]   = df.get("tiktok_video_id")
 work["url"]        = df.get("content_link")
 work["title"]      = df.get("video_title")
-work["post_type"]  = df.get("post_type")
 work["sound_used"] = df.get("sound_used")
 work["saves"]      = df.get("saves")
+
+# Normalize post_type
+if "post_type" in df.columns:
+    work["post_type"] = df["post_type"].apply(normalize_post_type)
+else:
+    work["post_type"] = None
 
 # numeric counts
 for src, dst in [
@@ -144,7 +165,7 @@ for src, dst in [
     else:
         work[dst] = None
 
-# duration → h/m/s/total (FIXED)
+# duration → h/m/s/total
 duration_col = "duration"
 if duration_col in df.columns:
     hms = df[duration_col].apply(parse_duration_to_hms)
@@ -180,6 +201,14 @@ if rows_after < rows_before:
     print(f"⚠️ Dropped {rows_before-rows_after} rows with empty tiktok_video_id.")
 
 print(f"✅ Ready to insert {len(work)} rows.")
+
+# Show post_type distribution before loading
+print("\n📊 Post Type Distribution (normalized):")
+if work["post_type"].notna().any():
+    print(work["post_type"].value_counts())
+else:
+    print("No post_type data available.")
+print()
 
 # ================= LOAD (landing) =================
 conn = psycopg2.connect(**db_params)
