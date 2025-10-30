@@ -11,7 +11,7 @@
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
     "@stackframe/react": "^2.8.44",
-    "@stackframe/stack": "^2.8.44",
+    "@stackframe/stack": "^2.8.47",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "firebase": "^12.2.1",
