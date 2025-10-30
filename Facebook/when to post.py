@@ -9,7 +9,7 @@ from datetime import datetime
 sns.set_style("whitegrid")
 
 # Load the data
-df = pd.read_csv("1_year_data.csv")
+df = pd.read_csv("Facebook/1_year_data.csv")
 
 # Convert publish_time to datetime for proper time series analysis
 df['publish_datetime'] = pd.to_datetime(df['publish_time'])

@@ -1,0 +1,1076 @@
+{
+  "overview": {
+    "total_videos": 391,
+    "total_views": 59699867.0,
+    "total_likes": 6485669.0,
+    "total_shares": 371341.0,
+    "total_comments": 47154.0,
+    "total_saves": 639427.0,
+    "avg_views": 152685.08184143223,
+    "avg_likes": 16587.38874680307,
+    "avg_shares": 949.7212276214834,
+    "avg_comments": 120.59846547314578,
+    "avg_saves": 1635.3631713554987,
+    "avg_duration_seconds": 42.88431876606684,
+    "engagement_rate": 12.635858971009098,
+    "like_rate": 10.863791371595518,
+    "share_rate": 0.6220131110174835,
+    "comment_rate": 0.0789851005865725,
+    "save_rate": 1.0710693878095239
+  },
+  "top_videos": {
+    "by_views": [
+      {
+        "video_id": "tkvid_150",
+        "title": "Pano kaya kung may kanta si Jose Rizal para sa first love niya?",
+        "views": 8500000,
+        "likes": 1200000,
+        "shares": 17000,
+        "comments_added": 6721,
+        "saves": 156900,
+        "publish_time": "2023-04-10 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7220350937594924293?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_202",
+        "title": "Leonora Challenge - SUGARCANE edition",
+        "views": 3400000,
+        "likes": 305600,
+        "shares": 4914,
+        "comments_added": 1217,
+        "saves": 26300,
+        "publish_time": "2023-05-13 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7232597831507397894?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_236",
+        "title": "BTS kung paano nagawa ang \"Sinehan\"",
+        "views": 3300000,
+        "likes": 68200,
+        "shares": 833,
+        "comments_added": 467,
+        "saves": 2353,
+        "publish_time": "2023-09-22 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7281615227022593286?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_412",
+        "title": "Naiyak siguro sya kaya ganyan lang reply nya",
+        "views": 2200000,
+        "likes": 289600,
+        "shares": 41400,
+        "comments_added": 1949,
+        "saves": 18700,
+        "publish_time": "2024-11-19 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7438884817611017490?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_209",
+        "title": "Leonora (Winners - Singing Challenge)",
+        "views": 1900000,
+        "likes": 238000,
+        "shares": 3564,
+        "comments_added": 956,
+        "saves": 27000,
+        "publish_time": "2023-05-19 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7234729670242061574?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_459",
+        "title": "#TangingIkaw Out now on Spotify! Kanta  Feelings  Tamang tao",
+        "views": 1900000,
+        "likes": 164900,
+        "shares": 18400,
+        "comments_added": 520,
+        "saves": 23400,
+        "publish_time": "2025-02-11 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7470123972894461202?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_166",
+        "title": "Pakinggan nyo rin \"Leonora\" maganda to promise",
+        "views": 1700000,
+        "likes": 70500,
+        "shares": 620,
+        "comments_added": 520,
+        "saves": 5356,
+        "publish_time": "2023-04-18 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7223233313534692634?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_220",
+        "title": "Live at Samsung Hall, SM Aura | We Play Here! by Warner Music Philippines. Watch on Youtube",
+        "views": 1400000,
+        "likes": 291700,
+        "shares": 10100,
+        "comments_added": 583,
+        "saves": 34800,
+        "publish_time": "2023-06-11 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7243395956320832774?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_155",
+        "title": "\"Leonora\" is out now on Youtube and Spotify",
+        "views": 1400000,
+        "likes": 218100,
+        "shares": 14200,
+        "comments_added": 1473,
+        "saves": 16700,
+        "publish_time": "2023-04-13 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7221430163467177242?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_198",
+        "title": "Mahal parin kita challenge - SUGARCANE edition",
+        "views": 1400000,
+        "likes": 89400,
+        "shares": 2524,
+        "comments_added": 984,
+        "saves": 11700,
+        "publish_time": "2023-05-09 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7231072755456724230?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      }
+    ],
+    "by_engagement": [
+      {
+        "video_id": "tkvid_150",
+        "title": "Pano kaya kung may kanta si Jose Rizal para sa first love niya?",
+        "views": 8500000,
+        "likes": 1200000,
+        "shares": 17000,
+        "comments_added": 6721,
+        "saves": 156900,
+        "total_engagement": 1380621,
+        "publish_time": "2023-04-10 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7220350937594924293?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_412",
+        "title": "Naiyak siguro sya kaya ganyan lang reply nya",
+        "views": 2200000,
+        "likes": 289600,
+        "shares": 41400,
+        "comments_added": 1949,
+        "saves": 18700,
+        "total_engagement": 351649,
+        "publish_time": "2024-11-19 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7438884817611017490?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_202",
+        "title": "Leonora Challenge - SUGARCANE edition",
+        "views": 3400000,
+        "likes": 305600,
+        "shares": 4914,
+        "comments_added": 1217,
+        "saves": 26300,
+        "total_engagement": 338031,
+        "publish_time": "2023-05-13 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7232597831507397894?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_220",
+        "title": "Live at Samsung Hall, SM Aura | We Play Here! by Warner Music Philippines. Watch on Youtube",
+        "views": 1400000,
+        "likes": 291700,
+        "shares": 10100,
+        "comments_added": 583,
+        "saves": 34800,
+        "total_engagement": 337183,
+        "publish_time": "2023-06-11 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7243395956320832774?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_209",
+        "title": "Leonora (Winners - Singing Challenge)",
+        "views": 1900000,
+        "likes": 238000,
+        "shares": 3564,
+        "comments_added": 956,
+        "saves": 27000,
+        "total_engagement": 269520,
+        "publish_time": "2023-05-19 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7234729670242061574?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_155",
+        "title": "\"Leonora\" is out now on Youtube and Spotify",
+        "views": 1400000,
+        "likes": 218100,
+        "shares": 14200,
+        "comments_added": 1473,
+        "saves": 16700,
+        "total_engagement": 250473,
+        "publish_time": "2023-04-13 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7221430163467177242?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_463",
+        "title": "#TangingIkaw lang sa araw ng mga puso",
+        "views": 1200000,
+        "likes": 157900,
+        "shares": 69200,
+        "comments_added": 1251,
+        "saves": 11400,
+        "total_engagement": 239751,
+        "publish_time": "2025-02-13 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7470872389316791560?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_288",
+        "title": "look at you go, leonora!  \"Maria Clara\", Out at Friday, 12am!!",
+        "views": 953600,
+        "likes": 196300,
+        "shares": 537,
+        "comments_added": 860,
+        "saves": 14200,
+        "total_engagement": 211897,
+        "publish_time": "2024-03-06 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7343209660410793222?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_165",
+        "title": "POV: hinaharana ka namin",
+        "views": 1000000,
+        "likes": 190800,
+        "shares": 2122,
+        "comments_added": 1118,
+        "saves": 13800,
+        "total_engagement": 207840,
+        "publish_time": "2023-04-17 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7222987162038357274?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_459",
+        "title": "#TangingIkaw Out now on Spotify! Kanta  Feelings  Tamang tao",
+        "views": 1900000,
+        "likes": 164900,
+        "shares": 18400,
+        "comments_added": 520,
+        "saves": 23400,
+        "total_engagement": 207220,
+        "publish_time": "2025-02-11 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7470123972894461202?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      }
+    ],
+    "by_engagement_rate": [
+      {
+        "video_id": "tkvid_336",
+        "title": "Pagbigyan ft. Carl, Carlo, and Carlito",
+        "views": 24000,
+        "likes": 6379,
+        "shares": 183,
+        "comments_added": 55,
+        "saves": 183,
+        "engagement_rate": 28.333333333333332,
+        "publish_time": "2024-07-26 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7395888726125088008?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_386",
+        "title": "Suko na po ako boss",
+        "views": 435000,
+        "likes": 68400,
+        "shares": 36700,
+        "comments_added": 255,
+        "saves": 4071,
+        "engagement_rate": 25.155402298850575,
+        "publish_time": "2024-11-05 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7433675399986498823?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_220",
+        "title": "Live at Samsung Hall, SM Aura | We Play Here! by Warner Music Philippines. Watch on Youtube",
+        "views": 1400000,
+        "likes": 291700,
+        "shares": 10100,
+        "comments_added": 583,
+        "saves": 34800,
+        "engagement_rate": 24.084500000000002,
+        "publish_time": "2023-06-11 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7243395956320832774?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_154",
+        "title": "Out now on all music platforms!",
+        "views": 244200,
+        "likes": 50400,
+        "shares": 1008,
+        "comments_added": 266,
+        "saves": 6716,
+        "engagement_rate": 23.91072891072891,
+        "publish_time": "2023-04-13 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7221348643939437829?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_181",
+        "title": "Otw na kami para hanapin ang dating tamis ng pagsasama",
+        "views": 285000,
+        "likes": 62200,
+        "shares": 657,
+        "comments_added": 358,
+        "saves": 4463,
+        "engagement_rate": 23.746666666666666,
+        "publish_time": "2023-04-26 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7226294314027011333?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_390",
+        "title": "As we count down to the release of our latest single, \u201cLagi Na Lang,\u201d coming out at midnight tonight, enjoy this one final treat for our previous single, \u201cPagbigyan\u201d featuring Gian Bernardino from Cup of Joe \u2013 LIVE!  Just 6 hours to go! Presave through the link in our bio",
+        "views": 65300,
+        "likes": 13100,
+        "shares": 817,
+        "comments_added": 101,
+        "saves": 950,
+        "engagement_rate": 22.921898928024504,
+        "publish_time": "2024-11-07 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7434487009940393223?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_193",
+        "title": "idol niyo pagod na",
+        "views": 280900,
+        "likes": 58500,
+        "shares": 1695,
+        "comments_added": 579,
+        "saves": 2920,
+        "engagement_rate": 22.6749733001068,
+        "publish_time": "2023-05-04 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7229259894484995334?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_178",
+        "title": "\"Leonora\", but vocals only",
+        "views": 702600,
+        "likes": 139900,
+        "shares": 2061,
+        "comments_added": 720,
+        "saves": 16100,
+        "engagement_rate": 22.599060631938514,
+        "publish_time": "2023-04-24 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7225549539397078277?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_288",
+        "title": "look at you go, leonora!  \"Maria Clara\", Out at Friday, 12am!!",
+        "views": 953600,
+        "likes": 196300,
+        "shares": 537,
+        "comments_added": 860,
+        "saves": 14200,
+        "engagement_rate": 22.220742449664428,
+        "publish_time": "2024-03-06 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7343209660410793222?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      },
+      {
+        "video_id": "tkvid_151",
+        "title": "We heard your comments, so here it is!",
+        "views": 87700,
+        "likes": 17000,
+        "shares": 581,
+        "comments_added": 268,
+        "saves": 1607,
+        "engagement_rate": 22.18472063854048,
+        "publish_time": "2023-04-11 00:00:00+00:00",
+        "url": "https:::www.tiktok.com:@thesugarcaneph:video:7220638621357985030?is_from_webapp=1&sender_device=pc&web_id=7555517756851799559"
+      }
+    ]
+  },
+  "temporal": {
+    "monthly": [
+      {
+        "publish_year": 2025,
+        "publish_month": 9,
+        "video_count": 5,
+        "total_views": 876330.0,
+        "total_likes": 6169.0,
+        "total_shares": 467.0,
+        "total_comments": 272.0,
+        "avg_views": 175266.0,
+        "avg_likes": 1233.8
+      },
+      {
+        "publish_year": 2025,
+        "publish_month": 8,
+        "video_count": 1,
+        "total_views": 339700.0,
+        "total_likes": 56000.0,
+        "total_shares": 4729.0,
+        "total_comments": 217.0,
+        "avg_views": 339700.0,
+        "avg_likes": 56000.0
+      },
+      {
+        "publish_year": 2025,
+        "publish_month": 7,
+        "video_count": 3,
+        "total_views": 73800.0,
+        "total_likes": 7774.0,
+        "total_shares": 473.0,
+        "total_comments": 92.0,
+        "avg_views": 24600.0,
+        "avg_likes": 2591.3333333333335
+      },
+      {
+        "publish_year": 2025,
+        "publish_month": 5,
+        "video_count": 3,
+        "total_views": 213700.0,
+        "total_likes": 6936.0,
+        "total_shares": 115.0,
+        "total_comments": 45.0,
+        "avg_views": 71233.33333333333,
+        "avg_likes": 2312.0
+      },
+      {
+        "publish_year": 2025,
+        "publish_month": 4,
+        "video_count": 1,
+        "total_views": 26400.0,
+        "total_likes": 2361.0,
+        "total_shares": 68.0,
+        "total_comments": 56.0,
+        "avg_views": 26400.0,
+        "avg_likes": 2361.0
+      },
+      {
+        "publish_year": 2025,
+        "publish_month": 3,
+        "video_count": 1,
+        "total_views": 133500.0,
+        "total_likes": 10900.0,
+        "total_shares": 127.0,
+        "total_comments": 32.0,
+        "avg_views": 133500.0,
+        "avg_likes": 10900.0
+      },
+      {
+        "publish_year": 2025,
+        "publish_month": 2,
+        "video_count": 38,
+        "total_views": 7591697.0,
+        "total_likes": 774048.0,
+        "total_shares": 149340.0,
+        "total_comments": 5159.0,
+        "avg_views": 199781.5,
+        "avg_likes": 20369.684210526317
+      },
+      {
+        "publish_year": 2025,
+        "publish_month": 1,
+        "video_count": 15,
+        "total_views": 3612200.0,
+        "total_likes": 407382.0,
+        "total_shares": 29257.0,
+        "total_comments": 2499.0,
+        "avg_views": 240813.33333333334,
+        "avg_likes": 27158.8
+      },
+      {
+        "publish_year": 2024,
+        "publish_month": 12,
+        "video_count": 7,
+        "total_views": 57763.0,
+        "total_likes": 4899.0,
+        "total_shares": 509.0,
+        "total_comments": 197.0,
+        "avg_views": 8251.857142857143,
+        "avg_likes": 699.8571428571429
+      },
+      {
+        "publish_year": 2024,
+        "publish_month": 11,
+        "video_count": 40,
+        "total_views": 3055853.0,
+        "total_likes": 400547.0,
+        "total_shares": 82901.0,
+        "total_comments": 3222.0,
+        "avg_views": 76396.325,
+        "avg_likes": 10013.675
+      },
+      {
+        "publish_year": 2024,
+        "publish_month": 10,
+        "video_count": 22,
+        "total_views": 204032.0,
+        "total_likes": 23191.0,
+        "total_shares": 1479.0,
+        "total_comments": 637.0,
+        "avg_views": 9274.181818181818,
+        "avg_likes": 1054.1363636363637
+      },
+      {
+        "publish_year": 2024,
+        "publish_month": 9,
+        "video_count": 3,
+        "total_views": 16879.0,
+        "total_likes": 1288.0,
+        "total_shares": 48.0,
+        "total_comments": 82.0,
+        "avg_views": 5626.333333333333,
+        "avg_likes": 429.3333333333333
+      },
+      {
+        "publish_year": 2024,
+        "publish_month": 8,
+        "video_count": 12,
+        "total_views": 236180.0,
+        "total_likes": 34250.0,
+        "total_shares": 7275.0,
+        "total_comments": 610.0,
+        "avg_views": 19681.666666666668,
+        "avg_likes": 2854.1666666666665
+      },
+      {
+        "publish_year": 2024,
+        "publish_month": 7,
+        "video_count": 8,
+        "total_views": 81413.0,
+        "total_likes": 14936.0,
+        "total_shares": 578.0,
+        "total_comments": 322.0,
+        "avg_views": 10176.625,
+        "avg_likes": 1867.0
+      },
+      {
+        "publish_year": 2024,
+        "publish_month": 6,
+        "video_count": 1,
+        "total_views": 9105.0,
+        "total_likes": 604.0,
+        "total_shares": 10.0,
+        "total_comments": 19.0,
+        "avg_views": 9105.0,
+        "avg_likes": 604.0
+      },
+      {
+        "publish_year": 2024,
+        "publish_month": 5,
+        "video_count": 8,
+        "total_views": 83357.0,
+        "total_likes": 6764.0,
+        "total_shares": 94.0,
+        "total_comments": 177.0,
+        "avg_views": 10419.625,
+        "avg_likes": 845.5
+      },
+      {
+        "publish_year": 2024,
+        "publish_month": 4,
+        "video_count": 12,
+        "total_views": 350978.0,
+        "total_likes": 12043.0,
+        "total_shares": 208.0,
+        "total_comments": 327.0,
+        "avg_views": 29248.166666666668,
+        "avg_likes": 1003.5833333333334
+      },
+      {
+        "publish_year": 2024,
+        "publish_month": 3,
+        "video_count": 26,
+        "total_views": 3089029.0,
+        "total_likes": 344935.0,
+        "total_shares": 2576.0,
+        "total_comments": 2365.0,
+        "avg_views": 118808.80769230769,
+        "avg_likes": 13266.73076923077
+      },
+      {
+        "publish_year": 2024,
+        "publish_month": 1,
+        "video_count": 4,
+        "total_views": 271800.0,
+        "total_likes": 17494.0,
+        "total_shares": 149.0,
+        "total_comments": 362.0,
+        "avg_views": 67950.0,
+        "avg_likes": 4373.5
+      },
+      {
+        "publish_year": 2023,
+        "publish_month": 12,
+        "video_count": 4,
+        "total_views": 252100.0,
+        "total_likes": 11457.0,
+        "total_shares": 69.0,
+        "total_comments": 245.0,
+        "avg_views": 63025.0,
+        "avg_likes": 2864.25
+      },
+      {
+        "publish_year": 2023,
+        "publish_month": 11,
+        "video_count": 16,
+        "total_views": 1134787.0,
+        "total_likes": 53726.0,
+        "total_shares": 805.0,
+        "total_comments": 868.0,
+        "avg_views": 70924.1875,
+        "avg_likes": 3357.875
+      },
+      {
+        "publish_year": 2023,
+        "publish_month": 10,
+        "video_count": 14,
+        "total_views": 1029741.0,
+        "total_likes": 87707.0,
+        "total_shares": 1231.0,
+        "total_comments": 881.0,
+        "avg_views": 73552.92857142857,
+        "avg_likes": 6264.785714285715
+      },
+      {
+        "publish_year": 2023,
+        "publish_month": 9,
+        "video_count": 15,
+        "total_views": 4983000.0,
+        "total_likes": 172754.0,
+        "total_shares": 7298.0,
+        "total_comments": 1757.0,
+        "avg_views": 332200.0,
+        "avg_likes": 11516.933333333332
+      },
+      {
+        "publish_year": 2023,
+        "publish_month": 8,
+        "video_count": 1,
+        "total_views": 21400.0,
+        "total_likes": 2568.0,
+        "total_shares": 223.0,
+        "total_comments": 53.0,
+        "avg_views": 21400.0,
+        "avg_likes": 2568.0
+      },
+      {
+        "publish_year": 2023,
+        "publish_month": 7,
+        "video_count": 6,
+        "total_views": 491800.0,
+        "total_likes": 45436.0,
+        "total_shares": 1073.0,
+        "total_comments": 275.0,
+        "avg_views": 81966.66666666667,
+        "avg_likes": 7572.666666666667
+      },
+      {
+        "publish_year": 2023,
+        "publish_month": 6,
+        "video_count": 10,
+        "total_views": 2500300.0,
+        "total_likes": 442785.0,
+        "total_shares": 14021.0,
+        "total_comments": 1690.0,
+        "avg_views": 250030.0,
+        "avg_likes": 44278.5
+      },
+      {
+        "publish_year": 2023,
+        "publish_month": 5,
+        "video_count": 27,
+        "total_views": 8438700.0,
+        "total_likes": 853832.0,
+        "total_shares": 16413.0,
+        "total_comments": 5310.0,
+        "avg_views": 312544.44444444444,
+        "avg_likes": 31623.40740740741
+      },
+      {
+        "publish_year": 2023,
+        "publish_month": 4,
+        "video_count": 43,
+        "total_views": 19013200.0,
+        "total_likes": 2541243.0,
+        "total_shares": 47568.0,
+        "total_comments": 18028.0,
+        "avg_views": 442167.4418604651,
+        "avg_likes": 59098.67441860465
+      },
+      {
+        "publish_year": 2023,
+        "publish_month": 3,
+        "video_count": 10,
+        "total_views": 454923.0,
+        "total_likes": 61202.0,
+        "total_shares": 704.0,
+        "total_comments": 464.0,
+        "avg_views": 45492.3,
+        "avg_likes": 6120.2
+      },
+      {
+        "publish_year": 2023,
+        "publish_month": 2,
+        "video_count": 3,
+        "total_views": 803400.0,
+        "total_likes": 72394.0,
+        "total_shares": 998.0,
+        "total_comments": 508.0,
+        "avg_views": 267800.0,
+        "avg_likes": 24131.333333333332
+      },
+      {
+        "publish_year": 2022,
+        "publish_month": 10,
+        "video_count": 1,
+        "total_views": 12800.0,
+        "total_likes": 372.0,
+        "total_shares": 18.0,
+        "total_comments": 10.0,
+        "avg_views": 12800.0,
+        "avg_likes": 372.0
+      },
+      {
+        "publish_year": 2022,
+        "publish_month": 8,
+        "video_count": 5,
+        "total_views": 48172.0,
+        "total_likes": 1299.0,
+        "total_shares": 62.0,
+        "total_comments": 45.0,
+        "avg_views": 9634.4,
+        "avg_likes": 259.8
+      },
+      {
+        "publish_year": 2022,
+        "publish_month": 7,
+        "video_count": 9,
+        "total_views": 105268.0,
+        "total_likes": 3001.0,
+        "total_shares": 144.0,
+        "total_comments": 122.0,
+        "avg_views": 11696.444444444443,
+        "avg_likes": 333.44444444444446
+      },
+      {
+        "publish_year": 2022,
+        "publish_month": 5,
+        "video_count": 3,
+        "total_views": 18185.0,
+        "total_likes": 616.0,
+        "total_shares": 91.0,
+        "total_comments": 24.0,
+        "avg_views": 6061.666666666667,
+        "avg_likes": 205.33333333333334
+      },
+      {
+        "publish_year": 2022,
+        "publish_month": 4,
+        "video_count": 5,
+        "total_views": 25720.0,
+        "total_likes": 1188.0,
+        "total_shares": 130.0,
+        "total_comments": 76.0,
+        "avg_views": 5144.0,
+        "avg_likes": 237.6
+      },
+      {
+        "publish_year": 2022,
+        "publish_month": 3,
+        "video_count": 2,
+        "total_views": 13774.0,
+        "total_likes": 534.0,
+        "total_shares": 34.0,
+        "total_comments": 41.0,
+        "avg_views": 6887.0,
+        "avg_likes": 267.0
+      },
+      {
+        "publish_year": 2021,
+        "publish_month": 10,
+        "video_count": 1,
+        "total_views": 2490.0,
+        "total_likes": 76.0,
+        "total_shares": 1.0,
+        "total_comments": 0.0,
+        "avg_views": 2490.0,
+        "avg_likes": 76.0
+      },
+      {
+        "publish_year": 2021,
+        "publish_month": 7,
+        "video_count": 4,
+        "total_views": 17341.0,
+        "total_likes": 581.0,
+        "total_shares": 41.0,
+        "total_comments": 39.0,
+        "avg_views": 4335.25,
+        "avg_likes": 145.25
+      },
+      {
+        "publish_year": 2021,
+        "publish_month": 6,
+        "video_count": 2,
+        "total_views": 9050.0,
+        "total_likes": 377.0,
+        "total_shares": 14.0,
+        "total_comments": 26.0,
+        "avg_views": 4525.0,
+        "avg_likes": 188.5
+      }
+    ],
+    "day_of_week": [
+      {
+        "day_of_week": 0.0,
+        "day_name": "Sunday",
+        "video_count": 54,
+        "avg_views": 80933.03703703704,
+        "avg_likes": 10365.666666666668,
+        "avg_engagement": 11960.833333333332
+      },
+      {
+        "day_of_week": 1.0,
+        "day_name": "Monday",
+        "video_count": 58,
+        "avg_views": 232433.37931034484,
+        "avg_likes": 30606.51724137931,
+        "avg_engagement": 34980.34482758621
+      },
+      {
+        "day_of_week": 2.0,
+        "day_name": "Tuesday",
+        "video_count": 46,
+        "avg_views": 227873.84782608695,
+        "avg_likes": 21917.326086956524,
+        "avg_engagement": 26229.652173913044
+      },
+      {
+        "day_of_week": 3.0,
+        "day_name": "Wednesday",
+        "video_count": 57,
+        "avg_views": 92070.91228070176,
+        "avg_likes": 12385.982456140351,
+        "avg_engagement": 14181.526315789473
+      },
+      {
+        "day_of_week": 4.0,
+        "day_name": "Thursday",
+        "video_count": 44,
+        "avg_views": 162312.52272727274,
+        "avg_likes": 21649.068181818184,
+        "avg_engagement": 26713.590909090908
+      },
+      {
+        "day_of_week": 5.0,
+        "day_name": "Friday",
+        "video_count": 72,
+        "avg_views": 147654.125,
+        "avg_likes": 10917.166666666668,
+        "avg_engagement": 12233.152777777777
+      },
+      {
+        "day_of_week": 6.0,
+        "day_name": "Saturday",
+        "video_count": 60,
+        "avg_views": 139087.66666666666,
+        "avg_likes": 11632.533333333333,
+        "avg_engagement": 13295.833333333332
+      }
+    ]
+  },
+  "content": {
+    "post_type": [
+      {
+        "post_type": "video",
+        "video_count": 233,
+        "avg_views": 222136.0042918455,
+        "avg_likes": 24599.137339055793,
+        "avg_shares": 1346.6437768240344,
+        "avg_comments": 166.6824034334764,
+        "total_views": 51757689.0
+      },
+      {
+        "post_type": "Video",
+        "video_count": 136,
+        "avg_views": 52408.14705882353,
+        "avg_likes": 4897.183823529412,
+        "avg_shares": 395.74264705882354,
+        "avg_comments": 53.61029411764706,
+        "total_views": 7127508.0
+      },
+      {
+        "post_type": "photo",
+        "video_count": 7,
+        "avg_views": 68302.14285714286,
+        "avg_likes": 6862.0,
+        "avg_shares": 459.14285714285717,
+        "avg_comments": 90.42857142857143,
+        "total_views": 478115.0
+      },
+      {
+        "post_type": "VIdeo",
+        "video_count": 5,
+        "avg_views": 51147.0,
+        "avg_likes": 6650.2,
+        "avg_shares": 85.2,
+        "avg_comments": 36.0,
+        "total_views": 255735.0
+      },
+      {
+        "post_type": "Photos",
+        "video_count": 8,
+        "avg_views": 8651.625,
+        "avg_likes": 678.5,
+        "avg_shares": 12.25,
+        "avg_comments": 20.5,
+        "total_views": 69213.0
+      },
+      {
+        "post_type": "Pictures",
+        "video_count": 2,
+        "avg_views": 5803.5,
+        "avg_likes": 670.0,
+        "avg_shares": 7.0,
+        "avg_comments": 24.5,
+        "total_views": 11607.0
+      }
+    ],
+    "duration": [
+      {
+        "duration_bucket": "0-15s",
+        "video_count": 51,
+        "avg_views": 54379.05882352941,
+        "avg_likes": 3951.4117647058824,
+        "avg_engagement": 4435.137254901961
+      },
+      {
+        "duration_bucket": "16-30s",
+        "video_count": 105,
+        "avg_views": 139284.52380952382,
+        "avg_likes": 17164.704761904763,
+        "avg_engagement": 19721.657142857144
+      },
+      {
+        "duration_bucket": "31-60s",
+        "video_count": 159,
+        "avg_views": 109468.56603773584,
+        "avg_likes": 12228.100628930819,
+        "avg_engagement": 14839.264150943396
+      },
+      {
+        "duration_bucket": "61-120s",
+        "video_count": 61,
+        "avg_views": 291763.34426229505,
+        "avg_likes": 34405.65573770492,
+        "avg_engagement": 39220.16393442623
+      },
+      {
+        "duration_bucket": "120s+",
+        "video_count": 13,
+        "avg_views": 529914.9230769231,
+        "avg_likes": 31443.076923076922,
+        "avg_engagement": 35456.230769230766
+      }
+    ],
+    "sound": [
+      {
+        "sound_category": "Sound Used",
+        "video_count": 391,
+        "avg_views": 152685.08184143223,
+        "avg_likes": 16587.38874680307
+      }
+    ]
+  },
+  "engagement": {
+    "like_rate": {
+      "mean": 8.675532344671412,
+      "median": 8.50327048864948,
+      "p25": 5.16847677033624,
+      "p75": 11.277416104781834,
+      "p90": 14.612089481199428
+    },
+    "share_rate": {
+      "mean": 0.4449310398322726,
+      "median": 0.1959412176347096,
+      "p25": 0.09145531599636397,
+      "p75": 0.4683434414555696,
+      "p90": 0.9981368112856002
+    },
+    "comment_rate": {
+      "mean": 0.19795858478169467,
+      "median": 0.14146341463414633,
+      "p25": 0.07844562515931686,
+      "p75": 0.2614846318583537,
+      "p90": 0.43923865300146414
+    },
+    "engagement_rate": {
+      "mean": 9.953400249184662,
+      "median": 9.791836734693877,
+      "p25": 5.759381997313032,
+      "p75": 12.872061679434019,
+      "p90": 16.79536101758324
+    }
+  },
+  "distribution": {
+    "views": {
+      "count": 391,
+      "mean": 152685.08184143223,
+      "median": 29100.0,
+      "std": 551182.2767422616,
+      "min": 1214.0,
+      "max": 8500000.0,
+      "q25": 7700.0,
+      "q50": 29100.0,
+      "q75": 88800.0,
+      "q90": 271500.0,
+      "q95": 577200.0,
+      "q99": 1930000.0000000068
+    },
+    "likes": {
+      "count": 391,
+      "mean": 16587.38874680307,
+      "median": 2065.0,
+      "std": 71080.15535286168,
+      "min": 50.0,
+      "max": 1200000.0,
+      "q25": 507.0,
+      "q50": 2065.0,
+      "q75": 6775.5,
+      "q90": 34700.0,
+      "q95": 68300.0,
+      "q99": 243160.00000000116
+    },
+    "shares": {
+      "count": 391,
+      "mean": 949.7212276214834,
+      "median": 48.0,
+      "std": 4916.4776093891805,
+      "min": 0.0,
+      "max": 69200.0,
+      "q25": 14.0,
+      "q50": 48.0,
+      "q75": 223.5,
+      "q90": 1066.0,
+      "q95": 2871.0,
+      "q99": 18880.00000000011
+    },
+    "comments_added": {
+      "count": 391,
+      "mean": 120.59846547314578,
+      "median": 40.0,
+      "std": 391.66820062682467,
+      "min": 0.0,
+      "max": 6721.0,
+      "q25": 18.0,
+      "q50": 40.0,
+      "q75": 90.0,
+      "q90": 241.0,
+      "q95": 361.0,
+      "q99": 1220.4000000000008
+    },
+    "saves": {
+      "count": 391,
+      "mean": 1635.3631713554987,
+      "median": 141.0,
+      "std": 8687.111698229277,
+      "min": 4.0,
+      "max": 156900.0,
+      "q25": 30.0,
+      "q50": 141.0,
+      "q75": 480.0,
+      "q90": 2988.0,
+      "q95": 7103.5,
+      "q99": 23690.000000000065
+    }
+  },
+  "generated_at": "2025-10-05T15:09:30.967849"
+}

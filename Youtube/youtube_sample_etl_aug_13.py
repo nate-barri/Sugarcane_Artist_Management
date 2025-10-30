@@ -15,7 +15,7 @@ db_params = {
 }
 
 # === Config ===
-CSV_PATH = r"C:\Sugarcane_Artist_Management\Youtube\final_full_set_yt.csv"
+CSV_PATH = r"C:\Sugarcane_Artist_Management\Youtube\final_full_set_yt.csv"## change to drag and drop
 ENSURE_TRIGGER = True  # reattach the statement-level trigger if the function exists
 
 # ---------- Helpers ----------
