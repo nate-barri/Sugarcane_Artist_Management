@@ -1,396 +1,618 @@
-import psycopg2
+
 import pandas as pd
+import numpy as np
+import psycopg2
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
-import numpy as np
 
-# Database connection parameters
-DB_PARAMS = {
-    "dbname": "neondb",
-    "user": "neondb_owner",
+# Style
+sns.set_style("whitegrid")
+plt.rcParams["figure.figsize"] = (12, 6)
+
+# ================= DB CONNECTION =================
+db_params = {
+    "dbname":   "neondb",
+    "user":     "neondb_owner",
     "password": "npg_dGzvq4CJPRx7",
-    "host": "ep-lingering-dawn-a410n0b8-pooler.us-east-1.aws.neon.tech",
-    "port": "5432",
-    "sslmode": "require",
+    "host":     "ep-lingering-dawn-a410n0b8-pooler.us-east-1.aws.neon.tech",
+    "port":     "5432",
+    "sslmode":  "require",
 }
 
-def fetch_data():
-    """Fetch data from PostgreSQL database"""
-    try:
-        conn = psycopg2.connect(**DB_PARAMS)
-        query = """
-        SELECT 
-            post_id, page_id, page_name, title, description, post_type,
-            duration_sec, publish_time, year, month, day, time,
-            permalink, is_crosspost, is_share, funded_content_status,
-            reach, shares, comments, reactions, seconds_viewed,
-            average_seconds_viewed, impressions
-        FROM public.facebook_data_set
-        ORDER BY publish_time
-        """
-        df = pd.read_sql_query(query, conn)
-        conn.close()
-        print(f"Successfully fetched {len(df)} rows from database")
-        return df
-    except Exception as e:
-        print(f"Error fetching data: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
+def execute_query(conn, query):
+    return pd.read_sql_query(query, conn)
 
-def prepare_data(df):
-    """Prepare and clean data for analysis"""
-    df['publish_time'] = pd.to_datetime(df['publish_time'])
-    df['date'] = df['publish_time'].dt.date
-    
-    # Fill missing values with 0 for engagement metrics
-    df['reactions'] = df['reactions'].fillna(0)
-    df['comments'] = df['comments'].fillna(0)
-    df['shares'] = df['shares'].fillna(0)
-    df['reach'] = df['reach'].fillna(0)
-    
-    # Calculate engagement metrics
-    df['total_engagement'] = df['reactions'] + df['comments'] + df['shares']
-    
-    # Calculate engagement rate, handling zero reach
-    df['engagement_rate'] = np.where(
-        df['reach'] > 0,
-        df['total_engagement'] / df['reach'],
-        0
-    )
-    
-    df['completion_rate'] = np.where(
-        df['duration_sec'] > 0,
-        df['average_seconds_viewed'] / df['duration_sec'],
-        np.nan
-    )
-    
+def safe_divide(a, b):
+    return a / b if b != 0 else 0
+
+# ================= VISUALIZATION FUNCTIONS =================
+def _annotate_bars(ax, values, fmt="{:,.0f}"):
+    for i, v in enumerate(values):
+        ax.text(i, v, fmt.format(v), ha="center", va="bottom")
+
+def plot_overview_metrics(overview_df):
+    """Each panel split into its own figure (no subplots)."""
+    # --- Total metrics ---
+    metrics   = ["total_views", "total_likes", "total_shares", "total_comments", "total_saves"]
+    labels    = ["Views", "Likes", "Shares", "Comments", "Saves"]
+    values    = [overview_df[m].iloc[0] for m in metrics]
+    plt.figure()
+    ax = plt.gca()
+    ax.bar(labels, values, color=["#1f77b4","#ff7f0e","#2ca02c","#d62728","#9467bd"])
+    ax.set_title("Total Engagement Metrics", fontweight="bold")
+    ax.set_ylabel("Count")
+    ax.tick_params(axis="x", rotation=45)
+    _annotate_bars(ax, values, "{:,.0f}")
+    plt.tight_layout(); plt.show()
+
+    # --- Average metrics per video ---
+    avg_metrics = ["avg_views", "avg_likes", "avg_shares", "avg_comments", "avg_saves"]
+    avg_values  = [overview_df[m].iloc[0] for m in avg_metrics]
+    plt.figure()
+    ax = plt.gca()
+    ax.bar(labels, avg_values, color=["#1f77b4","#ff7f0e","#2ca02c","#d62728","#9467bd"])
+    ax.set_title("Average Engagement per Video", fontweight="bold")
+    ax.set_ylabel("Average Count")
+    ax.tick_params(axis="x", rotation=45)
+    _annotate_bars(ax, avg_values, "{:,.0f}")
+    plt.tight_layout(); plt.show()
+
+    # --- Engagement rates ---
+    rate_labels = ["Like Rate","Share Rate","Comment Rate","Save Rate","Overall\nEngagement"]
+    rate_values = [
+        overview_df["like_rate"].iloc[0],
+        overview_df["share_rate"].iloc[0],
+        overview_df["comment_rate"].iloc[0],
+        overview_df["save_rate"].iloc[0],
+        overview_df["engagement_rate"].iloc[0],
+    ]
+    plt.figure()
+    ax = plt.gca()
+    ax.bar(rate_labels, rate_values, color=["#ff7f0e","#2ca02c","#d62728","#9467bd","#8c564b"])
+    ax.set_title("Engagement Rates (%)", fontweight="bold")
+    ax.set_ylabel("Percentage")
+    ax.tick_params(axis="x", rotation=45)
+    _annotate_bars(ax, rate_values, "{:.2f}%")
+    plt.tight_layout(); plt.show()
+
+    # --- Content stats (text-only figure) ---
+    plt.figure()
+    ax = plt.gca()
+    ax.axis("off")
+    ax.set_title("Content Stats", fontweight="bold")
+    ax.text(0.5, 0.7, f"Total Videos\n{int(overview_df['total_videos'].iloc[0]):,}",
+            ha="center", va="center", fontsize=20, fontweight="bold")
+    ax.text(0.5, 0.4, f"Avg Duration\n{overview_df['avg_duration_seconds'].iloc[0]:.1f}s",
+            ha="center", va="center", fontsize=16)
+    ax.text(0.5, 0.15, f"Avg Videos/Month\n{overview_df['avg_videos_per_month'].iloc[0]:.1f}",
+            ha="center", va="center", fontsize=16, color="#2ca02c")
+    plt.tight_layout(); plt.show()
+
+    # --- Summary statistics (text-only figure) ---
+    summary_text = f"""
+SUMMARY STATISTICS
+
+Total Videos: {int(overview_df['total_videos'].iloc[0]):,}
+Total Views: {overview_df['total_views'].iloc[0]:,.0f}
+Total Likes: {overview_df['total_likes'].iloc[0]:,.0f}
+
+Avg Views/Video: {overview_df['avg_views'].iloc[0]:,.0f}
+Avg Likes/Video: {overview_df['avg_likes'].iloc[0]:,.0f}
+Avg Videos/Month: {overview_df['avg_videos_per_month'].iloc[0]:.1f}
+
+Engagement Rate: {overview_df['engagement_rate'].iloc[0]:.2f}%
+"""
+    plt.figure()
+    ax = plt.gca()
+    ax.axis("off")
+    ax.text(0.05, 0.5, summary_text, ha="left", va="center", fontsize=11, family="monospace")
+    plt.tight_layout(); plt.show()
+
+def plot_top_videos(top_videos):
+    """Three separate figures."""
+    # Top by views
+    tv = top_videos["by_views"].head(10)
+    plt.figure()
+    ax = plt.gca()
+    ax.barh(range(len(tv)), tv["views"])
+    ax.set_yticks(range(len(tv)))
+    ax.set_yticklabels([t[:30]+"..." if len(t)>30 else t for t in tv["title"]], fontsize=8)
+    ax.set_xlabel("Views"); ax.set_title("Top 10 by Views", fontweight="bold")
+    ax.invert_yaxis()
+    plt.tight_layout(); plt.show()
+
+    # Top by total engagement
+    te = top_videos["by_engagement"].head(10)
+    plt.figure()
+    ax = plt.gca()
+    ax.barh(range(len(te)), te["total_engagement"], color="orange")
+    ax.set_yticks(range(len(te)))
+    ax.set_yticklabels([t[:30]+"..." if len(t)>30 else t for t in te["title"]], fontsize=8)
+    ax.set_xlabel("Total Engagement"); ax.set_title("Top 10 by Total Engagement", fontweight="bold")
+    ax.invert_yaxis()
+    plt.tight_layout(); plt.show()
+
+    # Top by engagement rate
+    tr = top_videos["by_engagement_rate"].head(10)
+    plt.figure()
+    ax = plt.gca()
+    ax.barh(range(len(tr)), tr["engagement_rate"], color="green")
+    ax.set_yticks(range(len(tr)))
+    ax.set_yticklabels([t[:30]+"..." if len(t)>30 else t for t in tr["title"]], fontsize=8)
+    ax.set_xlabel("Engagement Rate (%)"); ax.set_title("Top 10 by Engagement Rate", fontweight="bold")
+    ax.invert_yaxis()
+    plt.tight_layout(); plt.show()
+
+def plot_temporal_analysis(temporal):
+    """Four separate figures."""
+    monthly = temporal["monthly"].copy()
+    monthly["date_label"] = monthly["publish_year"].astype(str) + "-" + monthly["publish_month"].astype(str).str.zfill(2)
+    x_idx = range(len(monthly))
+
+    # Total views by month
+    plt.figure()
+    ax = plt.gca()
+    ax.plot(x_idx, monthly["total_views"], marker="o", linewidth=2)
+    ax.set_title("Total Views by Month", fontweight="bold")
+    ax.set_xlabel("Month"); ax.set_ylabel("Total Views")
+    ax.grid(True, alpha=0.3); ax.tick_params(axis="x", rotation=45)
+    ax.set_xticks(x_idx); ax.set_xticklabels(monthly["date_label"])
+    plt.tight_layout(); plt.show()
+
+    # Videos posted by month
+    plt.figure()
+    ax = plt.gca()
+    ax.bar(x_idx, monthly["video_count"], color="coral")
+    ax.set_title("Videos Posted by Month", fontweight="bold")
+    ax.set_xlabel("Month"); ax.set_ylabel("Video Count")
+    ax.grid(True, alpha=0.3, axis="y"); ax.tick_params(axis="x", rotation=45)
+    ax.set_xticks(x_idx); ax.set_xticklabels(monthly["date_label"])
+    plt.tight_layout(); plt.show()
+
+    # Average views per video by month
+    plt.figure()
+    ax = plt.gca()
+    ax.plot(x_idx, monthly["avg_views"], marker="s", color="green", linewidth=2)
+    ax.set_title("Average Views per Video by Month", fontweight="bold")
+    ax.set_xlabel("Month"); ax.set_ylabel("Avg Views")
+    ax.grid(True, alpha=0.3); ax.tick_params(axis="x", rotation=45)
+    ax.set_xticks(x_idx); ax.set_xticklabels(monthly["date_label"])
+    plt.tight_layout(); plt.show()
+
+    # Average views by day of week
+    dow = temporal["day_of_week"]
+    plt.figure()
+    ax = plt.gca()
+    ax.bar(dow["day_name"], dow["avg_views"], color="purple")
+    ax.set_title("Average Views by Day of Week", fontweight="bold")
+    ax.set_xlabel("Day of Week"); ax.set_ylabel("Avg Views")
+    ax.tick_params(axis="x", rotation=45); ax.grid(True, alpha=0.3, axis="y")
+    plt.tight_layout(); plt.show()
+
+def plot_videos_per_month_by_year(yearly_stats):
+    """Already produced as three separate figures: grouped bars, lines, heatmap."""
+    years  = sorted(yearly_stats["publish_year"].unique())
+    months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    month_nums = list(range(1, 13))
+    colors = plt.cm.viridis(np.linspace(0, 1, len(years)))
+    x = np.arange(len(months))
+
+    # --- Grouped Bar Chart ---
+    plt.figure(figsize=(14,6))
+    ax = plt.gca()
+    ax.set_title("Videos Posted by Month - Year Comparison (Grouped Bar Chart)", fontweight="bold")
+    width = 0.8 / len(years)
+    for i, year in enumerate(years):
+        yd = yearly_stats[yearly_stats["publish_year"] == year]
+        vals = [(yd[yd["publish_month"] == m]["video_count"].values[0] if len(yd[yd["publish_month"] == m])>0 else 0)
+                for m in month_nums]
+        offset = (i - len(years)/2 + 0.5) * width
+        bars = ax.bar(x + offset, vals, width, label=str(int(year)), color=colors[i])
+        for j, (bar, val) in enumerate(zip(bars, vals)):
+            if val > 0:
+                ax.text(bar.get_x() + bar.get_width()/2., bar.get_height(), f"{int(val)}",
+                        ha="center", va="bottom", fontsize=7)
+    ax.set_xlabel("Month", fontweight="bold"); ax.set_ylabel("Number of Videos", fontweight="bold")
+    ax.set_xticks(x); ax.set_xticklabels(months); ax.legend(title="Year", loc="upper left")
+    ax.grid(True, alpha=0.3, axis="y")
+    plt.tight_layout(); plt.show()
+
+    # --- Line Chart ---
+    plt.figure(figsize=(14,6))
+    ax = plt.gca()
+    ax.set_title("Videos Posted by Month - Year Comparison (Line Chart)", fontweight="bold")
+    for i, year in enumerate(years):
+        yd = yearly_stats[yearly_stats["publish_year"] == year]
+        vals = [(yd[yd["publish_month"] == m]["video_count"].values[0] if len(yd[yd["publish_month"] == m])>0 else 0)
+                for m in month_nums]
+        ax.plot(months, vals, marker="o", linewidth=2.5, markersize=8, label=str(int(year)), color=colors[i])
+        for j, val in enumerate(vals):
+            if val > 0:
+                ax.text(j, val, f"{int(val)}", ha="center", va="bottom", fontsize=8)
+    ax.set_xlabel("Month", fontweight="bold"); ax.set_ylabel("Number of Videos", fontweight="bold")
+    ax.legend(title="Year", loc="upper left"); ax.grid(True, alpha=0.3)
+    plt.tight_layout(); plt.show()
+
+    # --- Heatmap ---
+    plt.figure(figsize=(14,6))
+    ax = plt.gca()
+    ax.set_title("Videos Posted by Month - Year Comparison (Heatmap)", fontweight="bold")
+    heatmap_data = []
+    for year in years:
+        yd = yearly_stats[yearly_stats["publish_year"] == year]
+        vals = [(yd[yd["publish_month"] == m]["video_count"].values[0] if len(yd[yd["publish_month"] == m])>0 else 0)
+                for m in month_nums]
+        heatmap_data.append(vals)
+    arr = np.array(heatmap_data)
+    im = ax.imshow(arr, cmap="YlOrRd", aspect="auto")
+    ax.set_xticks(np.arange(len(months))); ax.set_yticks(np.arange(len(years)))
+    ax.set_xticklabels(months); ax.set_yticklabels([str(int(y)) for y in years])
+    cbar = plt.colorbar(im, ax=ax); cbar.set_label("Number of Videos", rotation=270, labelpad=20, fontweight="bold")
+    for i in range(len(years)):
+        for j in range(len(months)):
+            ax.text(j, i, int(arr[i, j]),
+                    ha="center", va="center",
+                    color=("black" if arr[i, j] < arr.max()/2 else "white"),
+                    fontsize=9, fontweight="bold")
+    ax.set_xlabel("Month", fontweight="bold"); ax.set_ylabel("Year", fontweight="bold")
+    plt.tight_layout(); plt.show()
+
+def plot_content_analysis(content):
+    """Four separate figures (if data available)."""
+    # Post type count
+    if not content["post_type"].empty:
+        pt = content["post_type"]
+        plt.figure()
+        ax = plt.gca()
+        ax.bar(pt["post_type"], pt["video_count"], color="steelblue")
+        ax.set_title("Video Count by Post Type", fontweight="bold")
+        ax.set_xlabel("Post Type"); ax.set_ylabel("Count"); ax.tick_params(axis="x", rotation=45)
+        for i, v in enumerate(pt["video_count"]):
+            ax.text(i, v, str(int(v)), ha="center", va="bottom")
+        plt.tight_layout(); plt.show()
+
+        # Avg views by post type
+        plt.figure()
+        ax = plt.gca()
+        ax.bar(pt["post_type"], pt["avg_views"], color="orange")
+        ax.set_title("Average Views by Post Type", fontweight="bold")
+        ax.set_xlabel("Post Type"); ax.set_ylabel("Avg Views"); ax.tick_params(axis="x", rotation=45)
+        plt.tight_layout(); plt.show()
+
+    # Duration analysis
+    if not content["duration"].empty:
+        dur = content["duration"]
+        plt.figure()
+        ax = plt.gca()
+        ax.bar(dur["duration_bucket"], dur["video_count"], color="green")
+        ax.set_title("Video Count by Duration", fontweight="bold")
+        ax.set_xlabel("Duration Bucket"); ax.set_ylabel("Count"); ax.tick_params(axis="x", rotation=45)
+        for i, v in enumerate(dur["video_count"]):
+            ax.text(i, v, str(int(v)), ha="center", va="bottom")
+        plt.tight_layout(); plt.show()
+
+        # Avg engagement by duration
+        plt.figure()
+        ax = plt.gca()
+        ax.bar(dur["duration_bucket"], dur["avg_engagement"], color="purple")
+        ax.set_title("Average Engagement by Duration", fontweight="bold")
+        ax.set_xlabel("Duration Bucket"); ax.set_ylabel("Avg Engagement"); ax.tick_params(axis="x", rotation=45)
+        plt.tight_layout(); plt.show()
+
+    # Sound used vs not - IMPROVED VERSION
+    if not content["sound"].empty:
+        sd = content["sound"]
+        plt.figure(figsize=(14, 6))
+        ax = plt.gca()
+        
+        # Sort by total views descending
+        sd_sorted = sd.sort_values("total_views", ascending=True)
+        
+        bars = ax.barh(range(len(sd_sorted)), sd_sorted["total_views"], color="#8c564b")
+        ax.set_yticks(range(len(sd_sorted)))
+        ax.set_yticklabels([label[:40]+"..." if len(label)>40 else label for label in sd_sorted["sound_category"]], fontsize=9)
+        ax.set_xlabel("Total Views", fontweight="bold")
+        ax.set_title("Total Views by Sound Usage", fontweight="bold")
+        
+        # Add value labels on bars
+        for i, (bar, val) in enumerate(zip(bars, sd_sorted["total_views"])):
+            ax.text(val, bar.get_y() + bar.get_height()/2, f"{int(val):,}", 
+                   ha="left", va="center", fontsize=8, fontweight="bold")
+        
+        ax.grid(True, alpha=0.3, axis="x")
+        plt.tight_layout()
+        plt.show()
+
+def plot_engagement_distribution(conn):
+    """Each distribution in its own figure."""
+    query = """
+    SELECT 
+        views,
+        likes,
+        shares,
+        comments_added,
+        saves,
+        CASE WHEN views > 0 THEN (likes::FLOAT / views) * 100 ELSE 0 END AS like_rate,
+        CASE WHEN views > 0 THEN (shares::FLOAT / views) * 100 ELSE 0 END AS share_rate,
+        CASE WHEN views > 0 THEN (comments_added::FLOAT / views) * 100 ELSE 0 END AS comment_rate,
+        CASE WHEN views > 0 THEN 
+            ((COALESCE(likes,0) + COALESCE(shares,0) + COALESCE(comments_added,0) + COALESCE(saves,0))::FLOAT / views) * 100
+        ELSE 0 END AS engagement_rate
+    FROM public.tt_video_etl
+    WHERE views > 0;
+    """
+    df = execute_query(conn, query)
+
+    # Views
+    plt.figure(figsize=(12,6))
+    ax = plt.gca()
+    ax.hist(df["views"], bins=50, color="skyblue", edgecolor="black")
+    ax.set_title("Views Distribution", fontweight="bold"); ax.set_xlabel("Views"); ax.set_ylabel("Frequency")
+    ax.axvline(df["views"].median(), color="red", linestyle="--", label=f"Median: {df['views'].median():,.0f}")
+    ax.legend(); plt.tight_layout(); plt.show()
+
+    # Likes
+    plt.figure(figsize=(12,6))
+    ax = plt.gca()
+    ax.hist(df["likes"], bins=50, color="orange", edgecolor="black")
+    ax.set_title("Likes Distribution", fontweight="bold"); ax.set_xlabel("Likes"); ax.set_ylabel("Frequency")
+    ax.axvline(df["likes"].median(), color="red", linestyle="--", label=f"Median: {df['likes'].median():,.0f}")
+    ax.legend(); plt.tight_layout(); plt.show()
+
+    # Shares
+    plt.figure(figsize=(12,6))
+    ax = plt.gca()
+    ax.hist(df["shares"], bins=50, color="green", edgecolor="black")
+    ax.set_title("Shares Distribution", fontweight="bold"); ax.set_xlabel("Shares"); ax.set_ylabel("Frequency")
+    ax.axvline(df["shares"].median(), color="red", linestyle="--", label=f"Median: {df['shares'].median():,.0f}")
+    ax.legend(); plt.tight_layout(); plt.show()
+
+    # Like Rate
+    plt.figure(figsize=(12,6))
+    ax = plt.gca()
+    ax.hist(df["like_rate"], bins=50, color="purple", edgecolor="black")
+    ax.set_title("Like Rate Distribution (%)", fontweight="bold"); ax.set_xlabel("Like Rate (%)"); ax.set_ylabel("Frequency")
+    ax.axvline(df["like_rate"].median(), color="red", linestyle="--", label=f"Median: {df['like_rate'].median():.2f}%")
+    ax.legend(); plt.tight_layout(); plt.show()
+
+    # Engagement Rate
+    plt.figure(figsize=(12,6))
+    ax = plt.gca()
+    ax.hist(df["engagement_rate"], bins=50, color="coral", edgecolor="black")
+    ax.set_title("Engagement Rate Distribution (%)", fontweight="bold"); ax.set_xlabel("Engagement Rate (%)"); ax.set_ylabel("Frequency")
+    ax.axvline(df["engagement_rate"].median(), color="red", linestyle="--", label=f"Median: {df['engagement_rate'].median():.2f}%")
+    ax.legend(); plt.tight_layout(); plt.show()
+
+    # Box plot comparison
+    plt.figure(figsize=(12,6))
+    ax = plt.gca()
+    ax.boxplot([df["like_rate"], df["share_rate"], df["engagement_rate"]],
+               labels=["Like Rate","Share Rate","Engagement Rate"])
+    ax.set_title("Engagement Rates Comparison", fontweight="bold"); ax.set_ylabel("Rate (%)")
+    ax.grid(True, alpha=0.3, axis="y")
+    plt.tight_layout(); plt.show()
+
+# ================= QUERY FUNCTIONS =================
+def get_overview_metrics(conn):
+    query = """
+    SELECT 
+        COUNT(*) as total_videos,
+        SUM(views) as total_views,
+        SUM(likes) as total_likes,
+        SUM(shares) as total_shares,
+        SUM(comments_added) as total_comments,
+        SUM(saves) as total_saves,
+        AVG(views) as avg_views,
+        AVG(likes) as avg_likes,
+        AVG(shares) as avg_shares,
+        AVG(comments_added) as avg_comments,
+        AVG(saves) as avg_saves,
+        AVG(duration_sec) as avg_duration_seconds,
+        COUNT(DISTINCT CONCAT(publish_year, '-', publish_month)) as total_months
+    FROM public.tt_video_etl
+    WHERE views IS NOT NULL;
+    """
+    df = execute_query(conn, query)
+
+    total_views    = df["total_views"].iloc[0] or 0
+    total_likes    = df["total_likes"].iloc[0] or 0
+    total_shares   = df["total_shares"].iloc[0] or 0
+    total_comments = df["total_comments"].iloc[0] or 0
+    total_saves    = df["total_saves"].iloc[0] or 0
+    total_videos   = df["total_videos"].iloc[0] or 0
+    total_months   = df["total_months"].iloc[0] or 1
+
+    df["engagement_rate"] = safe_divide(
+        (total_likes + total_shares + total_comments + total_saves), total_views) * 100
+    df["like_rate"]    = safe_divide(total_likes, total_views) * 100
+    df["share_rate"]   = safe_divide(total_shares, total_views) * 100
+    df["comment_rate"] = safe_divide(total_comments, total_views) * 100
+    df["save_rate"]    = safe_divide(total_saves, total_views) * 100
+    df["avg_videos_per_month"] = safe_divide(total_videos, total_months)
+
     return df
 
-def plot_cumulative_reach(df):
-    """Plot cumulative reach growth over time"""
-    # Sort by publish time and calculate cumulative metrics
-    df_sorted = df.sort_values('publish_time').copy()
-    df_sorted['cumulative_reach'] = df_sorted['reach'].cumsum()
-    df_sorted['cumulative_engagement'] = df_sorted['total_engagement'].cumsum()
-    
-    # Calculate cumulative engagement rate
-    df_sorted['cumulative_engagement_rate'] = np.where(
-        df_sorted['cumulative_reach'] > 0,
-        (df_sorted['cumulative_engagement'] / df_sorted['cumulative_reach']) * 100,
-        0
+def get_top_performing_videos(conn, limit=10):
+    query_views = f"""
+    SELECT video_id, title, views, likes, shares, comments_added, saves, publish_time, url
+    FROM public.tt_video_etl
+    WHERE views IS NOT NULL
+    ORDER BY views DESC
+    LIMIT {limit};
+    """
+    query_engagement = f"""
+    SELECT video_id, title, views, likes, shares, comments_added, saves,
+           (COALESCE(likes,0) + COALESCE(shares,0) + COALESCE(comments_added,0) + COALESCE(saves,0)) as total_engagement,
+           publish_time, url
+    FROM public.tt_video_etl
+    WHERE views IS NOT NULL
+    ORDER BY total_engagement DESC
+    LIMIT {limit};
+    """
+    query_engagement_rate = f"""
+    SELECT video_id, title, views, likes, shares, comments_added, saves,
+           CASE WHEN views > 0 THEN 
+               ((COALESCE(likes,0) + COALESCE(shares,0) + COALESCE(comments_added,0) + COALESCE(saves,0))::FLOAT / views) * 100
+           ELSE 0 END as engagement_rate,
+           publish_time, url
+    FROM public.tt_video_etl
+    WHERE views > 0
+    ORDER BY engagement_rate DESC
+    LIMIT {limit};
+    """
+    return {
+        "by_views": execute_query(conn, query_views),
+        "by_engagement": execute_query(conn, query_engagement),
+        "by_engagement_rate": execute_query(conn, query_engagement_rate),
+    }
+
+def get_temporal_analysis(conn):
+    query_monthly = """
+    SELECT publish_year, publish_month, COUNT(*) as video_count,
+           SUM(views) as total_views, SUM(likes) as total_likes,
+           SUM(shares) as total_shares, SUM(comments_added) as total_comments,
+           AVG(views) as avg_views, AVG(likes) as avg_likes
+    FROM public.tt_video_etl
+    WHERE publish_year IS NOT NULL AND publish_month IS NOT NULL AND views IS NOT NULL
+    GROUP BY publish_year, publish_month
+    ORDER BY publish_year ASC, publish_month ASC;
+    """
+    query_dow = """
+    SELECT EXTRACT(DOW FROM publish_time) as day_of_week,
+           CASE EXTRACT(DOW FROM publish_time)
+               WHEN 0 THEN 'Sunday' WHEN 1 THEN 'Monday' WHEN 2 THEN 'Tuesday'
+               WHEN 3 THEN 'Wednesday' WHEN 4 THEN 'Thursday' WHEN 5 THEN 'Friday'
+               WHEN 6 THEN 'Saturday'
+           END as day_name,
+           COUNT(*) as video_count, AVG(views) as avg_views, AVG(likes) as avg_likes,
+           AVG(COALESCE(likes,0) + COALESCE(shares,0) + COALESCE(comments_added,0) + COALESCE(saves,0)) as avg_engagement
+    FROM public.tt_video_etl
+    WHERE publish_time IS NOT NULL AND views IS NOT NULL
+    GROUP BY EXTRACT(DOW FROM publish_time)
+    ORDER BY EXTRACT(DOW FROM publish_time);
+    """
+    query_yearly = """
+    SELECT 
+        publish_year,
+        publish_month,
+        COUNT(*) as video_count
+    FROM public.tt_video_etl
+    WHERE publish_year IS NOT NULL AND publish_month IS NOT NULL AND views IS NOT NULL
+    GROUP BY publish_year, publish_month
+    ORDER BY publish_year, publish_month;
+    """
+    return {
+        "monthly": execute_query(conn, query_monthly),
+        "day_of_week": execute_query(conn, query_dow),
+        "yearly": execute_query(conn, query_yearly),
+    }
+
+def get_content_analysis(conn):
+    query_post_type = """
+    SELECT post_type, COUNT(*) as video_count,
+           AVG(views) as avg_views, AVG(likes) as avg_likes,
+           AVG(shares) as avg_shares, AVG(comments_added) as avg_comments,
+           SUM(views) as total_views
+    FROM public.tt_video_etl
+    WHERE post_type IS NOT NULL AND views IS NOT NULL
+    GROUP BY post_type
+    ORDER BY total_views DESC;
+    """
+    query_duration = """
+    WITH duration_buckets AS (
+        SELECT 
+            CASE 
+                WHEN duration_sec <= 15 THEN '0-15s'
+                WHEN duration_sec <= 30 THEN '16-30s'
+                WHEN duration_sec <= 60 THEN '31-60s'
+                WHEN duration_sec <= 120 THEN '61-120s'
+                ELSE '120s+'
+            END as duration_bucket,
+            CASE 
+                WHEN duration_sec <= 15 THEN 1
+                WHEN duration_sec <= 30 THEN 2
+                WHEN duration_sec <= 60 THEN 3
+                WHEN duration_sec <= 120 THEN 4
+                ELSE 5
+            END as sort_order,
+            views, likes, shares, comments_added, saves
+        FROM public.tt_video_etl
+        WHERE duration_sec IS NOT NULL AND views IS NOT NULL
     )
-    
-    # Create figure with 2 subplots
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
-    
-    # Plot 1: Cumulative Reach
-    ax1.plot(df_sorted['publish_time'], df_sorted['cumulative_reach'], 
-             linewidth=2, color='#1f77b4', marker='o', markersize=3)
-    ax1.fill_between(df_sorted['publish_time'], df_sorted['cumulative_reach'], 
-                     alpha=0.3, color='#1f77b4')
-    
-    ax1.set_title('Cumulative Reach Growth Over Time', fontsize=16, fontweight='bold')
-    ax1.set_xlabel('Date', fontsize=12)
-    ax1.set_ylabel('Cumulative Reach', fontsize=12)
-    ax1.grid(True, alpha=0.3)
-    ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
-    
-    # Plot 2: Cumulative Engagement Rate
-    ax2.plot(df_sorted['publish_time'], df_sorted['cumulative_engagement_rate'], 
-             linewidth=2, color='#2ecc71', marker='o', markersize=3)
-    ax2.fill_between(df_sorted['publish_time'], df_sorted['cumulative_engagement_rate'], 
-                     alpha=0.3, color='#2ecc71')
-    
-    ax2.set_title('Cumulative Engagement Rate Over Time', fontsize=16, fontweight='bold')
-    ax2.set_xlabel('Date', fontsize=12)
-    ax2.set_ylabel('Cumulative Engagement Rate (%)', fontsize=12)
-    ax2.grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plt.show()
+    SELECT duration_bucket, COUNT(*) as video_count,
+           AVG(views) as avg_views, AVG(likes) as avg_likes,
+           AVG(COALESCE(likes,0) + COALESCE(shares,0) + COALESCE(comments_added,0) + COALESCE(saves,0)) as avg_engagement
+    FROM duration_buckets
+    GROUP BY duration_bucket, sort_order
+    ORDER BY sort_order;
+    """
+    query_sound = """
+    SELECT 
+        CASE 
+            WHEN sound_used IS NULL OR sound_used = '' OR TRIM(sound_used) = '' THEN 'No Sound'
+            ELSE TRIM(sound_used)
+        END as sound_category,
+        COUNT(*) as video_count, 
+        SUM(views) as total_views,
+        AVG(views) as avg_views, 
+        AVG(likes) as avg_likes
+    FROM public.tt_video_etl
+    WHERE views IS NOT NULL
+        AND LOWER(TRIM(sound_used)) NOT IN ('sunet original', 'please', 'apt. - rose')
+    GROUP BY sound_category
+    ORDER BY total_views DESC
+    LIMIT 20;
+    """
+    return {
+        "post_type": execute_query(conn, query_post_type),
+        "duration": execute_query(conn, query_duration),
+        "sound": execute_query(conn, query_sound),
+    }
 
-def plot_engagement_summary_metrics(df):
-    """Plot total engagement metrics and engagement rates"""
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
-    
-    # Calculate totals
-    total_reactions = df['reactions'].sum()
-    total_comments = df['comments'].sum()
-    total_shares = df['shares'].sum()
-    total_reach = df['reach'].sum()
-    total_engagement = df['total_engagement'].sum()
-    
-    # Metrics data for first chart
-    metrics = ['Reactions', 'Comments', 'Shares']
-    values = [total_reactions, total_comments, total_shares]
-    colors_chart1 = ['#ff7f0e', '#9467bd', '#2ca02c']
-    
-    # Plot 1: Total Engagement Metrics
-    bars1 = ax1.bar(metrics, values, color=colors_chart1, alpha=0.8, edgecolor='black', linewidth=1.5)
-    ax1.set_title('Total Engagement Metrics', fontsize=16, fontweight='bold')
-    ax1.set_ylabel('Count', fontsize=12)
-    ax1.grid(True, alpha=0.3, axis='y')
-    ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
-    
-    # Add value labels on bars
-    for bar in bars1:
-        height = bar.get_height()
-        ax1.text(bar.get_x() + bar.get_width()/2., height,
-                f'{int(height):,}',
-                ha='center', va='bottom', fontsize=11, fontweight='bold')
-    
-    # Calculate engagement rates
-    like_rate = (total_reactions / total_reach * 100) if total_reach > 0 else 0
-    comment_rate = (total_comments / total_reach * 100) if total_reach > 0 else 0
-    share_rate = (total_shares / total_reach * 100) if total_reach > 0 else 0
-    overall_engagement_rate = (total_engagement / total_reach * 100) if total_reach > 0 else 0
-    
-    # Rates data for second chart
-    rate_labels = ['Like Rate', 'Comment Rate', 'Share Rate', 'Overall\nEngagement']
-    rate_values = [like_rate, comment_rate, share_rate, overall_engagement_rate]
-    colors_chart2 = ['#ff7f0e', '#9467bd', '#2ca02c', '#8b4513']
-    
-    # Plot 2: Engagement Rates
-    bars2 = ax2.bar(rate_labels, rate_values, color=colors_chart2, alpha=0.8, edgecolor='black', linewidth=1.5)
-    ax2.set_title('Engagement Rates (%)', fontsize=16, fontweight='bold')
-    ax2.set_ylabel('Percentage', fontsize=12)
-    ax2.grid(True, alpha=0.3, axis='y')
-    
-    # Add percentage labels on bars
-    for bar in bars2:
-        height = bar.get_height()
-        ax2.text(bar.get_x() + bar.get_width()/2., height,
-                f'{height:.2f}%',
-                ha='center', va='bottom', fontsize=11, fontweight='bold')
-    
-    plt.tight_layout()
-    plt.show()
+# ================= MAIN EXECUTION =================
+def generate_descriptive_analytics():
+    print("Starting TikTok Descriptive Analytics with Visualizations...\n")
+    max_retries, retry_delay, conn = 3, 2, None
 
-def plot_engagement_by_post_type(df):
-    """Analyze engagement by post type"""
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    
-    # 1. Average engagement by post type
-    engagement_by_type = df.groupby('post_type').agg({
-        'total_engagement': 'mean',
-        'reach': 'mean',
-        'engagement_rate': 'mean',
-        'post_id': 'count'
-    }).reset_index()
-    engagement_by_type.columns = ['post_type', 'avg_engagement', 'avg_reach', 'avg_engagement_rate', 'post_count']
-    
-    axes[0, 0].bar(engagement_by_type['post_type'], engagement_by_type['avg_engagement'], 
-                   color='#2ecc71', alpha=0.8)
-    axes[0, 0].set_title('Average Total Engagement by Post Type', fontweight='bold')
-    axes[0, 0].set_xlabel('Post Type')
-    axes[0, 0].set_ylabel('Avg Total Engagement')
-    axes[0, 0].tick_params(axis='x', rotation=45)
-    
-    # 2. Reach by post type
-    axes[0, 1].bar(engagement_by_type['post_type'], engagement_by_type['avg_reach'], 
-                   color='#3498db', alpha=0.8)
-    axes[0, 1].set_title('Average Reach by Post Type', fontweight='bold')
-    axes[0, 1].set_xlabel('Post Type')
-    axes[0, 1].set_ylabel('Avg Reach')
-    axes[0, 1].tick_params(axis='x', rotation=45)
-    
-    # 3. Engagement rate by post type
-    axes[1, 0].bar(engagement_by_type['post_type'], engagement_by_type['avg_engagement_rate'] * 100, 
-                   color='#e74c3c', alpha=0.8)
-    axes[1, 0].set_title('Average Engagement Rate by Post Type', fontweight='bold')
-    axes[1, 0].set_xlabel('Post Type')
-    axes[1, 0].set_ylabel('Avg Engagement Rate (%)')
-    axes[1, 0].tick_params(axis='x', rotation=45)
-    
-    # 4. Post count by type
-    axes[1, 1].pie(engagement_by_type['post_count'], labels=engagement_by_type['post_type'],
-                   autopct='%1.1f%%', startangle=90, colors=sns.color_palette('pastel'))
-    axes[1, 1].set_title('Distribution of Post Types', fontweight='bold')
-    
-    plt.tight_layout()
-    plt.show()
+    for attempt in range(max_retries):
+        try:
+            print(f"Attempting database connection (attempt {attempt+1}/{max_retries})...")
+            conn = psycopg2.connect(**db_params)
+            print("✓ Database connection successful!\n")
+            break
+        except psycopg2.OperationalError as e:
+            print(f"✗ Connection attempt {attempt+1} failed: {str(e)}")
+            if attempt < max_retries - 1:
+                import time; print(f"  Retrying in {retry_delay} seconds...\n"); time.sleep(retry_delay)
+            else:
+                print("\n❌ Failed to connect to database after multiple attempts.")
+                print("Please check internet, server status, and credentials."); return
+    if conn is None:
+        print("❌ Could not establish database connection."); return
 
-def plot_temporal_patterns(df):
-    """Analyze temporal posting and engagement patterns"""
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    
-    # 1. Posts per month
-    monthly_posts = df.groupby(['year', 'month']).size().reset_index(name='post_count')
-    monthly_posts['year_month'] = pd.to_datetime(monthly_posts[['year', 'month']].assign(day=1))
-    
-    axes[0, 0].plot(monthly_posts['year_month'], monthly_posts['post_count'], 
-                    marker='o', linewidth=2, color='#9b59b6')
-    axes[0, 0].set_title('Posts Published Per Month', fontweight='bold')
-    axes[0, 0].set_xlabel('Date')
-    axes[0, 0].set_ylabel('Number of Posts')
-    axes[0, 0].grid(True, alpha=0.3)
-    axes[0, 0].tick_params(axis='x', rotation=45)
-    
-    # 2. Engagement by day of week
-    df['day_of_week'] = df['publish_time'].dt.day_name()
-    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    engagement_by_day = df.groupby('day_of_week')['total_engagement'].mean().reindex(day_order)
-    
-    axes[0, 1].bar(range(7), engagement_by_day.values, color='#f39c12', alpha=0.8)
-    axes[0, 1].set_xticks(range(7))
-    axes[0, 1].set_xticklabels(day_order, rotation=45, ha='right')
-    axes[0, 1].set_title('Average Engagement by Day of Week', fontweight='bold')
-    axes[0, 1].set_ylabel('Avg Total Engagement')
-    
-    # 3. Reach by hour (if time data is available)
-    df['hour'] = df['publish_time'].dt.hour
-    reach_by_hour = df.groupby('hour')['reach'].mean()
-    
-    axes[1, 0].plot(reach_by_hour.index, reach_by_hour.values, 
-                    marker='o', linewidth=2, color='#16a085')
-    axes[1, 0].set_title('Average Reach by Hour of Day', fontweight='bold')
-    axes[1, 0].set_xlabel('Hour')
-    axes[1, 0].set_ylabel('Avg Reach')
-    axes[1, 0].grid(True, alpha=0.3)
-    axes[1, 0].set_xticks(range(0, 24, 2))
-    
-    # 4. Monthly reach trend
-    monthly_reach = df.groupby(['year', 'month'])['reach'].sum().reset_index()
-    monthly_reach['year_month'] = pd.to_datetime(monthly_reach[['year', 'month']].assign(day=1))
-    
-    axes[1, 1].plot(monthly_reach['year_month'], monthly_reach['reach'], 
-                    marker='o', linewidth=2, color='#c0392b')
-    axes[1, 1].fill_between(monthly_reach['year_month'], monthly_reach['reach'], alpha=0.3, color='#c0392b')
-    axes[1, 1].set_title('Total Monthly Reach Trend', fontweight='bold')
-    axes[1, 1].set_xlabel('Date')
-    axes[1, 1].set_ylabel('Total Reach')
-    axes[1, 1].grid(True, alpha=0.3)
-    axes[1, 1].tick_params(axis='x', rotation=45)
-    
-    plt.tight_layout()
-    plt.show()
+    try:
+        print("Fetching data...")
+        overview = get_overview_metrics(conn)
+        top_videos = get_top_performing_videos(conn, limit=10)
+        temporal = get_temporal_analysis(conn)
+        content  = get_content_analysis(conn)
 
-def plot_video_performance(df):
-    """Analyze video content performance"""
-    video_df = df[df['duration_sec'] > 0].copy()
-    
-    if len(video_df) == 0:
-        print("No video data available")
-        return
-    
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    
-    # 1. Video duration vs engagement
-    axes[0, 0].scatter(video_df['duration_sec'], video_df['total_engagement'], 
-                       alpha=0.5, color='#8e44ad')
-    axes[0, 0].set_title('Video Duration vs Total Engagement', fontweight='bold')
-    axes[0, 0].set_xlabel('Duration (seconds)')
-    axes[0, 0].set_ylabel('Total Engagement')
-    axes[0, 0].grid(True, alpha=0.3)
-    
-    # 2. Completion rate distribution
-    completion_rates = video_df['completion_rate'].dropna()
-    axes[0, 1].hist(completion_rates * 100, bins=30, color='#27ae60', alpha=0.7, edgecolor='black')
-    axes[0, 1].set_title('Video Completion Rate Distribution', fontweight='bold')
-    axes[0, 1].set_xlabel('Completion Rate (%)')
-    axes[0, 1].set_ylabel('Frequency')
-    axes[0, 1].axvline(completion_rates.mean() * 100, color='red', 
-                       linestyle='--', linewidth=2, label=f'Mean: {completion_rates.mean()*100:.1f}%')
-    axes[0, 1].legend()
-    
-    # 3. Duration bins vs avg engagement
-    video_df['duration_bin'] = pd.cut(video_df['duration_sec'], 
-                                       bins=[0, 30, 60, 120, 300, float('inf')],
-                                       labels=['0-30s', '30-60s', '1-2m', '2-5m', '5m+'])
-    engagement_by_duration = video_df.groupby('duration_bin')['total_engagement'].mean()
-    
-    axes[1, 0].bar(range(len(engagement_by_duration)), engagement_by_duration.values, 
-                   color='#d35400', alpha=0.8)
-    axes[1, 0].set_xticks(range(len(engagement_by_duration)))
-    axes[1, 0].set_xticklabels(engagement_by_duration.index, rotation=45)
-    axes[1, 0].set_title('Average Engagement by Video Duration Range', fontweight='bold')
-    axes[1, 0].set_ylabel('Avg Total Engagement')
-    
-    # 4. Average watch time vs completion rate
-    axes[1, 1].scatter(video_df['average_seconds_viewed'], video_df['completion_rate'] * 100,
-                       alpha=0.5, color='#2980b9')
-    axes[1, 1].set_title('Avg Watch Time vs Completion Rate', fontweight='bold')
-    axes[1, 1].set_xlabel('Avg Seconds Viewed')
-    axes[1, 1].set_ylabel('Completion Rate (%)')
-    axes[1, 1].grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plt.show()
+        print(f"\nAverage Videos Posted per Month: {overview['avg_videos_per_month'].iloc[0]:.2f}")
 
-def generate_summary_stats(df):
-    """Generate and print summary statistics"""
-    print("\n" + "="*60)
-    print("FACEBOOK DATA DESCRIPTIVE ANALYTICS SUMMARY")
-    print("="*60)
-    
-    print(f"\nDataset Overview:")
-    print(f"  Total Posts: {len(df):,}")
-    print(f"  Date Range: {df['publish_time'].min()} to {df['publish_time'].max()}")
-    print(f"  Unique Pages: {df['page_id'].nunique()}")
-    
-    print(f"\nReach Metrics:")
-    print(f"  Total Reach: {df['reach'].sum():,.0f}")
-    print(f"  Average Reach per Post: {df['reach'].mean():,.0f}")
-    print(f"  Median Reach: {df['reach'].median():,.0f}")
-    print(f"  Max Reach (Single Post): {df['reach'].max():,.0f}")
-    
-    print(f"\nEngagement Metrics:")
-    print(f"  Total Engagement: {df['total_engagement'].sum():,.0f}")
-    print(f"  Average Engagement per Post: {df['total_engagement'].mean():,.0f}")
-    print(f"  Average Engagement Rate: {df['engagement_rate'].mean()*100:.2f}%")
-    print(f"  Total Reactions: {df['reactions'].sum():,.0f}")
-    print(f"  Total Comments: {df['comments'].sum():,.0f}")
-    print(f"  Total Shares: {df['shares'].sum():,.0f}")
-    
-    print(f"\nPost Type Distribution:")
-    for post_type, count in df['post_type'].value_counts().items():
-        percentage = (count / len(df)) * 100
-        print(f"  {post_type}: {count:,} ({percentage:.1f}%)")
-    
-    print(f"\nTop 5 Performing Posts (by Reach):")
-    top_posts = df.nlargest(5, 'reach')[['title', 'post_type', 'reach', 'total_engagement', 'publish_time']]
-    for idx, row in top_posts.iterrows():
-        print(f"  • {row['title'][:50]}...")
-        print(f"    Type: {row['post_type']}, Reach: {row['reach']:,.0f}, Engagement: {row['total_engagement']:,.0f}")
-    
-    print("\n" + "="*60 + "\n")
+        print("\nGenerating visualizations...\n")
+        print("1. Overview Metrics");                 plot_overview_metrics(overview)
+        print("2. Top Performing Videos");            plot_top_videos(top_videos)
+        print("3. Temporal Analysis");                plot_temporal_analysis(temporal)
+        print("4. Videos per Month by Year");         plot_videos_per_month_by_year(temporal["yearly"])
+        print("5. Content Analysis");                 plot_content_analysis(content)
+        print("6. Engagement Distributions");         plot_engagement_distribution(conn)
+        print("\nAll visualizations complete!")
 
-def main():
-    """Main execution function"""
-    print("Fetching data from database...")
-    df = fetch_data()
-    
-    if df is None or len(df) == 0:
-        print("No data retrieved. Exiting.")
-        return
-    
-    print(f"Data loaded successfully: {len(df)} rows")
-    
-    # Prepare data
-    df = prepare_data(df)
-    
-    # Generate visualizations
-    print("\nGenerating cumulative reach chart...")
-    plot_cumulative_reach(df)
-    
-    print("Generating engagement summary metrics...")
-    plot_engagement_summary_metrics(df)
-    
-    print("Generating post type engagement analysis...")
-    plot_engagement_by_post_type(df)
-    
-    print("Generating temporal pattern analysis...")
-    plot_temporal_patterns(df)
-    
-    print("Generating video performance analysis...")
-    plot_video_performance(df)
-    
-    # Print summary statistics
-    generate_summary_stats(df)
-    
-    print("\nAll visualizations displayed successfully!")
+    except Exception as e:
+        print(f"Error: {str(e)}"); raise
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
-    main()
+    generate_descriptive_analytics()
