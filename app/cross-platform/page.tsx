@@ -15,7 +15,7 @@ export default function CrossPlatformDashboard() {
         </header>
 
         {/* Platform Comparison Section */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
             <h2 className="text-lg font-medium text-[#123458]">YouTube Performance</h2>
             <p className="text-3xl font-bold text-[#FF0000]">85%</p>
@@ -29,11 +29,6 @@ export default function CrossPlatformDashboard() {
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
             <h2 className="text-lg font-medium text-[#123458]">Spotify Performance</h2>
             <p className="text-3xl font-bold text-[#1DB954]">91%</p>
-            <p className="text-sm text-gray-500">Engagement Score</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
-            <h2 className="text-lg font-medium text-[#123458]">Instagram Performance</h2>
-            <p className="text-3xl font-bold text-[#962FBF]">78%</p>
             <p className="text-sm text-gray-500">Engagement Score</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">

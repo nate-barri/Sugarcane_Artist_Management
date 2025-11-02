@@ -9,7 +9,7 @@ export default function FacebookDashboard() {
       <Sidebar />
       <main className="flex-1 p-8">
         <header className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-[#FFFFFF]">Meta Facebook Dashboard</h1>
+          <h1 className="text-3xl font-bold text-[#FFFFFF]">Facebook Dashboard</h1>
         </header>
 
         {/* Key Metrics Section for Facebook */}

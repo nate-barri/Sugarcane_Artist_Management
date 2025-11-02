@@ -1,3 +1,11 @@
 {
-  "/page": "app/page.js"
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/page": "app/page.js",
+  "/facebook/page": "app/facebook/page.js",
+  "/import/page": "app/import/page.js",
+  "/cross-platform/page": "app/cross-platform/page.js",
+  "/predictive-analytics/page": "app/predictive-analytics/page.js",
+  "/tiktok/page": "app/tiktok/page.js",
+  "/notifications/page": "app/notifications/page.js",
+  "/faq/page": "app/faq/page.js"
 }

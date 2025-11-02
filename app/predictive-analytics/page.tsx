@@ -16,7 +16,7 @@ export default function PredictiveAnalyticsDashboard() {
         </header>
 
         {/* Best Time to Post Section */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
             <h2 className="text-lg font-medium text-[#123458]">Best Time to Post | Youtube</h2>
             <p className="text-xl font-bold text-gray-900">2:00 PM - 4:00 PM</p>
@@ -28,10 +28,6 @@ export default function PredictiveAnalyticsDashboard() {
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
             <h2 className="text-lg font-medium text-[#123458]">Best Time to Post | Spotify</h2>
             <p className="text-xl font-bold text-gray-900">6:00 PM - 8:00 PM</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
-            <h2 className="text-lg font-medium text-[#123458]">Best Time to Post | Instagram</h2>
-            <p className="text-xl font-bold text-gray-900">11:00 AM - 1:00 PM</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
             <h2 className="text-lg font-medium text-[#123458]">Best Time to Post | Tiktok</h2>

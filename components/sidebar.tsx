@@ -51,18 +51,17 @@ export default function Sidebar() {
 
   const dashboardPages = [
     { href: "/youtube", label: "YouTube" },
-    { href: "/facebook", label: "Meta Facebook" },
+    { href: "/facebook", label: "Meta" },
     { href: "/spotify", label: "Spotify" },
-    { href: "/instagram", label: "Instagram" },
     { href: "/tiktok", label: "TikTok" },
   ]
 
   const isDashboardActive =
     pathname === "/" || dashboardPages.some((page) => pathname.includes(page.href))
 
-  return (
+    return (
     <aside
-      className={`sidebar bg-[#0f2946] shadow-lg px-6 pt-6 flex flex-col rounded-r-lg transition-all duration-300 ease-in-out h-screen justify-between ${
+      className={`sidebar bg-[#0f2946] shadow-lg px-6 pt-6 flex flex-col rounded-r-lg transition-all duration-300 ease-in-out min-h-screen h-auto justify-between ${
         isCollapsed ? "w-20" : "w-64"
       }`}
     >
