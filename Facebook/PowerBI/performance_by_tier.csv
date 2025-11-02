@@ -1,4 +1,0 @@
-predicted_tier,post_count,actual_mean,actual_min,actual_max,predicted_mean,mape,accuracy_rate
-High,272,34086.65,0.0,2344542.0,15528.07,281.77,0.28
-Low,321,1871.01,0.0,243391.0,324.34,23.54,0.4
-Medium,275,6368.03,72.0,289447.0,2800.39,93.88,0.5

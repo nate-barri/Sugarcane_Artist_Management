@@ -53,10 +53,34 @@ def prepare_data(df):
     # Calculate engagement metrics
     df['total_engagement'] = df['reactions'] + df['comments'] + df['shares']
     
-    # Calculate engagement rate, handling zero reach
+    # Calculate engagement rate and ratios
     df['engagement_rate'] = np.where(
         df['reach'] > 0,
         df['total_engagement'] / df['reach'],
+        0
+    )
+    
+    df['reactions_to_reach_ratio'] = np.where(
+        df['reach'] > 0,
+        df['reactions'] / df['reach'],
+        0
+    )
+    
+    df['comments_to_reach_ratio'] = np.where(
+        df['reach'] > 0,
+        df['comments'] / df['reach'],
+        0
+    )
+    
+    df['shares_to_reach_ratio'] = np.where(
+        df['reach'] > 0,
+        df['shares'] / df['reach'],
+        0
+    )
+    
+    df['shares_to_reactions_ratio'] = np.where(
+        df['reactions'] > 0,
+        df['shares'] / df['reactions'],
         0
     )
     
@@ -70,9 +94,17 @@ def prepare_data(df):
 
 def plot_cumulative_reach(df):
     """Plot cumulative reach growth over time"""
-    # Sort by publish time and calculate cumulative reach
+    # Sort by publish time and calculate cumulative metrics
     df_sorted = df.sort_values('publish_time').copy()
     df_sorted['cumulative_reach'] = df_sorted['reach'].cumsum()
+    df_sorted['cumulative_engagement'] = df_sorted['total_engagement'].cumsum()
+    
+    # Calculate cumulative engagement rate
+    df_sorted['cumulative_engagement_rate'] = np.where(
+        df_sorted['cumulative_reach'] > 0,
+        (df_sorted['cumulative_engagement'] / df_sorted['cumulative_reach']) * 100,
+        0
+    )
     
     # Create figure with 2 subplots
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
@@ -89,25 +121,194 @@ def plot_cumulative_reach(df):
     ax1.grid(True, alpha=0.3)
     ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
     
-    # Plot 2: Engagement Rate Over Time
-    ax2.plot(df_sorted['publish_time'], df_sorted['engagement_rate'] * 100, 
-             linewidth=2, color='#2ecc71', marker='o', markersize=3, alpha=0.7)
-    ax2.fill_between(df_sorted['publish_time'], df_sorted['engagement_rate'] * 100, 
+    # Plot 2: Cumulative Engagement Rate
+    ax2.plot(df_sorted['publish_time'], df_sorted['cumulative_engagement_rate'], 
+             linewidth=2, color='#2ecc71', marker='o', markersize=3)
+    ax2.fill_between(df_sorted['publish_time'], df_sorted['cumulative_engagement_rate'], 
                      alpha=0.3, color='#2ecc71')
     
-    # Add moving average line
-    window = min(30, len(df_sorted) // 10)  # 30-post moving average or 10% of data
-    if window > 1:
-        df_sorted['engagement_rate_ma'] = df_sorted['engagement_rate'].rolling(window=window).mean()
-        ax2.plot(df_sorted['publish_time'], df_sorted['engagement_rate_ma'] * 100,
-                linewidth=3, color='#e74c3c', linestyle='--', 
-                label=f'{window}-Post Moving Average')
-        ax2.legend()
-    
-    ax2.set_title('Engagement Rate Over Time', fontsize=16, fontweight='bold')
+    ax2.set_title('Cumulative Engagement Rate Over Time', fontsize=16, fontweight='bold')
     ax2.set_xlabel('Date', fontsize=12)
-    ax2.set_ylabel('Engagement Rate (%)', fontsize=12)
+    ax2.set_ylabel('Cumulative Engagement Rate (%)', fontsize=12)
     ax2.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.show()
+
+def plot_engagement_summary_metrics(df):
+    """Plot total engagement metrics and engagement rates"""
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    
+    # Calculate totals
+    total_reactions = df['reactions'].sum()
+    total_comments = df['comments'].sum()
+    total_shares = df['shares'].sum()
+    total_reach = df['reach'].sum()
+    total_engagement = df['total_engagement'].sum()
+    
+    # Metrics data for first chart
+    metrics = ['Reactions', 'Comments', 'Shares']
+    values = [total_reactions, total_comments, total_shares]
+    colors_chart1 = ['#ff7f0e', '#9467bd', '#2ca02c']
+    
+    # Plot 1: Total Engagement Metrics
+    bars1 = ax1.bar(metrics, values, color=colors_chart1, alpha=0.8, edgecolor='black', linewidth=1.5)
+    ax1.set_title('Total Engagement Metrics', fontsize=16, fontweight='bold')
+    ax1.set_ylabel('Count', fontsize=12)
+    ax1.grid(True, alpha=0.3, axis='y')
+    ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
+    
+    # Add value labels on bars
+    for bar in bars1:
+        height = bar.get_height()
+        ax1.text(bar.get_x() + bar.get_width()/2., height,
+                f'{int(height):,}',
+                ha='center', va='bottom', fontsize=11, fontweight='bold')
+    
+    # Calculate engagement rates
+    like_rate = (total_reactions / total_reach * 100) if total_reach > 0 else 0
+    comment_rate = (total_comments / total_reach * 100) if total_reach > 0 else 0
+    share_rate = (total_shares / total_reach * 100) if total_reach > 0 else 0
+    overall_engagement_rate = (total_engagement / total_reach * 100) if total_reach > 0 else 0
+    
+    # Rates data for second chart
+    rate_labels = ['Like Rate', 'Comment Rate', 'Share Rate', 'Overall\nEngagement']
+    rate_values = [like_rate, comment_rate, share_rate, overall_engagement_rate]
+    colors_chart2 = ['#ff7f0e', '#9467bd', '#2ca02c', '#8b4513']
+    
+    # Plot 2: Engagement Rates
+    bars2 = ax2.bar(rate_labels, rate_values, color=colors_chart2, alpha=0.8, edgecolor='black', linewidth=1.5)
+    ax2.set_title('Engagement Rates (%)', fontsize=16, fontweight='bold')
+    ax2.set_ylabel('Percentage', fontsize=12)
+    ax2.grid(True, alpha=0.3, axis='y')
+    
+    # Add percentage labels on bars
+    for bar in bars2:
+        height = bar.get_height()
+        ax2.text(bar.get_x() + bar.get_width()/2., height,
+                f'{height:.2f}%',
+                ha='center', va='bottom', fontsize=11, fontweight='bold')
+    
+    plt.tight_layout()
+    plt.show()
+
+def plot_engagement_ratio_analysis(df):
+    """Plot detailed engagement ratio analysis"""
+    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+    
+    total_reach = df['reach'].sum()
+    total_reactions = df['reactions'].sum()
+    
+    # Overall ratios
+    reactions_reach = (df['reactions'].sum() / total_reach * 100) if total_reach > 0 else 0
+    comments_reach = (df['comments'].sum() / total_reach * 100) if total_reach > 0 else 0
+    shares_reach = (df['shares'].sum() / total_reach * 100) if total_reach > 0 else 0
+    engagement_rate = (df['total_engagement'].sum() / total_reach * 100) if total_reach > 0 else 0
+    virality_ratio = (df['shares'].sum() / total_reactions * 100) if total_reactions > 0 else 0
+    
+    # 1. Reactions to Reach Ratio by Post Type
+    reactions_by_type = df.groupby('post_type').agg({
+        'reactions': 'sum',
+        'reach': 'sum'
+    })
+    reactions_by_type['ratio'] = (reactions_by_type['reactions'] / reactions_by_type['reach'] * 100)
+    
+    axes[0, 0].bar(reactions_by_type.index, reactions_by_type['ratio'], 
+                   color='#ff7f0e', alpha=0.8, edgecolor='black')
+    axes[0, 0].set_title('Reactions-to-Reach Ratio by Post Type', fontweight='bold')
+    axes[0, 0].set_ylabel('Ratio (%)')
+    axes[0, 0].tick_params(axis='x', rotation=45)
+    axes[0, 0].grid(True, alpha=0.3, axis='y')
+    axes[0, 0].axhline(reactions_reach, color='red', linestyle='--', 
+                       label=f'Overall: {reactions_reach:.2f}%', linewidth=2)
+    axes[0, 0].legend()
+    
+    # 2. Comments to Reach Ratio by Post Type
+    comments_by_type = df.groupby('post_type').agg({
+        'comments': 'sum',
+        'reach': 'sum'
+    })
+    comments_by_type['ratio'] = (comments_by_type['comments'] / comments_by_type['reach'] * 100)
+    
+    axes[0, 1].bar(comments_by_type.index, comments_by_type['ratio'], 
+                   color='#9467bd', alpha=0.8, edgecolor='black')
+    axes[0, 1].set_title('Comments-to-Reach Ratio by Post Type', fontweight='bold')
+    axes[0, 1].set_ylabel('Ratio (%)')
+    axes[0, 1].tick_params(axis='x', rotation=45)
+    axes[0, 1].grid(True, alpha=0.3, axis='y')
+    axes[0, 1].axhline(comments_reach, color='red', linestyle='--', 
+                       label=f'Overall: {comments_reach:.2f}%', linewidth=2)
+    axes[0, 1].legend()
+    
+    # 3. Shares to Reach Ratio by Post Type
+    shares_by_type = df.groupby('post_type').agg({
+        'shares': 'sum',
+        'reach': 'sum'
+    })
+    shares_by_type['ratio'] = (shares_by_type['shares'] / shares_by_type['reach'] * 100)
+    
+    axes[0, 2].bar(shares_by_type.index, shares_by_type['ratio'], 
+                   color='#2ca02c', alpha=0.8, edgecolor='black')
+    axes[0, 2].set_title('Shares-to-Reach Ratio by Post Type', fontweight='bold')
+    axes[0, 2].set_ylabel('Ratio (%)')
+    axes[0, 2].tick_params(axis='x', rotation=45)
+    axes[0, 2].grid(True, alpha=0.3, axis='y')
+    axes[0, 2].axhline(shares_reach, color='red', linestyle='--', 
+                       label=f'Overall: {shares_reach:.2f}%', linewidth=2)
+    axes[0, 2].legend()
+    
+    # 4. Overall Engagement Rate by Post Type
+    engagement_by_type = df.groupby('post_type').agg({
+        'total_engagement': 'sum',
+        'reach': 'sum'
+    })
+    engagement_by_type['ratio'] = (engagement_by_type['total_engagement'] / engagement_by_type['reach'] * 100)
+    
+    axes[1, 0].bar(engagement_by_type.index, engagement_by_type['ratio'], 
+                   color='#8b4513', alpha=0.8, edgecolor='black')
+    axes[1, 0].set_title('Engagement Rate by Post Type', fontweight='bold')
+    axes[1, 0].set_ylabel('Rate (%)')
+    axes[1, 0].tick_params(axis='x', rotation=45)
+    axes[1, 0].grid(True, alpha=0.3, axis='y')
+    axes[1, 0].axhline(engagement_rate, color='red', linestyle='--', 
+                       label=f'Overall: {engagement_rate:.2f}%', linewidth=2)
+    axes[1, 0].legend()
+    
+    # 5. Virality Ratio (Shares to Reactions) by Post Type
+    virality_by_type = df.groupby('post_type').agg({
+        'shares': 'sum',
+        'reactions': 'sum'
+    })
+    virality_by_type['ratio'] = (virality_by_type['shares'] / virality_by_type['reactions'] * 100)
+    
+    axes[1, 1].bar(virality_by_type.index, virality_by_type['ratio'], 
+                   color='#d62728', alpha=0.8, edgecolor='black')
+    axes[1, 1].set_title('Virality Ratio (Shares-to-Reactions) by Post Type', fontweight='bold')
+    axes[1, 1].set_ylabel('Ratio (%)')
+    axes[1, 1].tick_params(axis='x', rotation=45)
+    axes[1, 1].grid(True, alpha=0.3, axis='y')
+    axes[1, 1].axhline(virality_ratio, color='red', linestyle='--', 
+                       label=f'Overall: {virality_ratio:.2f}%', linewidth=2)
+    axes[1, 1].legend()
+    
+    # 6. Summary comparison of all ratios
+    summary_labels = ['Reactions/\nReach', 'Comments/\nReach', 'Shares/\nReach', 
+                     'Engagement\nRate', 'Virality\n(Shares/Reactions)']
+    summary_values = [reactions_reach, comments_reach, shares_reach, engagement_rate, virality_ratio]
+    summary_colors = ['#ff7f0e', '#9467bd', '#2ca02c', '#8b4513', '#d62728']
+    
+    bars = axes[1, 2].bar(summary_labels, summary_values, color=summary_colors, 
+                         alpha=0.8, edgecolor='black', linewidth=1.5)
+    axes[1, 2].set_title('Overall Engagement Ratios Summary', fontweight='bold')
+    axes[1, 2].set_ylabel('Ratio (%)')
+    axes[1, 2].grid(True, alpha=0.3, axis='y')
+    
+    # Add value labels
+    for bar in bars:
+        height = bar.get_height()
+        axes[1, 2].text(bar.get_x() + bar.get_width()/2., height,
+                       f'{height:.2f}%',
+                       ha='center', va='bottom', fontsize=10, fontweight='bold')
     
     plt.tight_layout()
     plt.show()
@@ -221,44 +422,135 @@ def plot_video_performance(df):
     
     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
     
-    # 1. Video duration vs engagement
-    axes[0, 0].scatter(video_df['duration_sec'], video_df['total_engagement'], 
-                       alpha=0.5, color='#8e44ad')
-    axes[0, 0].set_title('Video Duration vs Total Engagement', fontweight='bold')
-    axes[0, 0].set_xlabel('Duration (seconds)')
-    axes[0, 0].set_ylabel('Total Engagement')
-    axes[0, 0].grid(True, alpha=0.3)
-    
-    # 2. Completion rate distribution
-    completion_rates = video_df['completion_rate'].dropna()
-    axes[0, 1].hist(completion_rates * 100, bins=30, color='#27ae60', alpha=0.7, edgecolor='black')
-    axes[0, 1].set_title('Video Completion Rate Distribution', fontweight='bold')
-    axes[0, 1].set_xlabel('Completion Rate (%)')
-    axes[0, 1].set_ylabel('Frequency')
-    axes[0, 1].axvline(completion_rates.mean() * 100, color='red', 
-                       linestyle='--', linewidth=2, label=f'Mean: {completion_rates.mean()*100:.1f}%')
-    axes[0, 1].legend()
-    
-    # 3. Duration bins vs avg engagement
+    # 1. Video Duration Distribution with Engagement Heatmap
+    # Create bins for duration
     video_df['duration_bin'] = pd.cut(video_df['duration_sec'], 
-                                       bins=[0, 30, 60, 120, 300, float('inf')],
-                                       labels=['0-30s', '30-60s', '1-2m', '2-5m', '5m+'])
-    engagement_by_duration = video_df.groupby('duration_bin')['total_engagement'].mean()
+                                       bins=[0, 30, 60, 120, 180, 300, float('inf')],
+                                       labels=['0-30s', '30-60s', '1-2m', '2-3m', '3-5m', '5m+'])
     
-    axes[1, 0].bar(range(len(engagement_by_duration)), engagement_by_duration.values, 
-                   color='#d35400', alpha=0.8)
-    axes[1, 0].set_xticks(range(len(engagement_by_duration)))
-    axes[1, 0].set_xticklabels(engagement_by_duration.index, rotation=45)
-    axes[1, 0].set_title('Average Engagement by Video Duration Range', fontweight='bold')
-    axes[1, 0].set_ylabel('Avg Total Engagement')
+    duration_stats = video_df.groupby('duration_bin').agg({
+        'total_engagement': ['mean', 'count'],
+        'reach': 'mean',
+        'completion_rate': 'mean'
+    }).reset_index()
+    duration_stats.columns = ['duration_bin', 'avg_engagement', 'count', 'avg_reach', 'avg_completion']
     
-    # 4. Average watch time vs completion rate
-    axes[1, 1].scatter(video_df['average_seconds_viewed'], video_df['completion_rate'] * 100,
-                       alpha=0.5, color='#2980b9')
-    axes[1, 1].set_title('Avg Watch Time vs Completion Rate', fontweight='bold')
-    axes[1, 1].set_xlabel('Avg Seconds Viewed')
-    axes[1, 1].set_ylabel('Completion Rate (%)')
-    axes[1, 1].grid(True, alpha=0.3)
+    # Bar chart with dual axis
+    ax1 = axes[0, 0]
+    ax1_twin = ax1.twinx()
+    
+    bars = ax1.bar(duration_stats['duration_bin'], duration_stats['avg_engagement'], 
+                   color='#3498db', alpha=0.7, label='Avg Engagement')
+    ax1.set_xlabel('Video Duration')
+    ax1.set_ylabel('Avg Total Engagement', color='#3498db')
+    ax1.tick_params(axis='y', labelcolor='#3498db')
+    ax1.tick_params(axis='x', rotation=45)
+    ax1.set_title('Video Engagement by Duration', fontweight='bold')
+    
+    line = ax1_twin.plot(duration_stats['duration_bin'], duration_stats['count'], 
+                         color='#e74c3c', marker='o', linewidth=2, markersize=8, label='Video Count')
+    ax1_twin.set_ylabel('Number of Videos', color='#e74c3c')
+    ax1_twin.tick_params(axis='y', labelcolor='#e74c3c')
+    
+    # Add value labels on bars
+    for i, bar in enumerate(bars):
+        height = bar.get_height()
+        ax1.text(bar.get_x() + bar.get_width()/2., height,
+                f'{int(height):,}',
+                ha='center', va='bottom', fontsize=9)
+    
+    # 2. Completion Rate Analysis
+    completion_bins = video_df.groupby('duration_bin')['completion_rate'].apply(
+        lambda x: x.dropna()
+    ).reset_index(drop=True)
+    
+    # Box plot for completion rates by duration
+    completion_data = [video_df[video_df['duration_bin'] == cat]['completion_rate'].dropna() * 100 
+                      for cat in duration_stats['duration_bin']]
+    
+    bp = axes[0, 1].boxplot(completion_data, labels=duration_stats['duration_bin'], 
+                           patch_artist=True, showmeans=True)
+    
+    for patch in bp['boxes']:
+        patch.set_facecolor('#27ae60')
+        patch.set_alpha(0.7)
+    
+    axes[0, 1].set_title('Completion Rate Distribution by Duration', fontweight='bold')
+    axes[0, 1].set_xlabel('Video Duration')
+    axes[0, 1].set_ylabel('Completion Rate (%)')
+    axes[0, 1].tick_params(axis='x', rotation=45)
+    axes[0, 1].grid(True, alpha=0.3, axis='y')
+    
+    # 3. Engagement vs Completion Rate Scatter (Performance Quadrant)
+    scatter = axes[1, 0].scatter(video_df['completion_rate'] * 100, 
+                                video_df['total_engagement'],
+                                c=video_df['reach'], 
+                                cmap='viridis', 
+                                alpha=0.6, 
+                                s=100,
+                                edgecolors='black',
+                                linewidth=0.5)
+    
+    # Add median lines to create quadrants
+    median_completion = video_df['completion_rate'].median() * 100
+    median_engagement = video_df['total_engagement'].median()
+    
+    axes[1, 0].axvline(median_completion, color='red', linestyle='--', alpha=0.5, linewidth=2)
+    axes[1, 0].axhline(median_engagement, color='red', linestyle='--', alpha=0.5, linewidth=2)
+    
+    axes[1, 0].set_title('Video Performance Quadrant Analysis', fontweight='bold')
+    axes[1, 0].set_xlabel('Completion Rate (%)')
+    axes[1, 0].set_ylabel('Total Engagement')
+    axes[1, 0].grid(True, alpha=0.3)
+    
+    # Add quadrant labels
+    axes[1, 0].text(0.95, 0.95, 'High Engagement\nHigh Completion', 
+                   transform=axes[1, 0].transAxes, fontsize=9, 
+                   verticalalignment='top', horizontalalignment='right',
+                   bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.5))
+    axes[1, 0].text(0.05, 0.05, 'Low Engagement\nLow Completion', 
+                   transform=axes[1, 0].transAxes, fontsize=9,
+                   verticalalignment='bottom', horizontalalignment='left',
+                   bbox=dict(boxstyle='round', facecolor='lightcoral', alpha=0.5))
+    
+    cbar = plt.colorbar(scatter, ax=axes[1, 0])
+    cbar.set_label('Reach', rotation=270, labelpad=15)
+    
+    # 4. Top Performing Videos Table
+    axes[1, 1].axis('off')
+    
+    # Get top 10 videos by engagement
+    top_videos = video_df.nlargest(10, 'total_engagement')[
+        ['title', 'duration_sec', 'total_engagement', 'reach', 'completion_rate']
+    ].copy()
+    
+    top_videos['title'] = top_videos['title'].str[:30] + '...'
+    top_videos['duration_sec'] = top_videos['duration_sec'].apply(lambda x: f"{int(x)}s")
+    top_videos['completion_rate'] = (top_videos['completion_rate'] * 100).round(1).astype(str) + '%'
+    top_videos['total_engagement'] = top_videos['total_engagement'].apply(lambda x: f"{int(x):,}")
+    top_videos['reach'] = top_videos['reach'].apply(lambda x: f"{int(x):,}")
+    
+    table_data = [top_videos.columns.tolist()] + top_videos.values.tolist()
+    
+    table = axes[1, 1].table(cellText=table_data, cellLoc='left', loc='center',
+                            colWidths=[0.35, 0.1, 0.15, 0.15, 0.1])
+    
+    table.auto_set_font_size(False)
+    table.set_fontsize(8)
+    table.scale(1, 1.8)
+    
+    # Style header row
+    for i in range(len(top_videos.columns)):
+        table[(0, i)].set_facecolor('#3498db')
+        table[(0, i)].set_text_props(weight='bold', color='white')
+    
+    # Alternate row colors
+    for i in range(1, len(table_data)):
+        for j in range(len(top_videos.columns)):
+            if i % 2 == 0:
+                table[(i, j)].set_facecolor('#ecf0f1')
+    
+    axes[1, 1].set_title('Top 10 Videos by Engagement', fontweight='bold', pad=20)
     
     plt.tight_layout()
     plt.show()
@@ -273,6 +565,11 @@ def generate_summary_stats(df):
     print(f"  Total Posts: {len(df):,}")
     print(f"  Date Range: {df['publish_time'].min()} to {df['publish_time'].max()}")
     print(f"  Unique Pages: {df['page_id'].nunique()}")
+    
+    # Calculate average posts per month
+    months_active = df.groupby(['year', 'month']).size().count()
+    avg_posts_per_month = len(df) / months_active if months_active > 0 else 0
+    print(f"  Average Posts per Month: {avg_posts_per_month:.1f}")
     
     print(f"\nReach Metrics:")
     print(f"  Total Reach: {df['reach'].sum():,.0f}")
@@ -318,6 +615,12 @@ def main():
     # Generate visualizations
     print("\nGenerating cumulative reach chart...")
     plot_cumulative_reach(df)
+    
+    print("Generating engagement summary metrics...")
+    plot_engagement_summary_metrics(df)
+    
+    print("Generating engagement ratio analysis...")
+    plot_engagement_ratio_analysis(df)
     
     print("Generating post type engagement analysis...")
     plot_engagement_by_post_type(df)

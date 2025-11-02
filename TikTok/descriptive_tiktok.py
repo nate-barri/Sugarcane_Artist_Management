@@ -45,20 +45,21 @@ def plot_overview_metrics(overview_df):
 
     # Draw bars with softer color palette
     colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
-    bars = ax.bar(labels, values, color=colors, edgecolor="black", linewidth=0.7)
+    bars = ax.bar(labels, values, color=colors)
 
-    # Title and labels
+    # Title
+    plt.ticklabel_format(style='plain', axis='y')
     ax.set_title("Total Engagement Metrics", fontsize=18, fontweight="bold", pad=15)
-    ax.set_ylabel("Count", fontsize=12)
-    ax.set_xlabel("")  # cleaner look
 
-    # Rotate x-labels slightly for better readability
+    ax.set_ylabel("Count")
+    ax.set_xlabel("Engagements")
+
     ax.tick_params(axis="x", rotation=25)
 
-    # Add subtle gridlines
+    # Add gridlines
     ax.grid(axis="y", linestyle="--", alpha=0.6)
 
-    # Annotate bars with formatted numbers
+    # Annotate bars 
     for bar, val in zip(bars, values):
         ax.text(bar.get_x() + bar.get_width() / 2,
                 bar.get_height() + (max(values) * 0.01),
@@ -66,27 +67,43 @@ def plot_overview_metrics(overview_df):
                 ha="center", va="bottom",
                 fontsize=11, fontweight="semibold")
 
-    # Add total annotation (optional)
+    # Add total annotation
     total = sum(values)
     ax.text(0.95, 0.9, f"Total Engagements: {total:,.0f}",
             transform=ax.transAxes, fontsize=11,
             color="gray", ha="right", style="italic")
 
-    # Clean layout
+    ax.legend(bars, labels, title="Metrics", loc="center left",
+            bbox_to_anchor=(1.02, 0.85), frameon=True)
+
     plt.tight_layout()
     plt.show()
 
     # --- Average metrics per video ---
     avg_metrics = ["avg_views", "avg_likes", "avg_shares", "avg_comments", "avg_saves"]
     avg_values  = [overview_df[m].iloc[0] for m in avg_metrics]
-    plt.figure()
+    labels = ["Views", "Likes", "Shares", "Comments", "Saves"]
+
+    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
+
+    plt.figure(figsize=(10, 6))
     ax = plt.gca()
-    ax.bar(labels, avg_values, color=["#1f77b4","#ff7f0e","#2ca02c","#d62728","#9467bd"])
+
+    bars = ax.bar(labels, avg_values, color=colors)
     ax.set_title("Average Engagement per Video", fontweight="bold")
     ax.set_ylabel("Average Count")
+    ax.set_xlabel("Engagements")
     ax.tick_params(axis="x", rotation=45)
-    _annotate_bars(ax, avg_values, "{:,.0f}")
-    plt.tight_layout(); plt.show()
+
+    for bar, value in zip(bars, avg_values):
+        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + max(avg_values)*0.01,
+                f"{value:,.0f}", ha="center", va="bottom", fontsize=9)
+
+    ax.legend(bars, labels, title="Metrics", loc="center left",
+            bbox_to_anchor=(1.02, 0.85), frameon=True)
+
+    plt.tight_layout()
+    plt.show()
 
     # --- Engagement rates ---
     rate_labels = ["Like Rate","Share Rate","Comment Rate","Save Rate","Overall\nEngagement"]
@@ -99,12 +116,18 @@ def plot_overview_metrics(overview_df):
     ]
     plt.figure()
     ax = plt.gca()
-    ax.bar(rate_labels, rate_values, color=["#ff7f0e","#2ca02c","#d62728","#9467bd","#8c564b"])
+    bars = ax.bar(rate_labels, rate_values, color=["#ff7f0e","#2ca02c","#d62728","#9467bd","#8c564b"])
     ax.set_title("Engagement Rates (%)", fontweight="bold")
     ax.set_ylabel("Percentage")
+    ax.set_xlabel("Engagements")
     ax.tick_params(axis="x", rotation=45)
     _annotate_bars(ax, rate_values, "{:.2f}%")
-    plt.tight_layout(); plt.show()
+    
+    ax.legend(bars, rate_labels, title="Metrics", loc="center left",
+            bbox_to_anchor=(1.02, 0.85), frameon=True)
+
+    plt.tight_layout()
+    plt.show()
 
     # --- Content stats (text-only figure) ---
     plt.figure()
