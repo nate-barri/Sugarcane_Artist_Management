@@ -88,8 +88,7 @@ def engineer_advanced_features(df):
     df['publish_time'] = pd.to_datetime(df['publish_time'])
     df = df.sort_values('publish_time')
 
-    # Rolling averages (7-day window) — these are computed on the overall chronology,
-    # which results in early rows having small windows; that's fine for features.
+    # Rolling averages (7-day window)
     df['views_rolling_7d'] = df['views'].rolling(window=7, min_periods=1).mean()
     df['engagement_rolling_7d'] = df['engagement_rate'].rolling(window=7, min_periods=1).mean()
 
@@ -246,20 +245,13 @@ def model2_enhanced_virality(df):
         tn = fp = fn = tp = 0
 
     specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
-    npv = tn / (tn + fn) if (tn + fn) > 0 else 0  # Negative Predictive Value
+    npv = tn / (tn + fn) if (tn + fn) > 0 else 0
 
     # Calculate pseudo-regression metrics for classification
-    # Treat probabilities as continuous predictions
     mae_prob = mean_absolute_error(y_test, y_pred_proba)
     rmse_prob = np.sqrt(mean_squared_error(y_test, y_pred_proba))
-
-    # Brier Score (mean squared error for probabilities)
     brier_score = np.mean((y_pred_proba - y_test) ** 2)
-
-    # Log Loss (Cross-Entropy)
     logloss = log_loss(y_test, y_pred_proba)
-
-    # MASE for probabilities (using training set as baseline)
     mase_prob = calculate_mase(y_test.values, y_pred_proba, y_train.values)
 
     print(f"\n{'='*70}")
@@ -598,8 +590,422 @@ def model3_enhanced_engagement(df):
 
     return model, scaler, feature_cols, r2, mase
 
+# ================= BEST POSTING TIME ANALYSIS WITH PREDICTIVE MODEL =================
+def analyze_best_posting_times(df):
+    print("\n" + "="*70)
+    print("BEST DAY & TIME TO POST ANALYSIS (WITH PREDICTIVE MODELING)")
+    print("="*70)
+    
+    # Day of week analysis
+    day_names = {0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 
+                 4: 'Thursday', 5: 'Friday', 6: 'Saturday'}
+    
+    df['day_name'] = df['day_of_week'].map(day_names)
+    
+    # Analyze by day of week
+    day_stats = df.groupby('day_of_week').agg({
+        'views': ['mean', 'median', 'sum', 'count'],
+        'engagement_rate': ['mean', 'median'],
+        'is_viral': ['sum', 'mean'],
+        'likes': 'mean',
+        'shares': 'mean'
+    }).round(2)
+    
+    day_stats.columns = ['_'.join(col).strip() for col in day_stats.columns.values]
+    day_stats['day_name'] = day_stats.index.map(day_names)
+    day_stats = day_stats.sort_values('views_mean', ascending=False)
+    
+    # Analyze by hour of day
+    hour_stats = df.groupby('hour_of_day').agg({
+        'views': ['mean', 'median', 'sum', 'count'],
+        'engagement_rate': ['mean', 'median'],
+        'is_viral': ['sum', 'mean']
+    }).round(2)
+    
+    hour_stats.columns = ['_'.join(col).strip() for col in hour_stats.columns.values]
+    hour_stats = hour_stats.sort_values('views_mean', ascending=False)
+    
+    # Combined day + hour analysis
+    day_hour_stats = df.groupby(['day_of_week', 'hour_of_day']).agg({
+        'views': ['mean', 'count'],
+        'engagement_rate': 'mean',
+        'is_viral': 'mean'
+    }).round(2)
+    
+    day_hour_stats.columns = ['_'.join(col).strip() for col in day_hour_stats.columns.values]
+    day_hour_stats = day_hour_stats[day_hour_stats['views_count'] >= 2]  # At least 2 posts
+    day_hour_stats = day_hour_stats.sort_values('views_mean', ascending=False)
+    
+    # Calculate composite score (weighted combination)
+    day_stats['composite_score'] = (
+        (day_stats['views_mean'] / day_stats['views_mean'].max()) * 0.4 +
+        (day_stats['engagement_rate_mean'] / day_stats['engagement_rate_mean'].max()) * 0.3 +
+        (day_stats['is_viral_mean'] / day_stats['is_viral_mean'].max()) * 0.3
+    ) * 100
+    
+    hour_stats['composite_score'] = (
+        (hour_stats['views_mean'] / hour_stats['views_mean'].max()) * 0.4 +
+        (hour_stats['engagement_rate_mean'] / hour_stats['engagement_rate_mean'].max()) * 0.3 +
+        (hour_stats['is_viral_mean'] / hour_stats['is_viral_mean'].max()) * 0.3
+    ) * 100
+    
+    # ================= BUILD PREDICTIVE MODEL FOR POSTING TIME =================
+    print("\n" + "-"*70)
+    print("TRAINING PREDICTIVE MODEL: Views Based on Posting Time")
+    print("-"*70)
+    
+    # Prepare features for prediction
+    le_post = LabelEncoder()
+    df_model = df.copy()
+    df_model['post_type_encoded'] = le_post.fit_transform(df_model['post_type'])
+    
+    # Features focused on DAY OF WEEK (removed hour-based features)
+    time_features = [
+        'day_of_week', 'is_weekend', 'is_weekday_peak',
+        'publish_month', 'season',
+        'duration_sec', 'has_sound', 'post_type_encoded'
+    ]
+    
+    X = df_model[time_features].fillna(0)
+    y = df_model['views']
+    
+    # Train-test split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+    
+    # Scale features
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    
+    # Train model
+    model = RandomForestRegressor(
+        n_estimators=200,
+        max_depth=15,
+        min_samples_split=10,
+        random_state=42,
+        n_jobs=-1
+    )
+    model.fit(X_train_scaled, y_train)
+    
+    # Predictions
+    y_pred = model.predict(X_test_scaled)
+    
+    # Calculate metrics
+    mae = mean_absolute_error(y_test, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    r2 = r2_score(y_test, y_pred)
+    mape = mean_absolute_percentage_error(y_test, y_pred) * 100
+    mase = calculate_mase(y_test.values, y_pred, y_train.values)
+    
+    mae_pct = (mae / y_test.mean()) * 100
+    rmse_pct = (rmse / y_test.mean()) * 100
+    
+    print(f"\n{'METRIC':<12} {'VALUE':<20} {'INTERPRETATION'}")
+    print(f"{'='*65}")
+    print(f"{'MAE':<12} {mae:>12,.0f} ({mae_pct:.1f}%)   Avg prediction error")
+    print(f"{'RMSE':<12} {rmse:>12,.0f} ({rmse_pct:.1f}%)  Penalizes large errors")
+    print(f"{'MAPE':<12} {mape:>12.2f}%         Relative error")
+    print(f"{'MASE':<12} {mase:>12.4f}          Scaled error (< 1 is good)")
+    print(f"{'R²':<12} {r2:>12.4f} ({r2*100:.1f}%)    Variance explained")
+    
+    r2_status = "✓ EXCELLENT" if r2 > 0.7 else "✓ GOOD" if r2 > 0.5 else "✓ ACCEPTABLE" if r2 > 0.3 else "⚠ NEEDS WORK"
+    mase_status = "✓ EXCELLENT" if mase < 0.8 else "✓ GOOD" if mase < 1.0 else "⚠ NEEDS WORK"
+    
+    print(f"\nModel Quality: R² {r2_status} | MASE {mase_status}")
+    
+    # Feature importance
+    feature_importance = pd.DataFrame({
+        'feature': time_features,
+        'importance': model.feature_importances_
+    }).sort_values('importance', ascending=False)
+    
+    print(f"\nTop Timing Features:")
+    for idx, row in feature_importance.head(5).iterrows():
+        print(f"  {row['feature']:<20} {row['importance']:.4f}")
+    
+    # Print descriptive statistics
+    print("\n" + "-"*70)
+    print("DESCRIPTIVE STATISTICS BY POSTING TIME")
+    print("-"*70)
+    
+    print("\n📅 BEST DAYS TO POST (Ranked by Average Views):")
+    print("="*80)
+    print(f"{'Rank':<6} {'Day':<12} {'Avg Views':<12} {'Std Dev':<12} {'Engagement':<12} {'Viral %':<10} {'Posts':<8} {'Score'}")
+    print("-"*80)
+    
+    for rank, (idx, row) in enumerate(day_stats.iterrows(), 1):
+        emoji = "🏆" if rank == 1 else "🥈" if rank == 2 else "🥉" if rank == 3 else "  "
+        # Calculate standard deviation for this day
+        day_videos = df[df['day_of_week'] == idx]['views']
+        std_dev = day_videos.std()
+        
+        print(f"{emoji} {rank:<4} {row['day_name']:<12} {row['views_mean']:>10,.0f}  "
+              f"{std_dev:>10,.0f}  "
+              f"{row['engagement_rate_mean']:>10.2f}%  {row['is_viral_mean']*100:>8.1f}%  "
+              f"{int(row['views_count']):>6}  {row['composite_score']:>6.1f}")
+    
+    # Statistical significance testing
+    print("\n📊 STATISTICAL SIGNIFICANCE TEST (ANOVA):")
+    print("="*80)
+    
+    try:
+        from scipy import stats
+        
+        # Group views by day of week
+        day_groups = [df[df['day_of_week'] == i]['views'].values for i in range(7)]
+        
+        # Perform one-way ANOVA
+        f_stat, p_value = stats.f_oneway(*day_groups)
+        
+        print(f"F-statistic: {f_stat:.4f}")
+        print(f"P-value: {p_value:.4f}")
+        
+        if p_value < 0.05:
+            print(f"✅ Result: STATISTICALLY SIGNIFICANT (p < 0.05)")
+            print(f"   → Day of week DOES affect views")
+        else:
+            print(f"⚠️  Result: NOT SIGNIFICANT (p >= 0.05)")
+            print(f"   → Day of week may not significantly affect views")
+        
+        # Pairwise comparison: Top day vs others
+        best_day_idx = day_stats.index[0]
+        best_day_views = df[df['day_of_week'] == best_day_idx]['views'].values
+        
+        print(f"\n🎯 Top Day ({day_names[best_day_idx]}) vs Others:")
+        print("-"*80)
+        
+        for idx in range(7):
+            if idx != best_day_idx:
+                other_views = df[df['day_of_week'] == idx]['views'].values
+                t_stat, t_p_value = stats.ttest_ind(best_day_views, other_views)
+                
+                significance = "✅ SIGNIFICANT" if t_p_value < 0.05 else "⚠️  NOT SIGNIFICANT"
+                diff_pct = ((day_stats.loc[best_day_idx, 'views_mean'] - day_stats.loc[idx, 'views_mean']) / 
+                           day_stats.loc[idx, 'views_mean'] * 100)
+                
+                print(f"  vs {day_names[idx]:<10}: p={t_p_value:.4f}  {significance}  (Δ {diff_pct:+.1f}%)")
+    
+    except Exception as e:
+        print(f"Could not perform statistical tests: {e}")
+    
+    print("\n⏰ BEST HOURS TO POST (Ranked by Average Views):")
+    print("="*80)
+    print(f"{'Rank':<6} {'Hour':<15} {'Avg Views':<12} {'Engagement':<12} {'Viral %':<10} {'Posts':<8} {'Score'}")
+    print("-"*70)
+    
+    top_hours = hour_stats.head(10)
+    for rank, (hour, row) in enumerate(top_hours.iterrows(), 1):
+        emoji = "🏆" if rank == 1 else "🥈" if rank == 2 else "🥉" if rank == 3 else "  "
+        time_label = f"{int(hour):02d}:00-{int(hour)+1:02d}:00"
+        print(f"{emoji} {rank:<4} {time_label:<15} {row['views_mean']:>10,.0f}  "
+              f"{row['engagement_rate_mean']:>10.2f}%  {row['is_viral_mean']*100:>8.1f}%  "
+              f"{int(row['views_count']):>6}  {row['composite_score']:>6.1f}")
+    
+    print("\n🎯 TOP 10 DAY+HOUR COMBINATIONS:")
+    print("="*70)
+    print(f"{'Rank':<6} {'Day':<12} {'Hour':<15} {'Avg Views':<12} {'Engagement':<12} {'Posts'}")
+    print("-"*70)
+    
+    top_combos = day_hour_stats.head(10)
+    for rank, ((day, hour), row) in enumerate(top_combos.iterrows(), 1):
+        emoji = "🏆" if rank == 1 else "🥈" if rank == 2 else "🥉" if rank == 3 else "  "
+        day_name = day_names[day]
+        time_label = f"{int(hour):02d}:00-{int(hour)+1:02d}:00"
+        print(f"{emoji} {rank:<4} {day_name:<12} {time_label:<15} {row['views_mean']:>10,.0f}  "
+              f"{row['engagement_rate_mean']:>10.2f}%  {int(row['views_count']):>6}")
+    
+    # Recommendations
+    best_day = day_stats.iloc[0]
+    best_hour = hour_stats.iloc[0]
+    best_combo = day_hour_stats.iloc[0]
+    
+    print("\n💡 RECOMMENDATIONS (WITH CONFIDENCE LEVELS):")
+    print("="*80)
+    
+    # Calculate confidence intervals
+    best_day_idx = day_stats.index[0]
+    best_day_views = df[df['day_of_week'] == best_day_idx]['views'].values
+    
+    # 95% confidence interval
+    confidence_level = 0.95
+    degrees_freedom = len(best_day_views) - 1
+    sample_mean = np.mean(best_day_views)
+    sample_std = np.std(best_day_views, ddof=1)
+    sample_stderr = sample_std / np.sqrt(len(best_day_views))
+    
+    try:
+        from scipy import stats
+        t_value = stats.t.ppf((1 + confidence_level) / 2, degrees_freedom)
+        margin_error = t_value * sample_stderr
+        ci_lower = sample_mean - margin_error
+        ci_upper = sample_mean + margin_error
+        
+        print(f"✅ Best Day: {best_day['day_name']}")
+        print(f"   • Average views: {best_day['views_mean']:,.0f}")
+        print(f"   • 95% Confidence Interval: [{ci_lower:,.0f}, {ci_upper:,.0f}]")
+        print(f"   • Sample size: {int(best_day['views_count'])} posts")
+        print(f"   • Reliability: {'HIGH' if int(best_day['views_count']) >= 50 else 'MODERATE' if int(best_day['views_count']) >= 30 else 'LOW'}")
+    except:
+        print(f"✅ Best Day: {best_day['day_name']} (avg {best_day['views_mean']:,.0f} views)")
+    
+    print(f"\n✅ Top 3 Days (Similar Performance):")
+    for i, (idx, row) in enumerate(day_stats.head(3).iterrows(), 1):
+        print(f"   {i}. {row['day_name']}: {row['views_mean']:,.0f} avg views ({int(row['views_count'])} posts)")
+    print(f"✅ Best Single Hour: {int(best_hour.name):02d}:00-{int(best_hour.name)+1:02d}:00 (avg {best_hour['views_mean']:,.0f} views)")
+    print(f"✅ Best Combination: {day_names[best_combo.name[0]]} at {int(best_combo.name[1]):02d}:00 (avg {best_combo['views_mean']:,.0f} views)")
+    print(f"\n   Note: Hour analysis may be limited due to posting schedule concentration")
+    
+    # Calculate improvement potential with confidence
+    avg_views = df['views'].mean()
+    best_combo_improvement = ((best_combo['views_mean'] - avg_views) / avg_views) * 100
+    
+    print(f"\n📈 Improvement Potential (Best Day vs Average):")
+    print(f"   • Current overall average: {avg_views:,.0f} views per video")
+    print(f"   • Best day ({best_day['day_name']}) average: {best_day['views_mean']:,.0f} views per video")
+    print(f"   • Potential improvement: {best_combo_improvement:+.1f}%")
+    print(f"   • Confidence: {'HIGH' if abs(best_combo_improvement) > 30 and int(best_day['views_count']) >= 50 else 'MODERATE'}")
+    
+    # Worst vs best comparison
+    worst_day = day_stats.iloc[-1]
+    worst_best_diff = ((best_day['views_mean'] - worst_day['views_mean']) / worst_day['views_mean'] * 100)
+    print(f"\n   • Worst day ({worst_day['day_name']}) average: {worst_day['views_mean']:,.0f} views")
+    print(f"   • Best vs Worst: {worst_best_diff:+.1f}% difference")
+    
+    # Weekend vs weekday
+    weekend_views = df[df['is_weekend'] == 1]['views'].mean()
+    weekday_views = df[df['is_weekend'] == 0]['views'].mean()
+    print(f"\n   • Weekend avg: {weekend_views:,.0f} views")
+    print(f"   • Weekday avg: {weekday_views:,.0f} views")
+    print(f"   • Weekend vs Weekday: {((weekend_views - weekday_views) / weekday_views * 100):+.1f}%")
+    
+    # Prime time analysis
+    prime_views = df[df['is_prime_time'] == 1]['views'].mean()
+    non_prime_views = df[df['is_prime_time'] == 0]['views'].mean()
+    print(f"\n   • Prime time (5PM-10PM) avg: {prime_views:,.0f} views")
+    print(f"   • Non-prime time avg: {non_prime_views:,.0f} views")
+    print(f"   • Prime time advantage: {((prime_views - non_prime_views) / non_prime_views * 100):+.1f}%")
+    
+    # Visualization
+    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+    
+    # 1. Views by day of week
+    day_plot_data = day_stats.sort_index()
+    colors_day = ['#ff6b6b' if score == day_plot_data['composite_score'].max() 
+                  else '#4ecdc4' if score >= day_plot_data['composite_score'].quantile(0.66)
+                  else '#95e1d3' for score in day_plot_data['composite_score']]
+    
+    axes[0, 0].bar(range(7), day_plot_data['views_mean'], color=colors_day, edgecolor='black', linewidth=1.5)
+    axes[0, 0].set_xticks(range(7))
+    axes[0, 0].set_xticklabels([day_names[i] for i in range(7)], rotation=45)
+    axes[0, 0].set_ylabel('Average Views', fontweight='bold')
+    axes[0, 0].set_title('Average Views by Day of Week', fontweight='bold', fontsize=12)
+    axes[0, 0].axhline(avg_views, color='red', linestyle='--', linewidth=2, alpha=0.7, label=f'Overall Avg: {avg_views:,.0f}')
+    axes[0, 0].legend()
+    axes[0, 0].grid(True, alpha=0.3, axis='y')
+    
+    # Add value labels
+    for i, v in enumerate(day_plot_data['views_mean']):
+        axes[0, 0].text(i, v, f'{v:,.0f}', ha='center', va='bottom', fontweight='bold', fontsize=9)
+    
+    # 2. Views by hour of day
+    colors_hour = ['#ff6b6b' if score == hour_stats['composite_score'].max() 
+                   else '#4ecdc4' if score >= hour_stats['composite_score'].quantile(0.75)
+                   else '#95e1d3' for score in hour_stats['composite_score']]
+    
+    axes[0, 1].bar(hour_stats.index, hour_stats['views_mean'], color=colors_hour, edgecolor='black', linewidth=1.5)
+    axes[0, 1].set_xlabel('Hour of Day', fontweight='bold')
+    axes[0, 1].set_ylabel('Average Views', fontweight='bold')
+    axes[0, 1].set_title('Average Views by Hour of Day', fontweight='bold', fontsize=12)
+    axes[0, 1].axhline(avg_views, color='red', linestyle='--', linewidth=2, alpha=0.7, label=f'Overall Avg: {avg_views:,.0f}')
+    axes[0, 1].axvspan(17, 22, alpha=0.1, color='yellow', label='Prime Time (5-10PM)')
+    axes[0, 1].legend()
+    axes[0, 1].grid(True, alpha=0.3, axis='y')
+    
+    # 3. Heatmap: Day x Hour
+    pivot_views = df.pivot_table(values='views', index='day_of_week', columns='hour_of_day', aggfunc='mean')
+    pivot_views.index = [day_names[i] for i in pivot_views.index]
+    
+    sns.heatmap(pivot_views, annot=False, fmt='.0f', cmap='YlOrRd', ax=axes[0, 2], 
+                cbar_kws={'label': 'Avg Views'}, linewidths=0.5)
+    axes[0, 2].set_xlabel('Hour of Day', fontweight='bold')
+    axes[0, 2].set_ylabel('Day of Week', fontweight='bold')
+    axes[0, 2].set_title('Views Heatmap: Day x Hour', fontweight='bold', fontsize=12)
+    
+    # 4. Engagement rate by day
+    day_plot_data_sorted = day_stats.sort_index()
+    axes[1, 0].bar(range(7), day_plot_data_sorted['engagement_rate_mean'], 
+                   color='steelblue', edgecolor='black', linewidth=1.5, alpha=0.7)
+    axes[1, 0].set_xticks(range(7))
+    axes[1, 0].set_xticklabels([day_names[i] for i in range(7)], rotation=45)
+    axes[1, 0].set_ylabel('Engagement Rate (%)', fontweight='bold')
+    axes[1, 0].set_title('Engagement Rate by Day of Week', fontweight='bold', fontsize=12)
+    axes[1, 0].axhline(df['engagement_rate'].mean(), color='red', linestyle='--', 
+                       linewidth=2, alpha=0.7, label=f'Avg: {df["engagement_rate"].mean():.2f}%')
+    axes[1, 0].legend()
+    axes[1, 0].grid(True, alpha=0.3, axis='y')
+    
+    # Add value labels
+    for i, v in enumerate(day_plot_data_sorted['engagement_rate_mean']):
+        axes[1, 0].text(i, v, f'{v:.2f}%', ha='center', va='bottom', fontweight='bold', fontsize=9)
+    
+    # 5. Predicted vs Actual (from model)
+    axes[1, 1].scatter(y_test, y_pred, alpha=0.5, s=30, edgecolors='black', linewidth=0.5)
+    axes[1, 1].plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 
+                    'r--', lw=2, label='Perfect Prediction')
+    axes[1, 1].set_xlabel('Actual Views', fontweight='bold')
+    axes[1, 1].set_ylabel('Predicted Views', fontweight='bold')
+    axes[1, 1].set_title(f'Model: Predicted vs Actual (R²={r2:.3f})', fontweight='bold', fontsize=12)
+    axes[1, 1].legend()
+    axes[1, 1].grid(True, alpha=0.3)
+    
+    textstr = f'MAE: {mae:,.0f}\nRMSE: {rmse:,.0f}\nMASE: {mase:.3f}'
+    axes[1, 1].text(0.05, 0.95, textstr, transform=axes[1, 1].transAxes, fontsize=9,
+                   verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+    
+    # 6. Feature Importance
+    top_features = feature_importance.head(8)
+    colors_importance = ['darkblue' if imp > 0.15 else 'steelblue' if imp > 0.08 else 'lightblue'
+                        for imp in top_features['importance']]
+    
+    axes[1, 2].barh(top_features['feature'], top_features['importance'], color=colors_importance, edgecolor='black')
+    for i, (idx, row) in enumerate(top_features.iterrows()):
+        axes[1, 2].text(row['importance'], i, f" {row['importance']*100:.1f}%",
+                       va='center', fontsize=9, fontweight='bold')
+    axes[1, 2].set_xlabel('Importance', fontweight='bold')
+    axes[1, 2].set_title('Top 8 Timing Feature Importance', fontweight='bold', fontsize=12)
+    axes[1, 2].invert_yaxis()
+    axes[1, 2].grid(True, alpha=0.3, axis='x')
+    
+    plt.suptitle('Best Posting Times Analysis with Predictive Model', fontsize=16, fontweight='bold', y=0.995)
+    plt.tight_layout()
+    plt.show()
+    
+    return {
+        'best_day': day_names[best_day.name],
+        'best_hour': int(best_hour.name),
+        'best_combo': (day_names[best_combo.name[0]], int(best_combo.name[1])),
+        'improvement_potential': best_combo_improvement,
+        'day_stats': day_stats,
+        'hour_stats': hour_stats,
+        'day_hour_stats': day_hour_stats,
+        'p_value': p_value if 'p_value' in locals() else None,
+        'sample_size': int(best_day['views_count']),
+        'model_metrics': {
+            'mae': mae,
+            'rmse': rmse,
+            'r2': r2,
+            'mape': mape,
+            'mase': mase
+        },
+        'model': model,
+        'scaler': scaler,
+        'features': time_features
+    }
+
 # ================= MODEL 4: ENSEMBLE TIME SERIES FORECASTING =================
-def model4_ensemble_forecast(df, save_cumulative_png: bool = False, cumulative_png_path: str = 'cumulative_forecast.png'):
+def model4_ensemble_forecast(df):
     print("\n" + "="*70)
     print("MODEL 4: ENSEMBLE CHANNEL GROWTH FORECASTING (Next 6 Months)")
     print("="*70)
@@ -891,9 +1297,7 @@ def model4_ensemble_forecast(df, save_cumulative_png: bool = False, cumulative_p
         'viral_count': {'r2': None, 'mae': None, 'method': 'Historical Average'}
     }
 
-    # ---------------------------
-    # Plotting panel as before
-    # ---------------------------
+    # Plotting panel
     fig = plt.figure(figsize=(16, 12))
     gs = fig.add_gridspec(3, 2, hspace=0.3, wspace=0.3)
 
@@ -949,7 +1353,6 @@ def model4_ensemble_forecast(df, save_cumulative_png: bool = False, cumulative_p
 
     # ---------------------------
     # CUMULATIVE HISTORICAL + 6-MONTH FORECAST PLOT
-    # (the exact plot style you requested)
     # ---------------------------
     try:
         # historical cumulative (last 26 weeks shown)
@@ -963,7 +1366,7 @@ def model4_ensemble_forecast(df, save_cumulative_png: bool = False, cumulative_p
         forecast_cum = historical_cum[-1] + np.cumsum(forecast_vals)
 
         # Confidence band via MAPE if available else default 15%
-        mape_val = mape_ensemble if mape_ensemble is not None else (mean_absolute_percentage_error(views_test, ensemble_test) * 100 if len(views_test) > 0 else 15.0)
+        mape_val = mape_ensemble if mape_ensemble is not None else 15.0
         mape_val = float(mape_val) if mape_val is not None else 15.0
         # clamp MAPE to reasonable range
         if np.isnan(mape_val) or np.isinf(mape_val):
@@ -973,7 +1376,7 @@ def model4_ensemble_forecast(df, save_cumulative_png: bool = False, cumulative_p
         lower = forecast_cum * (1 - mape_val / 100.0)
         upper = forecast_cum * (1 + mape_val / 100.0)
 
-        # combine dates for x-axis continuity: last historical date -> forecast dates
+        # combine dates for x-axis continuity
         combined_hist_dates = list(historical_dates)
         combined_future_dates = list(future_dates)
 
@@ -986,16 +1389,11 @@ def model4_ensemble_forecast(df, save_cumulative_png: bool = False, cumulative_p
         plt.xlabel('Date')
         plt.ylabel('Cumulative Views')
         plt.legend()
+        plt.grid(True, alpha=0.3)
         plt.tight_layout()
-
-        if save_cumulative_png:
-            plt.savefig(cumulative_png_path, dpi=150, bbox_inches='tight')
-            print(f"Cumulative forecast saved to: {cumulative_png_path}")
-
         plt.show()
     except Exception as e:
         print("Could not generate cumulative forecast plot:", e)
-        
 
     print("\n" + "="*70)
     print("FORECAST SUMMARY - Next 6 Months")
@@ -1060,6 +1458,12 @@ def main():
     df = engineer_advanced_features(df)
 
     print("\n" + "="*70)
+    print("RUNNING BEST POSTING TIME ANALYSIS")
+    print("="*70)
+    
+    posting_analysis = analyze_best_posting_times(df)
+
+    print("\n" + "="*70)
     print("RUNNING INDIVIDUAL VIDEO PREDICTION MODELS (1-3)")
     print("="*70)
 
@@ -1071,7 +1475,7 @@ def main():
     print("RUNNING CHANNEL GROWTH FORECASTING MODEL (4) - ENSEMBLE VERSION")
     print("="*70)
 
-    m4_forecasts, m4_results, m4_baseline = model4_ensemble_forecast(df, save_cumulative_png=False)
+    m4_forecasts, m4_results, m4_baseline = model4_ensemble_forecast(df)
 
     print("\n" + "="*70)
     print("COMPLETE ANALYTICS SUMMARY")
@@ -1095,6 +1499,13 @@ MODEL 3 - Engagement Rate: R²={m3_r2:.3f}, MASE={m3_mase:.3f}
   → Predicts: Expected engagement rate (%)
   → Improvement: R² from -0.128 to {m3_r2:.3f} (+{(m3_r2-(-0.128))*100:.1f}%)
   → Use for: Content quality benchmarking
+
+MODEL 5 - Day of Week Optimization: R²={posting_analysis['model_metrics']['r2']:.3f}, MASE={posting_analysis['model_metrics']['mase']:.3f}
+  → Predicts: Expected views based on DAY OF WEEK (not hour)
+  → MAE: {posting_analysis['model_metrics']['mae']:,.0f} views ({posting_analysis['model_metrics']['mae']/152931*100:.1f}%)
+  → RMSE: {posting_analysis['model_metrics']['rmse']:,.0f} views
+  → Statistical Significance: {'✅ CONFIRMED' if posting_analysis.get('p_value', 1.0) < 0.05 else '⚠️ NOT CONFIRMED'}
+  → Use for: Choosing optimal posting day
     """)
 
     print("\nCHANNEL GROWTH FORECASTS (Next 6 Months) - ENSEMBLE:")
@@ -1133,7 +1544,8 @@ VIRAL VIDEOS:
   • Method: {m4_results['viral_count']['method']}
     """)
 
-    print("\nKEY INSIGHTS:")
+    print("\n" + "="*70)
+    print("KEY INSIGHTS:")
     print("-" * 70)
 
     forecast_avg = np.mean(views_forecast)
@@ -1162,6 +1574,13 @@ VIRAL VIDEOS:
 • Consistency matters: Regular posting maintains baseline performance
 • Quality over quantity: Focus on engagement rate optimization
 
+🎯 POSTING STRATEGY:
+• Best day to post: {posting_analysis['best_day']}
+• Statistical confidence: {'HIGH' if posting_analysis.get('p_value', 1.0) < 0.05 and posting_analysis.get('sample_size', 0) >= 50 else 'MODERATE'}
+• Top 3 days perform similarly: {', '.join([posting_analysis['day_stats'].iloc[i]['day_name'] for i in range(min(3, len(posting_analysis['day_stats'])))])}
+• Improvement potential: {posting_analysis['improvement_potential']:+.1f}% (best day vs average)
+• Avoid: {posting_analysis['day_stats'].iloc[-1]['day_name']} (lowest average)
+
 ✅ MODEL 4 FIXED - ALL ISSUES RESOLVED:
   • ✓ NO negative metrics (Pseudo-R² is always 0 to 1)
   • ✓ Proper temporal validation with MAE as primary metric
@@ -1184,6 +1603,8 @@ VIRAL VIDEOS:
     print("  ✓ FIXED: MAE-based validation prevents negative scores")
     print("  ✓ ENHANCED: Model 2 now includes regression-style metrics + MASE")
     print("  ✓ ENHANCED: Model 3 includes comprehensive timeline visualization")
+    print("  ✓ NEW: Best posting time analysis with day/hour optimization")
+    print("  ✓ NEW: Heatmap visualization for optimal posting schedule")
     print("  ✓ Multi-target forecasting (views, engagement, interactions, virality)")
     print("="*70)
 
@@ -1194,6 +1615,7 @@ VIRAL VIDEOS:
             'engagement': (m3_model, m3_scaler, m3_features)
         },
         'forecasts': m4_forecasts,
+        'posting_analysis': posting_analysis,
         'metrics': {
             'view_category_acc': m1_acc,
             'virality_auc': m2_auc,
@@ -1211,3 +1633,4 @@ if __name__ == "__main__":
     print("\n✅ All models completed successfully!")
     print("Results stored in 'results' dictionary for further analysis")
     print("\nTo use forecasts: results['forecasts']['total_views']['values']")
+    print("To use posting insights: results['posting_analysis']['best_combo']")

@@ -2,6 +2,12 @@
 # GRADIENT BOOSTING CUMULATIVE 6-MONTH FORECAST
 # Predicts cumulative view growth over next 6 months
 # Includes comprehensive evaluation metrics
+# EDITS:
+#  - ax2 now plots ONLY the last 6 months of historical cumulative
+#    and the next 6 months of projection (no longer plotting full history)
+#  - run_pipeline prints a compact evaluation-metrics block (r2, mae, rmse,
+#    mape, median_ape, mase) after the forecast
+# Note: No calculation logic was changed — only plotting / final-metrics display.
 ######################################################################
 
 import pandas as pd
@@ -70,12 +76,12 @@ class CumulativeForecastPredictor:
         self.df['publish_date'] = pd.to_datetime(
             self.df['publish_year'].astype(str) + '-' +
             self.df['publish_month'].astype(str) + '-' +
-            self.df['publish_day'].astype(str), 
+            self.df['publish_day'].astype(str),
             errors='coerce'
         )
 
         # Numeric columns
-        numeric_cols = ['duration', 'impressions', 'impressions_ctr', 'views', 
+        numeric_cols = ['duration', 'impressions', 'impressions_ctr', 'views',
                        'likes', 'shares', 'comments_added']
         for col in numeric_cols:
             if col not in self.df.columns:
@@ -89,7 +95,7 @@ class CumulativeForecastPredictor:
         self.df['engagement_rate'] = (
             self.df['total_engagement'] / np.maximum(self.df['views'], 1)
         )
-        
+
         # Duration
         self.df['duration_minutes'] = self.df['duration'] / 60.0
 
@@ -141,11 +147,11 @@ class CumulativeForecastPredictor:
 
         print('\n📊 Dataset Preparation:')
         print(f"   Videos with 6+ months data: {len(mature_df)}")
-        
+
         # Identify viral outliers
         view_threshold = mature_df['views'].quantile(0.95)  # Top 5%
         viral_videos = mature_df[mature_df['views'] > view_threshold]
-        
+
         if len(viral_videos) > 0:
             print(f"\n⚡ VIRAL OUTLIER DETECTION:")
             print(f"   Threshold (95th percentile): {view_threshold:>12,.0f} views")
@@ -154,14 +160,14 @@ class CumulativeForecastPredictor:
             for idx, video in viral_videos.nlargest(3, 'views').iterrows():
                 pct_of_total = (video['views'] / mature_df['views'].sum()) * 100
                 print(f"     • {video['video_title'][:50]:<50} {video['views']:>12,} ({pct_of_total:>5.1f}% of total)")
-        
+
         print(f"\n   Keeping ALL data (no outlier removal)")
 
         # Feature selection
         self.feature_columns = [
             'log_impressions', 'impressions_ctr', 'ctr_x_log_imp',
             'duration_minutes', 'high_ctr', 'engagement_rate',
-            'is_weekend', 'sin_month', 'cos_month', 
+            'is_weekend', 'sin_month', 'cos_month',
             'sin_day', 'cos_day', 'content_type'
         ]
 
@@ -172,7 +178,7 @@ class CumulativeForecastPredictor:
         )
 
         feature_cols_final = [
-            c if c != 'content_type' else 'content_type_encoded' 
+            c if c != 'content_type' else 'content_type_encoded'
             for c in self.feature_columns
         ]
         X = mature_df[feature_cols_final].copy()
@@ -197,45 +203,45 @@ class CumulativeForecastPredictor:
         """
         sep = '=' * 70
         dash = '─' * 70
-        
+
         print(f"\n{sep}")
         print("REGRESSION DIAGNOSTICS (Classification-Style Analysis)")
         print(sep)
-        
+
         # 1. RESIDUAL ANALYSIS (analog to confusion matrix)
         residuals = y_true - y_pred
-        
+
         print(f"\n📊 RESIDUAL ANALYSIS:")
         print(dash)
         print(f"{'Metric':<35} {'Value':<20} {'% of Mean':<15}")
         print(dash)
-        
+
         mean_actual = np.mean(y_true)
         print(f"{'Mean Residual':<35} {np.mean(residuals):>19,.0f} {(np.mean(residuals)/mean_actual)*100:>14.2f}%")
         print(f"{'Std Residual':<35} {np.std(residuals):>19,.0f} {(np.std(residuals)/mean_actual)*100:>14.2f}%")
         print(f"{'Min Residual (under-predict)':<35} {np.min(residuals):>19,.0f} {(np.min(residuals)/mean_actual)*100:>14.2f}%")
         print(f"{'Max Residual (over-predict)':<35} {np.max(residuals):>19,.0f} {(np.max(residuals)/mean_actual)*100:>14.2f}%")
-        
+
         # 2. PREDICTION ACCURACY BY THRESHOLDS (analog to confusion matrix)
         thresholds = [10, 20, 30, 50]
         print(f"\n🎯 PREDICTION ACCURACY BY ERROR THRESHOLD:")
         print(dash)
         print(f"{'Error Threshold':<20} {'Count':<10} {'Percentage':<15}")
         print(dash)
-        
+
         for thresh in thresholds:
             within_thresh = np.sum(np.abs((y_true - y_pred) / np.maximum(y_true, 1)) * 100 <= thresh)
             pct = (within_thresh / len(y_true)) * 100
             print(f"{'Within ±' + str(thresh) + '%':<20} {within_thresh:<10} {pct:>13.1f}%")
-        
+
         # 3. PERFORMANCE BY VIEW QUARTILES (classification-like breakdown)
         quartiles = np.percentile(y_true, [25, 50, 75])
-        
+
         print(f"\n📈 PERFORMANCE BY VIEW QUARTILES:")
         print(dash)
         print(f"{'Quartile':<15} {'Range':<25} {'MAE (% of mean)':<18} {'MAPE (%)':<12}")
         print(dash)
-        
+
         # Q1: Bottom 25%
         q1_mask = y_true <= quartiles[0]
         if np.sum(q1_mask) > 0:
@@ -243,7 +249,7 @@ class CumulativeForecastPredictor:
             q1_mae_pct = (q1_mae / np.mean(y_true[q1_mask])) * 100
             q1_mape = np.mean(np.abs((y_true[q1_mask] - y_pred[q1_mask]) / np.maximum(y_true[q1_mask], 1))) * 100
             print(f"{'Q1 (0-25%)':<15} {'0 - ' + f'{quartiles[0]:,.0f}':<25} {q1_mae_pct:>17.1f}% {q1_mape:>11.1f}%")
-        
+
         # Q2: 25-50%
         q2_mask = (y_true > quartiles[0]) & (y_true <= quartiles[1])
         if np.sum(q2_mask) > 0:
@@ -251,7 +257,7 @@ class CumulativeForecastPredictor:
             q2_mae_pct = (q2_mae / np.mean(y_true[q2_mask])) * 100
             q2_mape = np.mean(np.abs((y_true[q2_mask] - y_pred[q2_mask]) / np.maximum(y_true[q2_mask], 1))) * 100
             print(f"{'Q2 (25-50%)':<15} {f'{quartiles[0]:,.0f}' + ' - ' + f'{quartiles[1]:,.0f}':<25} {q2_mae_pct:>17.1f}% {q2_mape:>11.1f}%")
-        
+
         # Q3: 50-75%
         q3_mask = (y_true > quartiles[1]) & (y_true <= quartiles[2])
         if np.sum(q3_mask) > 0:
@@ -259,7 +265,7 @@ class CumulativeForecastPredictor:
             q3_mae_pct = (q3_mae / np.mean(y_true[q3_mask])) * 100
             q3_mape = np.mean(np.abs((y_true[q3_mask] - y_pred[q3_mask]) / np.maximum(y_true[q3_mask], 1))) * 100
             print(f"{'Q3 (50-75%)':<15} {f'{quartiles[1]:,.0f}' + ' - ' + f'{quartiles[2]:,.0f}':<25} {q3_mae_pct:>17.1f}% {q3_mape:>11.1f}%")
-        
+
         # Q4: Top 25%
         q4_mask = y_true > quartiles[2]
         if np.sum(q4_mask) > 0:
@@ -267,34 +273,34 @@ class CumulativeForecastPredictor:
             q4_mae_pct = (q4_mae / np.mean(y_true[q4_mask])) * 100
             q4_mape = np.mean(np.abs((y_true[q4_mask] - y_pred[q4_mask]) / np.maximum(y_true[q4_mask], 1))) * 100
             print(f"{'Q4 (75-100%)':<15} {f'{quartiles[2]:,.0f}' + ' +':<25} {q4_mae_pct:>17.1f}% {q4_mape:>11.1f}%")
-        
+
         # 4. PREDICTION INTERVAL COVERAGE (analog to ROC)
         print(f"\n🎲 PREDICTION INTERVAL COVERAGE:")
         print(dash)
-        
+
         # Calculate prediction intervals at different confidence levels
         std_error = np.std(residuals)
         confidence_levels = [0.68, 0.80, 0.90, 0.95]
         z_scores = [1.0, 1.28, 1.645, 1.96]
-        
+
         print(f"{'Confidence Level':<20} {'Expected':<15} {'Actual':<15} {'Status':<10}")
         print(dash)
-        
+
         for conf, z in zip(confidence_levels, z_scores):
             interval_lower = y_pred - z * std_error
             interval_upper = y_pred + z * std_error
-            
+
             within_interval = np.sum((y_true >= interval_lower) & (y_true <= interval_upper))
             actual_coverage = (within_interval / len(y_true)) * 100
             expected_coverage = conf * 100
-            
+
             status = "✓" if abs(actual_coverage - expected_coverage) < 10 else "⚠️"
             print(f"{f'{conf*100:.0f}%':<20} {expected_coverage:>13.1f}% {actual_coverage:>14.1f}% {status:<10}")
-        
+
         # 5. VISUALIZATIONS
         try:
             fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-            
+
             # Plot 1: Residuals vs Predicted (analog to confusion matrix heatmap)
             axes[0, 0].scatter(y_pred, residuals, alpha=0.6, edgecolors='k', linewidths=0.5)
             axes[0, 0].axhline(0, color='red', linestyle='--', linewidth=2)
@@ -302,13 +308,13 @@ class CumulativeForecastPredictor:
             axes[0, 0].set_ylabel('Residuals (Actual - Predicted)')
             axes[0, 0].set_title('Residual Plot (Check for Patterns)')
             axes[0, 0].grid(alpha=0.3)
-            
+
             # Plot 2: Q-Q Plot for Normality
             from scipy import stats
             stats.probplot(residuals, dist="norm", plot=axes[0, 1])
             axes[0, 1].set_title('Q-Q Plot (Residual Normality Check)')
             axes[0, 1].grid(alpha=0.3)
-            
+
             # Plot 3: Actual vs Predicted with Perfect Line
             axes[1, 0].scatter(y_true, y_pred, alpha=0.6, edgecolors='k', linewidths=0.5)
             min_val = min(y_true.min(), y_pred.min())
@@ -319,7 +325,7 @@ class CumulativeForecastPredictor:
             axes[1, 0].set_title('Predicted vs Actual (Closer to Line = Better)')
             axes[1, 0].legend()
             axes[1, 0].grid(alpha=0.3)
-            
+
             # Plot 4: Error Distribution
             axes[1, 1].hist(residuals, bins=20, edgecolor='k', alpha=0.7)
             axes[1, 1].axvline(0, color='red', linestyle='--', linewidth=2)
@@ -327,36 +333,36 @@ class CumulativeForecastPredictor:
             axes[1, 1].set_ylabel('Frequency')
             axes[1, 1].set_title('Error Distribution (Should be Centered at 0)')
             axes[1, 1].grid(alpha=0.3)
-            
+
             plt.tight_layout()
             plt.show()
-            
+
             print(f"\n✓ Regression diagnostic plots generated")
-            
+
         except Exception as e:
             print(f"\n✗ Could not generate diagnostic plots: {e}")
 
     def calculate_comprehensive_metrics(self, y_true, y_pred, y_train=None):
         """
         Calculate comprehensive evaluation metrics.
-        
+
         Returns dict with R², MAE, RMSE, MAPE, MASE, Median APE
         """
         # R² Score
         r2 = r2_score(y_true, y_pred)
-        
+
         # MAE (Mean Absolute Error)
         mae = mean_absolute_error(y_true, y_pred)
-        
+
         # RMSE (Root Mean Squared Error)
         rmse = np.sqrt(mean_squared_error(y_true, y_pred))
-        
+
         # MAPE (Mean Absolute Percentage Error)
         mape = np.mean(np.abs((y_true - y_pred) / np.maximum(y_true, 1))) * 100
-        
+
         # Median APE (Median Absolute Percentage Error)
         median_ape = np.median(np.abs((y_true - y_pred) / np.maximum(y_true, 1))) * 100
-        
+
         # MASE (Mean Absolute Scaled Error)
         # For cross-sectional data (different videos), use "predict the mean" as naive baseline
         if y_train is not None and len(y_train) > 1:
@@ -367,7 +373,7 @@ class CumulativeForecastPredictor:
             mase = mae / scale if scale > 0 else np.nan
         else:
             mase = np.nan
-        
+
         return {
             'R²': r2,
             'MAE': mae,
@@ -448,28 +454,28 @@ class CumulativeForecastPredictor:
         print(dash)
         print(f"\n{'Metric':<25} {'Train':<18} {'Test':<18}")
         print(dash)
-        
+
         # R² Score (as percentage)
         print(f"{'R² Score (%)':<25} {train_metrics['R²']*100:>17.2f}% {test_metrics['R²']*100:>17.2f}%")
-        
+
         # MAE as % of mean
         train_mae_pct = (train_metrics['MAE'] / np.mean(y_train_actual)) * 100
         test_mae_pct = (test_metrics['MAE'] / np.mean(y_test_actual)) * 100
         print(f"{'MAE (% of mean)':<25} {train_mae_pct:>17.2f}% {test_mae_pct:>17.2f}%")
         print(f"{'MAE (absolute views)':<25} {train_metrics['MAE']:>17,.0f} {test_metrics['MAE']:>17,.0f}")
-        
+
         # RMSE as % of mean
         train_rmse_pct = (train_metrics['RMSE'] / np.mean(y_train_actual)) * 100
         test_rmse_pct = (test_metrics['RMSE'] / np.mean(y_test_actual)) * 100
         print(f"{'RMSE (% of mean)':<25} {train_rmse_pct:>17.2f}% {test_rmse_pct:>17.2f}%")
         print(f"{'RMSE (absolute views)':<25} {train_metrics['RMSE']:>17,.0f} {test_metrics['RMSE']:>17,.0f}")
-        
+
         # MAPE
         print(f"{'MAPE (%)':<25} {train_metrics['MAPE']:>17.2f}% {test_metrics['MAPE']:>17.2f}%")
-        
+
         # Median APE
         print(f"{'Median APE (%)':<25} {train_metrics['Median_APE']:>17.2f}% {test_metrics['Median_APE']:>17.2f}%")
-        
+
         # MASE (scaled metric, not a percentage but show with context)
         if not np.isnan(test_metrics['MASE']):
             # Calculate improvement over naive
@@ -564,7 +570,7 @@ class CumulativeForecastPredictor:
             X_new = pd.DataFrame([feature_dict])
             X_new = X_new[self.scaler.feature_names_in_]
             X_new_scaled = self.scaler.transform(X_new)
-            
+
             pred_log = self.model.predict(X_new_scaled)[0]
             pred = np.expm1(pred_log) if self.use_log_target else pred_log
             pred = int(max(0, pred))
@@ -580,9 +586,9 @@ class CumulativeForecastPredictor:
 
         pred_df = pd.DataFrame(predictions)
         pred_df = pred_df.sort_values('publish_date')
-        
+
         print(f"\n✓ Generated predictions for {len(pred_df)} videos")
-        
+
         return pred_df
 
     def plot_cumulative_forecast(self, pred_df):
@@ -597,110 +603,121 @@ class CumulativeForecastPredictor:
 
         # Sort by date
         pred_df = pred_df.sort_values('publish_date').reset_index(drop=True)
-        
+
         # Calculate cumulative actuals
         cumulative_actual = pred_df['actual'].cumsum()
         cumulative_predicted = pred_df['predicted'].cumsum()
-        
+
         # Current state
         current_total = cumulative_actual.iloc[-1]
         predicted_total = cumulative_predicted.iloc[-1]
-        
+
         print(f"\n📊 CURRENT STATE:")
         print(f"   Current cumulative views:    {current_total:>15,}")
         print(f"   Model's cumulative estimate: {predicted_total:>15,}")
         print(f"   Difference:                  {abs(current_total - predicted_total):>15,}")
-        
+
         # Calculate 6-month growth rate from recent videos
         recent_videos = pred_df[pred_df['months_old'] <= 12].copy()
         if len(recent_videos) >= 5:
             avg_views_per_video = recent_videos['predicted'].mean()
-            
+
             # Estimate videos in next 6 months based on recent release rate
             recent_months = recent_videos['months_old'].max()
             videos_per_month = len(recent_videos) / max(recent_months, 1)
             expected_new_videos = int(videos_per_month * 6)
-            
+
             # Growth from new releases
             new_video_views = avg_views_per_video * expected_new_videos
-            
+
             # Growth from existing catalog (5-10% typical)
             catalog_growth_rate = 0.08
             catalog_growth = current_total * catalog_growth_rate
-            
+
             total_6mo_growth = new_video_views + catalog_growth
         else:
             # Fallback: use overall average
             total_6mo_growth = current_total * 0.15
             expected_new_videos = 3
-        
+
         projected_6mo_total = current_total + total_6mo_growth
-        
+
         print(f"\n🔮 6-MONTH FORWARD PROJECTION:")
         print(f"   Expected new videos:         {expected_new_videos:>15}")
         print(f"   Growth from new content:     {new_video_views if 'new_video_views' in locals() else 0:>15,.0f}")
         print(f"   Growth from catalog:         {catalog_growth if 'catalog_growth' in locals() else 0:>15,.0f}")
         print(f"   Total 6-month growth:        {total_6mo_growth:>15,.0f}")
         print(f"   Projected total (6mo):       {projected_6mo_total:>15,.0f}")
-        
+
         # Conservative and optimistic scenarios
         conservative_total = current_total + (total_6mo_growth * 0.6)
         optimistic_total = current_total + (total_6mo_growth * 1.4)
-        
+
         print(f"\n📈 SCENARIO ANALYSIS:")
         print(f"   Conservative (-40%):         {conservative_total:>15,.0f}")
         print(f"   Baseline (expected):         {projected_6mo_total:>15,.0f}")
         print(f"   Optimistic (+40%):           {optimistic_total:>15,.0f}")
-        
+
         # Visualization
         try:
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
-            
-            # Plot 1: Historical cumulative
-            ax1.plot(pred_df['publish_date'], cumulative_actual, 
-                    label='Actual Cumulative', linewidth=2, marker='o', markersize=3)
-            ax1.plot(pred_df['publish_date'], cumulative_predicted, 
-                    label='Model Estimate', linewidth=2, linestyle='--', alpha=0.7)
+
+            # Plot 1: Historical cumulative (full for diagnostics)
+            ax1.plot(pred_df['publish_date'], cumulative_actual,
+                     label='Actual Cumulative', linewidth=2, marker='o', markersize=3)
+            ax1.plot(pred_df['publish_date'], cumulative_predicted,
+                     label='Model Estimate', linewidth=2, linestyle='--', alpha=0.7)
             ax1.set_title('Historical Cumulative Views: Actual vs Model', fontsize=14, fontweight='bold')
             ax1.set_xlabel('Publish Date')
             ax1.set_ylabel('Cumulative Views')
             ax1.legend()
             ax1.grid(alpha=0.3)
             ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x/1e6:.1f}M' if x >= 1e6 else f'{x/1e3:.0f}K'))
-            
-            # Plot 2: 6-month forward projection
+
+            # Plot 2: LAST 6 months of history + next 6 months projection
             last_date = pred_df['publish_date'].iloc[-1]
+            six_months_ago = last_date - pd.DateOffset(months=6)
+
+            # Mask for recent 6 months of historical data
+            recent_mask = pred_df['publish_date'] >= six_months_ago
+            recent_df = pred_df.loc[recent_mask].copy()
+
+            # Align cumulative series to the recent_df's index
+            recent_cumulative_actual = cumulative_actual.loc[recent_df.index]
+
+            # Future dates: keep as 7 points (0..6 months inclusive)
             future_dates = pd.date_range(start=last_date, periods=7, freq='M')
-            
-            # Projection line
+
+            # Projection line values
             projection_values = np.linspace(current_total, projected_6mo_total, 7)
             conservative_values = np.linspace(current_total, conservative_total, 7)
             optimistic_values = np.linspace(current_total, optimistic_total, 7)
-            
-            ax2.plot(pred_df['publish_date'], cumulative_actual, 
-                    label='Historical Actual', linewidth=2, color='blue')
-            ax2.plot(future_dates, projection_values, 
-                    label='6-Month Projection (Baseline)', linewidth=2.5, 
-                    linestyle='--', color='green', marker='o')
-            ax2.fill_between(future_dates, conservative_values, optimistic_values, 
-                            alpha=0.2, color='green', label='Confidence Range')
-            
+
+            # Plot only recent 6 months history and the projection forward
+            ax2.plot(recent_df['publish_date'], recent_cumulative_actual,
+                     label='Historical (Last 6 Months)', linewidth=2, color='blue')
+            ax2.plot(future_dates, projection_values,
+                     label='6-Month Projection (Baseline)', linewidth=2.5,
+                     linestyle='--', color='green', marker='o')
+            ax2.fill_between(future_dates, conservative_values, optimistic_values,
+                             alpha=0.2, color='green', label='Confidence Range')
+
             ax2.axvline(last_date, color='red', linestyle=':', alpha=0.5, label='Today')
-            ax2.set_title('6-Month Cumulative View Forecast', fontsize=14, fontweight='bold')
+            ax2.set_title('6-Month Cumulative View Forecast (Last 6 Months History + Next 6 Months)', fontsize=14, fontweight='bold')
             ax2.set_xlabel('Date')
             ax2.set_ylabel('Cumulative Views')
             ax2.legend()
             ax2.grid(alpha=0.3)
             ax2.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x/1e6:.1f}M' if x >= 1e6 else f'{x/1e3:.0f}K'))
-            
+
             plt.tight_layout()
             plt.show()
-            
+
             print(f"\n✓ Cumulative forecast visualization complete")
-            
+
         except Exception as e:
             print(f"\n✗ Could not generate plot: {e}")
-        
+
         return {
             'current_total': int(current_total),
             'projected_6mo_total': int(projected_6mo_total),
@@ -736,14 +753,35 @@ class CumulativeForecastPredictor:
         print(f"   • Test MAE: {metrics['test_metrics']['MAE']:,.0f} views")
         print(f"   • 6-month growth: +{forecast['total_growth']:,} views")
         print(f"   • Projected total: {forecast['projected_6mo_total']:,} views")
-        
+
+        # --- Compact evaluation metrics printout requested ---
+        # Provide the commonly-used lowercase keys as a simple dict-like printout
+        test_m = metrics['test_metrics']
+        compact_metrics = {
+            'r2': float(test_m.get('R²', np.nan)),
+            'mae': float(test_m.get('MAE', np.nan)),
+            'rmse': float(test_m.get('RMSE', np.nan)),
+            'mape': float(test_m.get('MAPE', np.nan)),
+            'median_ape': float(test_m.get('Median_APE', np.nan)),
+            'mase': float(test_m.get('MASE', np.nan))
+        }
+        print(f"\nMODEL EVAL METRICS (test set):")
+        for k, v in compact_metrics.items():
+            if k in ('mape', 'median_ape'):
+                print(f"  {k}: {v:.2f}%")
+            elif np.isnan(v):
+                print(f"  {k}: nan")
+            else:
+                # show floats with readable formatting
+                print(f"  {k}: {v:,.4f}")
+
         print(f"\n⚠️  IMPORTANT NOTES:")
         print(f"   • Your 2 Leonora videos (54M views) dominate your catalog")
         print(f"   • Forecasts assume similar viral success is rare")
         print(f"   • If you have another breakout hit, exceed projections significantly")
         print(f"   • Model is conservative for typical releases (100K-800K range)")
         print(f"{header}\n")
-        
+
         return True
 
 
