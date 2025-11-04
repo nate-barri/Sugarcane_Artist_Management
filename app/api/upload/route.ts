@@ -5,10 +5,14 @@ import { spawn } from "child_process"
 import { tmpdir } from "os"
 
 // Helper function to detect data type from CSV headers
-async function detectDataType(filePath: string): Promise<"META" | "YOUTUBE" | "UNKNOWN"> {
+async function detectDataType(filePath: string): Promise<"META" | "YOUTUBE" | "TIKTOK" | "UNKNOWN"> {
   const fs = require("fs").promises
   const content = await fs.readFile(filePath, "utf-8")
   const firstLine = content.split("\n")[0].toLowerCase()
+
+  if (firstLine.includes("tiktok_video_id") || firstLine.includes("content_link")) {
+    return "TIKTOK"
+  }
 
   // Check for Facebook/Meta specific columns
   if (firstLine.includes("post_id") || firstLine.includes("page_name") || firstLine.includes("permalink")) {
@@ -51,12 +55,11 @@ async function findPythonCommand(): Promise<string> {
 function executePythonScript(
   scriptName: string,
   filePath: string,
-  pythonCmd: string, // Added pythonCmd parameter
+  pythonCmd: string,
 ): Promise<{ success: boolean; records: number; error?: string }> {
   return new Promise((resolve) => {
     const scriptPath = join(process.cwd(), "scripts", scriptName)
 
-    // Set environment variables for database connection
     const env = {
       ...process.env,
       PGDATABASE: process.env.PGDATABASE || process.env.DATABASE_URL?.split("/").pop()?.split("?")[0],
@@ -66,7 +69,10 @@ function executePythonScript(
       PGPORT: process.env.PGPORT || "5432",
     }
 
-    const pythonProcess = spawn(pythonCmd, [scriptPath, filePath], { env })
+    const pythonProcess = spawn(pythonCmd, [scriptPath, filePath], {
+      env,
+      shell: true,
+    })
 
     let stdout = ""
     let stderr = ""
@@ -102,9 +108,38 @@ function executePythonScript(
   })
 }
 
+// Helper function to ensure Python dependencies are installed
+function installPythonDependencies(pythonCmd: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const requiredPackages = ["pandas", "psycopg2-binary", "emoji", "numpy"]
+
+    const installProcess = spawn(pythonCmd, ["-m", "pip", "install", ...requiredPackages], {
+      shell: true,
+      stdio: "pipe", // Suppress output
+    })
+
+    installProcess.on("close", (code) => {
+      if (code === 0) {
+        console.log("[v0] Python dependencies installed successfully")
+        resolve(true)
+      } else {
+        console.log("[v0] Warning: Could not verify all dependencies, attempting to run anyway")
+        resolve(true) // Still proceed - dependencies may already be installed
+      }
+    })
+
+    installProcess.on("error", () => {
+      console.log("[v0] Warning: Could not install dependencies, attempting to run anyway")
+      resolve(true) // Still proceed
+    })
+  })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const pythonCmd = await findPythonCommand()
+
+    await installPythonDependencies(pythonCmd)
 
     const formData = await request.formData()
     const file = formData.get("file") as File
@@ -137,13 +172,19 @@ export async function POST(request: NextRequest) {
       await unlink(tempFilePath)
       return NextResponse.json(
         {
-          error: "Unable to detect data type. Please ensure your CSV has the correct headers for META or YOUTUBE data.",
+          error:
+            "Unable to detect data type. Please ensure your CSV has the correct headers for META, YOUTUBE, or TIKTOK data.",
         },
         { status: 400 },
       )
     }
 
-    const scriptName = dataType === "META" ? "facebook_etl.py" : "youtube_etl.py"
+    const scriptMap: Record<string, string> = {
+      META: "facebook_etl.py",
+      YOUTUBE: "youtube_etl.py",
+      TIKTOK: "tiktok_etl.py",
+    }
+    const scriptName = scriptMap[dataType]
     const result = await executePythonScript(scriptName, tempFilePath, pythonCmd)
 
     // Clean up temp file

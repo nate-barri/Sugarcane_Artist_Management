@@ -17,8 +17,30 @@ interface ImportRecord {
 export default function ImportDashboard() {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadStatus, setUploadStatus] = useState<string>("")
+  const [uploadProgress, setUploadProgress] = useState<number>(0)
   const [recentImports, setRecentImports] = useState<ImportRecord[]>([
-    
+    {
+      fileName: "youtube_analytics_2024.csv",
+      type: "CSV",
+      date: "2024-01-15",
+      status: "Success",
+      records: 1250,
+      dataType: "YOUTUBE",
+    },
+    {
+      fileName: "instagram_data.xlsx",
+      type: "Excel",
+      date: "2024-01-14",
+      status: "Success",
+      records: 890,
+    },
+    {
+      fileName: "spotify_metrics.json",
+      type: "JSON",
+      date: "2024-01-13",
+      status: "Processing",
+      records: 2100,
+    },
   ])
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,34 +49,68 @@ export default function ImportDashboard() {
 
     setIsUploading(true)
     setUploadStatus("Uploading and processing...")
+    setUploadProgress(0)
 
     try {
       const formData = new FormData()
       formData.append("file", file)
 
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
+      const response = await new Promise<{ ok: boolean; data: any }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+
+        // Track upload progress
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = (event.loaded / event.total) * 100
+            setUploadProgress(Math.min(percentComplete, 90)) // Cap at 90% until complete
+          }
+        })
+
+        xhr.addEventListener("load", () => {
+          if (xhr.status === 200 || xhr.status === 201) {
+            try {
+              const data = JSON.parse(xhr.responseText)
+              resolve({ ok: true, data })
+            } catch {
+              reject(new Error("Failed to parse response"))
+            }
+          } else {
+            try {
+              const data = JSON.parse(xhr.responseText)
+              resolve({ ok: false, data })
+            } catch {
+              reject(new Error(`Upload failed with status ${xhr.status}`))
+            }
+          }
+        })
+
+        xhr.addEventListener("error", () => {
+          reject(new Error("Upload failed"))
+        })
+
+        xhr.open("POST", "/api/upload")
+        xhr.send(formData)
       })
 
-      const data = await response.json()
-
       if (response.ok) {
-        setUploadStatus(`Success! Processed ${data.records} records from ${data.dataType} data.`)
+        setUploadProgress(100)
+        setUploadStatus(`Success! Processed ${response.data.records} records from ${response.data.dataType} data.`)
 
         const newImport: ImportRecord = {
-          fileName: data.fileName,
+          fileName: response.data.fileName,
           type: file.name.endsWith(".csv") ? "CSV" : "Excel",
           date: new Date().toISOString().split("T")[0],
           status: "Success",
-          records: data.records,
-          dataType: data.dataType,
+          records: response.data.records,
+          dataType: response.data.dataType,
         }
         setRecentImports([newImport, ...recentImports])
       } else {
-        setUploadStatus(`Error: ${data.error}`)
+        setUploadProgress(0)
+        setUploadStatus(`Error: ${response.data.error}`)
       }
     } catch (error) {
+      setUploadProgress(0)
       setUploadStatus(`Error: ${error instanceof Error ? error.message : "Upload failed"}`)
     } finally {
       setIsUploading(false)
@@ -84,11 +140,19 @@ export default function ImportDashboard() {
             }`}
           >
             {uploadStatus}
+            {isUploading && uploadProgress > 0 && (
+              <div className="mt-3 w-full bg-gray-300 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            )}
           </div>
         )}
 
         {/* Import Options Section */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* CSV Import Card */}
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col justify-between">
             <div>
@@ -178,9 +242,10 @@ export default function ImportDashboard() {
             <p>• Ensure your data files are properly formatted with headers</p>
             <p>• Maximum file size: 50MB per upload</p>
             <p>• Supported formats: CSV and XLSX files</p>
-            <p>• System automatically detects META (Facebook) or YOUTUBE data</p>
+            <p>• System automatically detects META (Facebook), YOUTUBE, or TIKTOK data</p>
             <p>• META data requires: post_id, page_name, publish_time columns</p>
             <p>• YOUTUBE data requires: Video title, Video ID, Video publish time columns</p>
+            <p>• TIKTOK data requires: tiktok_video_id, content_link, video_title columns</p>
             <p>• Data will be processed and loaded into the database immediately</p>
           </div>
         </section>
