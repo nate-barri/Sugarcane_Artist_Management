@@ -1,29 +1,38 @@
 "use client"
 
 import type React from "react"
-
-import { useStackApp, useUser } from "@stackframe/stack"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, type User } from "firebase/auth"
+import { auth } from "@/lib/firebase"
 
 export default function LoginPage() {
-  const app = useStackApp()
-  const user = useUser()
   const router = useRouter()
+  const [user, setUser] = useState<User | null>(null)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
-  if (user) {
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser)
+      setIsCheckingAuth(false)
+      if (currentUser) {
+        router.push("/import")
+      }
+    })
+
+    return () => unsubscribe()
+  }, [router])
+
+  if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-900">You are already logged in</h2>
-          <button onClick={() => router.push("/import")} className="text-[#123458] hover:text-[#0e2742] font-medium">
-            Go to Dashboard
-          </button>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     )
@@ -42,14 +51,10 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
-        // Sign up new user
-        await app.signUpWithCredential({ email, password })
-        router.push("/import")
+        await createUserWithEmailAndPassword(auth, email, password)
       } else {
         try {
-          console.log("[v0] Attempting sign in with email:", email)
-          const result = await app.signInWithCredential({ email, password })
-          console.log("[v0] Sign in result:", result)
+          const result = await signInWithEmailAndPassword(auth, email, password)
 
           const validateResponse = await fetch("/api/auth/validate-user", {
             method: "POST",
@@ -57,51 +62,38 @@ export default function LoginPage() {
             body: JSON.stringify({ email }),
           })
 
-          console.log("[v0] Validation response status:", validateResponse.status)
-          const validationData = await validateResponse.json()
-          console.log("[v0] Validation data:", validationData)
-
-          if (!validateResponse.ok || !validationData.exists) {
-            console.log("[v0] User not found in Neon database, signing out")
-            if (result?.user) {
-              await result.user.signOut()
-            }
+          if (!validateResponse.ok || !(await validateResponse.json()).exists) {
+            // User not found in Neon database, sign them out
+            await result.user.getIdToken(true)
             setError("User not registered in the system. Please contact your administrator.")
             setLoading(false)
             return
           }
 
-          console.log("[v0] User validated in Neon database, redirecting to import")
           localStorage.setItem("authToken", email)
           router.push("/import")
         } catch (signInError: any) {
-          console.log("[v0] Sign in error:", signInError)
           const errorMessage = signInError?.message || ""
-          if (
-            errorMessage.toLowerCase().includes("not found") ||
-            errorMessage.toLowerCase().includes("invalid") ||
-            errorMessage.toLowerCase().includes("unauthorized") ||
-            errorMessage.toLowerCase().includes("user does not exist")
-          ) {
-            setError(
-              "User not found or invalid credentials. Please contact your administrator if you need to create an account.",
-            )
-            setLoading(false)
-            return
+          if (errorMessage.includes("user-not-found") || errorMessage.includes("invalid-credential")) {
+            setError("Invalid email or password. Please contact your administrator if you need assistance.")
+          } else {
+            setError(errorMessage || "Sign in failed. Please try again.")
           }
-          throw signInError
+          setLoading(false)
+          return
         }
       }
     } catch (err: any) {
-      console.log("[v0] Auth error:", err)
-      const errorMsg = err?.message || "Authentication failed. Please try again."
+      const errorMessage = err?.message || "Authentication failed. Please try again."
 
-      if (errorMsg.toLowerCase().includes("not found") || errorMsg.toLowerCase().includes("does not exist")) {
+      if (errorMessage.includes("user-not-found")) {
         setError("This account is not registered. Please contact your administrator.")
-      } else if (errorMsg.toLowerCase().includes("invalid") || errorMsg.toLowerCase().includes("unauthorized")) {
-        setError("Invalid email or password. Please contact your administrator if you need assistance.")
+      } else if (errorMessage.includes("invalid-credential") || errorMessage.includes("wrong-password")) {
+        setError("Invalid email or password.")
+      } else if (errorMessage.includes("email-already-in-use")) {
+        setError("This email is already registered.")
       } else {
-        setError(errorMsg)
+        setError(errorMessage)
       }
     } finally {
       setLoading(false)

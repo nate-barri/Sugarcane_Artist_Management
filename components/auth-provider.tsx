@@ -1,31 +1,38 @@
 "use client"
 
-import { createContext, useContext, type ReactNode } from "react"
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { useUser as useStackUser } from "@stackframe/stack"
+import { onAuthStateChanged, signOut as firebaseSignOut, type User } from "firebase/auth"
+import { auth } from "@/lib/firebase"
 
 interface AuthContextType {
-  user: any | null
+  user: User | null
   isLoading: boolean
-  logout: () => Promise<void>
+  signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const user = useStackUser()
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
-  const logout = async () => {
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
+      setIsLoading(false)
+    })
+
+    return () => unsubscribe()
+  }, [])
+
+  const signOut = async () => {
     try {
-      if (user) {
-        await user.signOut()
-      }
-      // Redirect to login page after successful logout
+      await firebaseSignOut(auth)
       router.push("/login")
     } catch (error) {
       console.error("Logout error:", error)
-      // Still redirect even if there's an error
       router.push("/login")
     }
   }
@@ -33,9 +40,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: user || null,
-        isLoading: false,
-        logout,
+        user,
+        isLoading,
+        signOut,
       }}
     >
       {children}

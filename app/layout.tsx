@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import { Inter, Roboto_Mono } from "next/font/google"
 import { AuthProvider } from "@/components/auth-provider"
-import { StackAuthProvider } from "@/components/stack-provider"
 import type React from "react"
 import { Suspense } from "react"
 import "./globals.css"
@@ -33,11 +32,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${robotoMono.variable}`}>
       <body className="antialiased" suppressHydrationWarning>
-        <StackAuthProvider>
-          <Suspense fallback={<AuthProviderFallback />}>
-            <AuthProvider>{children}</AuthProvider>
-          </Suspense>
-        </StackAuthProvider>
+        <Suspense fallback={<AuthProviderFallback />}>
+          <AuthProvider>{children}</AuthProvider>
+        </Suspense>
       </body>
     </html>
   )
