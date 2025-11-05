@@ -41,15 +41,15 @@
       "static/chunks/main-app.js",
       "static/chunks/app/api/analytics/tiktok/top-videos/route.js"
     ],
-    "/api/analytics/tiktok/temporal/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/tiktok/temporal/route.js"
-    ],
     "/api/analytics/tiktok/post-type/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/analytics/tiktok/post-type/route.js"
+    ],
+    "/api/analytics/tiktok/temporal/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/tiktok/temporal/route.js"
     ],
     "/api/analytics/tiktok/duration/route": [
       "static/chunks/webpack.js",
@@ -65,11 +65,6 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/analytics/tiktok/engagement-distribution/route.js"
-    ],
-    "/_not-found/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/_not-found/page.js"
     ]
   }
 }
