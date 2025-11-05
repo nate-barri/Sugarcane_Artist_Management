@@ -1,7 +1,9 @@
-"use client"
+"use client";
 
-import Sidebar from "@/components/sidebar"
-import { useEffect, useState } from "react"
+import Sidebar from "@/components/sidebar";
+import { useEffect, useMemo, useState } from "react";
+
+// Recharts
 import {
   ResponsiveContainer,
   LineChart,
@@ -13,272 +15,394 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ScatterChart,
-  Scatter,
-} from "recharts"
+} from "recharts";
 
-export default function TikTokDashboard() {
-  const [overview, setOverview] = useState<any>({})
-  const [topVideos, setTopVideos] = useState<any[]>([])
-  const [monthly, setMonthly] = useState<any[]>([])
-  const [postType, setPostType] = useState<any[]>([])
-  const [duration, setDuration] = useState<any[]>([])
-  const [sound, setSound] = useState<any[]>([])
-  const [engagement, setEngagement] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+// ===== Types =====
+type VideoRow = { video_title: string; total_views: number };
+type MonthlyRow = { publish_year: number; publish_month: number; total_views: number };
+type Overview = {
+  engagement_rate?: number; // 0–1 or 0–100 both supported
+  total_views?: number;
+  total_likes?: number;
+  total_shares?: number;
+};
 
-  useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
+// ===== Helpers: CSV Parsing (handles quotes, commas, BOM) =====
+function parseCSV(text: string): Record<string, string>[] {
+  const cleaned = text.replace(/^\uFEFF/, ""); // strip BOM
+  const lines = cleaned.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (!lines.length) return [];
+  const headers = splitCSVLine(lines[0]).map((h) => h.trim());
 
-        const [overviewRes, videosRes, temporalRes, postTypeRes, durationRes, soundRes, engagementRes] =
-          await Promise.all([
-            fetch("/api/analytics/tiktok/overview"),
-            fetch("/api/analytics/tiktok/top-videos?limit=10"),
-            fetch("/api/analytics/tiktok/temporal"),
-            fetch("/api/analytics/tiktok/post-type"),
-            fetch("/api/analytics/tiktok/duration"),
-            fetch("/api/analytics/tiktok/sound"),
-            fetch("/api/analytics/tiktok/engagement-distribution"),
-          ])
+  return lines.slice(1).map((line) => {
+    const cells = splitCSVLine(line);
+    const row: Record<string, string> = {};
+    headers.forEach((h, i) => (row[h] = (cells[i] ?? "").trim()));
+    return row;
+  });
 
-        if (!overviewRes.ok) throw new Error("Failed to fetch overview")
-        const overviewData = await overviewRes.json()
-        setOverview(overviewData)
-
-        if (!videosRes.ok) throw new Error("Failed to fetch videos")
-        const videosData = await videosRes.json()
-        setTopVideos(videosData.videos || [])
-
-        if (!temporalRes.ok) throw new Error("Failed to fetch temporal data")
-        const temporalData = await temporalRes.json()
-        setMonthly(temporalData.monthly || [])
-
-        if (!postTypeRes.ok) throw new Error("Failed to fetch post type data")
-        const postTypeData = await postTypeRes.json()
-        setPostType(postTypeData.post_type || [])
-
-        if (!durationRes.ok) throw new Error("Failed to fetch duration data")
-        const durationData = await durationRes.json()
-        setDuration(durationData.duration || [])
-
-        if (!soundRes.ok) throw new Error("Failed to fetch sound data")
-        const soundData = await soundRes.json()
-        setSound(soundData.sound || [])
-
-        if (!engagementRes.ok) throw new Error("Failed to fetch engagement data")
-        const engagementData = await engagementRes.json()
-        setEngagement(engagementData.engagement_distribution || [])
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load data")
-      } finally {
-        setLoading(false)
+  function splitCSVLine(line: string): string[] {
+    const out: string[] = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (c === "," && !inQuotes) {
+        out.push(cur);
+        cur = "";
+      } else {
+        cur += c;
       }
     }
+    out.push(cur);
+    return out;
+  }
+}
 
-    fetchAllData()
-  }, [])
+// ===== Flexible mappers =====
+function mapRowsToVideos(rows: Record<string, string>[]): VideoRow[] {
+  if (!rows.length) return [];
+  const keys = Object.keys(rows[0]);
 
-  const fmtInt = (n?: number) => (typeof n === "number" && Number.isFinite(n) ? n.toLocaleString() : "—")
+  const titleKey =
+    keys.find((k) => /^(video[_\s-]*title|title|caption|content)$/i.test(k)) ??
+    keys.find((k) => typeof rows[0][k] === "string") ??
+    "video_title";
+
+  let viewsKey = keys.find((k) => /views?|total[_\s-]*views?/i.test(k));
+  if (!viewsKey) {
+    const numericScore = (k: string) =>
+      rows.reduce((acc, r) => {
+        const n = Number(String(r[k] ?? "").replace(/,/g, ""));
+        return acc + (Number.isFinite(n) ? 1 : 0);
+      }, 0);
+    viewsKey = [...keys].sort((a, b) => numericScore(b) - numericScore(a))[0];
+  }
+
+  return rows
+    .map((r) => {
+      const title = r[titleKey!] ?? "";
+      const raw = String(r[viewsKey!] ?? "").replace(/,/g, "");
+      const views = Number(raw);
+      return { video_title: String(title), total_views: Number.isFinite(views) ? views : NaN };
+    })
+    .filter((r) => r.video_title && Number.isFinite(r.total_views));
+}
+
+function mapRowsToMonthly(rows: Record<string, string>[]): MonthlyRow[] {
+  if (!rows.length) return [];
+  const keys = Object.keys(rows[0]);
+  const findKey = (regexes: RegExp[]) =>
+    keys.find((k) => regexes.some((re) => re.test(k))) ?? "";
+
+  const yearKey = findKey([/publish[_\s-]*year/i, /^year$/i]);
+  const monthKey = findKey([/publish[_\s-]*month/i, /^month$/i]);
+  const viewsKey =
+    keys.find((k) => /total[_\s-]*views?|views?/i.test(k)) ??
+    keys.find((k) => /count|value|number/i.test(k)) ??
+    keys[0];
+
+  const out: MonthlyRow[] = [];
+
+  if (yearKey && monthKey) {
+    for (const r of rows) {
+      const y = Number(String(r[yearKey]).replace(/\D/g, ""));
+      const m = Number(String(r[monthKey]).replace(/\D/g, ""));
+      const v = Number(String(r[viewsKey]).replace(/,/g, ""));
+      if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(v)) {
+        out.push({ publish_year: y, publish_month: m, total_views: v });
+      }
+    }
+  } else {
+    const monthLikeKey = findKey([/^month$/i, /date/i, /period/i]);
+    for (const r of rows) {
+      const label = r[monthLikeKey] ?? "";
+      let y = NaN, m = NaN;
+      const iso = label.match(/(\d{4})[-/](\d{1,2})/);
+      if (iso) {
+        y = Number(iso[1]);
+        m = Number(iso[2]);
+      } else {
+        const mName = label.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*/i);
+        const yNum = label.match(/(20\d{2})/);
+        if (mName && yNum) {
+          const idx =
+            "jan feb mar apr may jun jul aug sep oct nov dec"
+              .split(" ")
+              .findIndex((s) => mName[1].toLowerCase().startsWith(s)) + 1;
+          m = idx;
+          y = Number(yNum[1]);
+        }
+      }
+      const v = Number(String(r[viewsKey]).replace(/,/g, ""));
+      if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(v)) {
+        out.push({ publish_year: y, publish_month: m, total_views: v });
+      }
+    }
+  }
+
+  out.sort((a, b) => a.publish_year - b.publish_year || a.publish_month - b.publish_month);
+  return out;
+}
+
+/** Map overview_metrics.csv into { engagement_rate, total_views, total_likes, total_shares }.
+ *  Supports either:
+ *   A) wide format (columns already named like engagement_rate,total_views,... on row 1), or
+ *   B) long format with two columns like metric,value (e.g., "metric,value" rows)
+ */
+function mapRowsToOverview(rows: Record<string, string>[]): Overview {
+  if (!rows.length) return {};
+
+  const keys = Object.keys(rows[0]);
+  const lowerKeys = keys.map((k) => k.toLowerCase());
+
+  // Wide-format detection
+  const hasWide =
+    lowerKeys.some((k) => /engagement[_\s-]*rate/.test(k)) ||
+    lowerKeys.some((k) => /total[_\s-]*views?/.test(k)) ||
+    lowerKeys.some((k) => /total[_\s-]*likes?/.test(k)) ||
+    lowerKeys.some((k) => /total[_\s-]*shares?/.test(k));
+
+  if (hasWide) {
+    const row = rows[0];
+    const pickNum = (re: RegExp) => {
+      const key = keys.find((k) => re.test(k.toLowerCase()));
+      if (!key) return undefined;
+      const raw = String(row[key]).replace(/[, %]/g, "");
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : undefined;
+    };
+
+    let er = pickNum(/engagement[_\s-]*rate/);
+    // Normalize ER: if it's 0–100, convert to 0–1 for display helper later
+    if (er !== undefined && er > 1.0001) er = er / 100;
+
+    return {
+      engagement_rate: er,
+      total_views: pickNum(/total[_\s-]*views?/),
+      total_likes: pickNum(/total[_\s-]*likes?/),
+      total_shares: pickNum(/total[_\s-]*shares?/),
+    };
+  }
+
+  // Long format (metric,value)
+  const metricKey =
+    keys.find((k) => /^metric|name|measure$/i.test(k)) ?? keys[0];
+  const valueKey =
+    keys.find((k) => /^value|amount|total|number|count$/i.test(k)) ??
+    keys[1] ??
+    keys[0];
+
+  const out: Overview = {};
+  for (const r of rows) {
+    const m = (r[metricKey] || "").toLowerCase().trim();
+    const valRaw = String(r[valueKey] ?? "");
+    const valNum = Number(valRaw.replace(/[, %]/g, ""));
+    if (!Number.isFinite(valNum)) continue;
+
+    if (/engagement/.test(m)) out.engagement_rate = valNum > 1.0001 ? valNum / 100 : valNum;
+    else if (/views?/.test(m)) out.total_views = valNum;
+    else if (/likes?/.test(m)) out.total_likes = valNum;
+    else if (/shares?/.test(m)) out.total_shares = valNum;
+  }
+  return out;
+}
+
+// ===== Component =====
+export default function TikTokDashboard() {
+  const [videos, setVideos] = useState<VideoRow[]>([]);
+  const [monthly, setMonthly] = useState<MonthlyRow[]>([]);
+  const [overview, setOverview] = useState<Overview>({});
+  const [errTop, setErrTop] = useState<string | null>(null);
+  const [errMonthly, setErrMonthly] = useState<string | null>(null);
+  const [errOverview, setErrOverview] = useState<string | null>(null);
+
+  // Load Top Videos CSV
+  useEffect(() => {
+    fetch("/top_videos_by_views.csv", { cache: "no-store" })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
+      .then((txt) => setVideos(mapRowsToVideos(parseCSV(txt))))
+      .catch((e) => setErrTop(String(e?.message || e)));
+  }, []);
+
+  // Load Monthly CSV
+  useEffect(() => {
+    fetch("/monthly_stats.csv", { cache: "no-store" })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
+      .then((txt) => setMonthly(mapRowsToMonthly(parseCSV(txt))))
+      .catch((e) => setErrMonthly(String(e?.message || e)));
+  }, []);
+
+  // Load Overview metrics CSV
+  useEffect(() => {
+    fetch("/overview_metrics.csv", { cache: "no-store" })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
+      .then((txt) => setOverview(mapRowsToOverview(parseCSV(txt))))
+      .catch((e) => setErrOverview(String(e?.message || e)));
+  }, []);
+
+  const top10 = useMemo(
+    () => [...videos].sort((a, b) => b.total_views - a.total_views).slice(0, 10),
+    [videos]
+  );
+
+  // ===== Formatters =====
+  const fmtInt = (n?: number) =>
+    typeof n === "number" && Number.isFinite(n)
+      ? n.toLocaleString()
+      : "—";
   const fmtPct = (n?: number) => {
-    if (typeof n !== "number" || !Number.isFinite(n)) return "—"
-    return `${n.toFixed(2)}%`
-  }
+    if (typeof n !== "number" || !Number.isFinite(n)) return "—";
+    // expects 0–1; if user stored 0–100 we normalized earlier
+    return `${(n * 100).toFixed(2)}%`;
+  };
   const fmtCompact = (n: number) =>
-    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : `${n}`
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen bg-[#123458] text-white">
-        <Sidebar />
-        <main className="flex-1 p-8 flex items-center justify-center">
-          <p className="text-xl">Loading dashboard data...</p>
-        </main>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex min-h-screen bg-[#123458] text-white">
-        <Sidebar />
-        <main className="flex-1 p-8 flex items-center justify-center">
-          <div className="bg-red-900 p-6 rounded-lg">
-            <p className="text-lg font-semibold">Error loading dashboard</p>
-            <p className="text-sm mt-2">{error}</p>
-          </div>
-        </main>
-      </div>
-    )
-  }
+    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M`
+    : n >= 1_000     ? `${(n / 1_000).toFixed(1)}K`
+    : `${n}`;
 
   return (
     <div className="flex min-h-screen bg-[#123458] text-white">
       <Sidebar />
       <main className="flex-1 p-8">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold">TikTok Analytics Dashboard</h1>
+        <header className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-[#FFFFFF]">TikTok Dashboard</h1>
         </header>
 
-        {/* KPIs */}
+        {/* KPIs driven by overview_metrics.csv */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-sm font-medium text-gray-600">Total Videos</h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{fmtInt(overview.total_videos)}</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-sm font-medium text-gray-600">Total Views</h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{fmtCompact(overview.total_views)}</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-sm font-medium text-gray-600">Engagement Rate</h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{fmtPct(overview.engagement_rate)}</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-sm font-medium text-gray-600">Avg Videos/Month</h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{fmtInt(overview.avg_videos_per_month)}</p>
-          </div>
-        </section>
-
-        {/* Top Videos */}
-        <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Top 10 Videos by Views</h2>
-          <div className="h-96">
-            {topVideos.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topVideos} layout="vertical" margin={{ top: 5, right: 30, left: 200, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tickFormatter={fmtCompact} />
-                  <YAxis dataKey="title" type="category" width={190} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v) => fmtInt(v as number)} />
-                  <Bar dataKey="views" fill="#0c4d8f" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-gray-500">No data available</div>
+          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
+            <h2 className="text-lg font-medium text-[#123458]">Engagement Rate</h2>
+            <p className="text-3xl font-bold text-gray-900">
+              {fmtPct(overview.engagement_rate)}
+            </p>
+            {errOverview && (
+              <p className="text-xs text-red-600 mt-1">Failed to load overview: {errOverview}</p>
             )}
           </div>
-        </section>
-
-        {/* Monthly Trends */}
-        <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Monthly Views Trend</h2>
-          <div className="h-96">
-            {monthly.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={monthly.map((m) => ({
-                    month: `${m.publish_year}-${String(m.publish_month).padStart(2, "0")}`,
-                    views: m.total_views,
-                  }))}
-                  margin={{ top: 5, right: 30, left: 0, bottom: 30 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" angle={-45} textAnchor="end" height={60} />
-                  <YAxis />
-                  <Tooltip formatter={(v) => fmtInt(v as number)} />
-                  <Line type="monotone" dataKey="views" stroke="#2c0379" strokeWidth={2} dot={{ r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-gray-500">No data available</div>
-            )}
+          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
+            <h2 className="text-lg font-medium text-[#123458]">Views</h2>
+            <p className="text-3xl font-bold text-gray-900">
+              {fmtInt(overview.total_views)}
+            </p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
+            <h2 className="text-lg font-medium text-[#123458]">Likes</h2>
+            <p className="text-3xl font-bold text-gray-900">
+              {fmtInt(overview.total_likes)}
+            </p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
+            <h2 className="text-lg font-medium text-[#123458]">Shares</h2>
+            <p className="text-3xl font-bold text-gray-900">
+              {fmtInt(overview.total_shares)}
+            </p>
           </div>
         </section>
 
-        {/* Post Type Analysis */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Charts */}
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Highest-Performing Videos by Total Views (Top 10) */}
           <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4 text-[#123458]">Performance by Post Type</h2>
-            <div className="h-80">
-              {postType.length > 0 ? (
+            <h2 className="text-xl font-semibold mb-4 text-[#123458]">
+              Highest-Performing Videos by Total Views
+            </h2>
+
+            <div className="h-96">
+              {errTop ? (
+                <div className="text-red-600">
+                  Failed to load CSV: {errTop}. Check that
+                  <code className="mx-1 text-[#123458]">/public/top_videos_by_views.csv</code>
+                  exists, opens at <code>/top_videos_by_views.csv</code>, and has a title column and a numeric views column.
+                </div>
+              ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={postType} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                  <BarChart
+                    data={top10}
+                    layout="vertical"
+                    margin={{ top: 12, right: 24, bottom: 12, left: 24 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="post_type" />
-                    <YAxis />
-                    <Tooltip formatter={(v) => fmtInt(v as number)} />
+                    <XAxis type="number" tickFormatter={fmtCompact} />
+                    <YAxis
+                      type="category"
+                      dataKey="video_title"
+                      width={220}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <Tooltip
+                      formatter={(v: any) =>
+                        Number.isFinite(v) ? v.toLocaleString() : String(v)
+                      }
+                    />
                     <Legend />
-                    <Bar dataKey="avg_views" fill="#8b5cf6" name="Avg Views" />
-                    <Bar dataKey="avg_likes" fill="#ec4899" name="Avg Likes" />
+                    <Bar dataKey="total_views" name="Views" fill="#0c4d8fff" />
                   </BarChart>
                 </ResponsiveContainer>
-              ) : (
-                <div className="text-gray-500">No data available</div>
               )}
             </div>
           </div>
 
-          {/* Duration Analysis */}
+          {/* Total Views by Month (Line) */}
           <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4 text-[#123458]">Performance by Duration</h2>
-            <div className="h-80">
-              {duration.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={duration} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="duration_bucket" />
-                    <YAxis />
-                    <Tooltip formatter={(v) => fmtInt(v as number)} />
-                    <Legend />
-                    <Bar dataKey="avg_views" fill="#06b6d4" name="Avg Views" />
-                    <Bar dataKey="avg_engagement" fill="#14b8a6" name="Avg Engagement" />
-                  </BarChart>
-                </ResponsiveContainer>
+            <h2 className="text-xl font-semibold mb-4 text-[#123458]">Total Views by Month</h2>
+
+            <div className="h-96">
+              {errMonthly ? (
+                <div className="text-red-600">
+                  Failed to load CSV: {errMonthly}. Check that
+                  <code className="mx-1 text-[#123458]">/public/monthly_stats.csv</code>
+                  exists, opens at <code>/monthly_stats.csv</code>, and has year/month + total_views columns.
+                </div>
               ) : (
-                <div className="text-gray-500">No data available</div>
+                <ResponsiveContainer width="100%" height={400}>
+                  <LineChart
+                    data={monthly.map((m) => ({
+                      month: `${m.publish_year}-${String(m.publish_month).padStart(2, "0")}`,
+                      total_views: m.total_views,
+                    }))}
+                    margin={{ top: 16, right: 24, bottom: 32, left: 24 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" angle={-45} textAnchor="end" height={60} />
+                    <YAxis tickFormatter={(v) => (Number.isFinite(v) ? v.toLocaleString() : String(v))} />
+                    <Tooltip
+                      labelFormatter={(l) => `Month: ${l}`}
+                      formatter={(v: any) => (Number.isFinite(v) ? v.toLocaleString() : String(v))}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="total_views"
+                      name="Month"
+                      stroke = "#2c0379ff"
+                      strokeWidth={2}
+                      dot
+                      activeDot={{ r: 5 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               )}
             </div>
-          </div>
-        </section>
-
-        {/* Sound Analysis */}
-        <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Top 20 Sounds by Views</h2>
-          <div className="h-96">
-            {sound.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={sound.slice(0, 10)}
-                  layout="vertical"
-                  margin={{ top: 5, right: 30, left: 150, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tickFormatter={fmtCompact} />
-                  <YAxis dataKey="sound_category" type="category" width={140} tick={{ fontSize: 10 }} />
-                  <Tooltip formatter={(v) => fmtInt(v as number)} />
-                  <Bar dataKey="total_views" fill="#f59e0b" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-gray-500">No data available</div>
-            )}
-          </div>
-        </section>
-
-        {/* Engagement Rate Distribution */}
-        <section className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Engagement Rate Distribution</h2>
-          <div className="h-96">
-            {engagement.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="views" name="Views" tickFormatter={fmtCompact} />
-                  <YAxis dataKey="engagement_rate" name="Engagement Rate %" />
-                  <Tooltip cursor={{ strokeDasharray: "3 3" }} formatter={(v) => fmtPct(v as number)} />
-                  <Scatter name="Videos" data={engagement.slice(0, 500)} fill="#10b981" />
-                </ScatterChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-gray-500">No data available</div>
-            )}
           </div>
         </section>
       </main>
     </div>
-  )
+  );
 }

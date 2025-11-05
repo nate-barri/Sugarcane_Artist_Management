@@ -220,7 +220,7 @@ def export_analytics_to_csv():
     print("Starting TikTok Analytics CSV Export...\n")
     
     # Define the target directory path
-    base_path = r"C:\Users\Luis\Desktop\COLLEGE\CAPSTONE\Sugarcane_Artist_Management\public"
+    base_path = r"C:\Sugarcane_Artist_Management\public"
     output_dir = os.path.join(base_path, "tiktok_analytics_export")
     
     # Create directory if it doesn't exist
