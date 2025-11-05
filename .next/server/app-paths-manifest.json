@@ -1,4 +1,13 @@
 {
-  "/page": "app/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/analytics/tiktok/overview/route": "app/api/analytics/tiktok/overview/route.js",
+  "/api/analytics/tiktok/top-videos/route": "app/api/analytics/tiktok/top-videos/route.js",
+  "/api/analytics/tiktok/temporal/route": "app/api/analytics/tiktok/temporal/route.js",
+  "/api/analytics/tiktok/post-type/route": "app/api/analytics/tiktok/post-type/route.js",
+  "/api/analytics/tiktok/duration/route": "app/api/analytics/tiktok/duration/route.js",
+  "/api/analytics/tiktok/sound/route": "app/api/analytics/tiktok/sound/route.js",
+  "/api/analytics/tiktok/engagement-distribution/route": "app/api/analytics/tiktok/engagement-distribution/route.js",
+  "/login/page": "app/login/page.js",
+  "/import/page": "app/import/page.js",
   "/tiktok/page": "app/tiktok/page.js"
 }

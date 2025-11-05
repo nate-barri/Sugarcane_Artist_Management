@@ -16,10 +16,60 @@
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
     ],
+    "/login/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/login/page.js"
+    ],
+    "/import/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/import/page.js"
+    ],
     "/tiktok/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/tiktok/page.js"
+    ],
+    "/api/analytics/tiktok/overview/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/tiktok/overview/route.js"
+    ],
+    "/api/analytics/tiktok/top-videos/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/tiktok/top-videos/route.js"
+    ],
+    "/api/analytics/tiktok/temporal/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/tiktok/temporal/route.js"
+    ],
+    "/api/analytics/tiktok/post-type/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/tiktok/post-type/route.js"
+    ],
+    "/api/analytics/tiktok/duration/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/tiktok/duration/route.js"
+    ],
+    "/api/analytics/tiktok/sound/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/tiktok/sound/route.js"
+    ],
+    "/api/analytics/tiktok/engagement-distribution/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/tiktok/engagement-distribution/route.js"
+    ],
+    "/_not-found/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/_not-found/page.js"
     ]
   }
 }
