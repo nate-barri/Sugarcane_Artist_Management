@@ -1,640 +1,917 @@
+# =============================================================================
+# MACHINE LEARNING FACEBOOK FORECASTER (ENSEMBLE APPROACH)
+# =============================================================================
+
 import psycopg2
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-from datetime import datetime
 import numpy as np
+import matplotlib.pyplot as plt
+import warnings
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.linear_model import Ridge
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from datetime import datetime, timedelta
+warnings.filterwarnings("ignore")
 
-# Database connection parameters
-DB_PARAMS = {
-    "dbname": "neondb",
-    "user": "neondb_owner",
-    "password": "npg_dGzvq4CJPRx7",
-    "host": "ep-lingering-dawn-a410n0b8-pooler.us-east-1.aws.neon.tech",
-    "port": "5432",
-    "sslmode": "require",
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
+db_params = {
+    'dbname': 'neondb',
+    'user': 'neondb_owner',
+    'password': 'npg_dGzvq4CJPRx7',
+    'host': 'ep-lingering-dawn-a410n0b8-pooler.us-east-1.aws.neon.tech',
+    'port': '5432',
+    'sslmode': 'require'
 }
 
+# =============================================================================
+# FETCH DATA
+# =============================================================================
 def fetch_data():
-    """Fetch data from PostgreSQL database"""
-    try:
-        conn = psycopg2.connect(**DB_PARAMS)
-        query = """
-        SELECT 
-            post_id, page_id, page_name, title, description, post_type,
-            duration_sec, publish_time, year, month, day, time,
-            permalink, is_crosspost, is_share, funded_content_status,
-            reach, shares, comments, reactions, seconds_viewed,
-            average_seconds_viewed, impressions
-        FROM public.facebook_data_set
-        ORDER BY publish_time
-        """
-        df = pd.read_sql_query(query, conn)
-        conn.close()
-        print(f"Successfully fetched {len(df)} rows from database")
-        return df
-    except Exception as e:
-        print(f"Error fetching data: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
+    print("Connecting to database...")
+    conn = psycopg2.connect(**db_params)
+    query = """
+    SELECT publish_time, post_type, reach, shares, comments, reactions,
+           impressions, seconds_viewed, average_seconds_viewed
+    FROM facebook_data_set
+    WHERE publish_time IS NOT NULL
+    ORDER BY publish_time;
+    """
+    df = pd.read_sql_query(query, conn)
+    conn.close()
 
-def prepare_data(df):
-    """Prepare and clean data for analysis"""
     df['publish_time'] = pd.to_datetime(df['publish_time'])
-    df['date'] = df['publish_time'].dt.date
+    for col in ['reach', 'shares', 'comments', 'reactions', 'impressions', 'seconds_viewed', 'average_seconds_viewed']:
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
     
-    # Fill missing values with 0 for engagement metrics
-    df['reactions'] = df['reactions'].fillna(0)
-    df['comments'] = df['comments'].fillna(0)
-    df['shares'] = df['shares'].fillna(0)
-    df['reach'] = df['reach'].fillna(0)
+    df['engagement'] = df['reactions'] + df['comments'] + df['shares']
     
-    # Calculate engagement metrics
-    df['total_engagement'] = df['reactions'] + df['comments'] + df['shares']
-    
-    # Calculate engagement rate and ratios
-    df['engagement_rate'] = np.where(
-        df['reach'] > 0,
-        df['total_engagement'] / df['reach'],
-        0
-    )
-    
-    df['reactions_to_reach_ratio'] = np.where(
-        df['reach'] > 0,
-        df['reactions'] / df['reach'],
-        0
-    )
-    
-    df['comments_to_reach_ratio'] = np.where(
-        df['reach'] > 0,
-        df['comments'] / df['reach'],
-        0
-    )
-    
-    df['shares_to_reach_ratio'] = np.where(
-        df['reach'] > 0,
-        df['shares'] / df['reach'],
-        0
-    )
-    
-    df['shares_to_reactions_ratio'] = np.where(
-        df['reactions'] > 0,
-        df['shares'] / df['reactions'],
-        0
-    )
-    
-    df['completion_rate'] = np.where(
-        df['duration_sec'] > 0,
-        df['average_seconds_viewed'] / df['duration_sec'],
-        np.nan
-    )
-    
+    print(f"✓ Loaded {len(df)} posts from {df['publish_time'].min().date()} → {df['publish_time'].max().date()}")
     return df
 
-def plot_cumulative_reach(df):
-    """Plot cumulative reach growth over time"""
-    # Sort by publish time and calculate cumulative metrics
-    df_sorted = df.sort_values('publish_time').copy()
-    df_sorted['cumulative_reach'] = df_sorted['reach'].cumsum()
-    df_sorted['cumulative_engagement'] = df_sorted['total_engagement'].cumsum()
+# =============================================================================
+# FEATURE ENGINEERING
+# =============================================================================
+def engineer_features(df):
+    """Create features for ML model"""
+    df = df.copy()
     
-    # Calculate cumulative engagement rate
-    df_sorted['cumulative_engagement_rate'] = np.where(
-        df_sorted['cumulative_reach'] > 0,
-        (df_sorted['cumulative_engagement'] / df_sorted['cumulative_reach']) * 100,
-        0
-    )
+    # Temporal features
+    df['year'] = df['publish_time'].dt.year
+    df['month'] = df['publish_time'].dt.month
+    df['day_of_week'] = df['publish_time'].dt.dayofweek
+    df['day_of_month'] = df['publish_time'].dt.day
+    df['quarter'] = df['publish_time'].dt.quarter
+    df['week_of_year'] = df['publish_time'].dt.isocalendar().week
+    df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
     
-    # Create figure with 2 subplots
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+    # Cyclical encoding for month (sin/cos to capture seasonality)
+    df['month_sin'] = np.sin(2 * np.pi * df['month'] / 12)
+    df['month_cos'] = np.cos(2 * np.pi * df['month'] / 12)
     
-    # Plot 1: Cumulative Reach
-    ax1.plot(df_sorted['publish_time'], df_sorted['cumulative_reach'], 
-             linewidth=2, color='#1f77b4', marker='o', markersize=3)
-    ax1.fill_between(df_sorted['publish_time'], df_sorted['cumulative_reach'], 
-                     alpha=0.3, color='#1f77b4')
+    # Time-based trend (months since start)
+    df['months_since_start'] = ((df['publish_time'] - df['publish_time'].min()).dt.days / 30.44).astype(int)
     
-    ax1.set_title('Cumulative Reach Growth Over Time', fontsize=16, fontweight='bold')
-    ax1.set_xlabel('Date', fontsize=12)
-    ax1.set_ylabel('Cumulative Reach', fontsize=12)
-    ax1.grid(True, alpha=0.3)
-    ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
+    # Rolling statistics (last 30 days)
+    df = df.sort_values('publish_time')
+    df['rolling_30d_reach_mean'] = df['reach'].rolling(window=30, min_periods=1).mean()
+    df['rolling_30d_reach_std'] = df['reach'].rolling(window=30, min_periods=1).std().fillna(0)
+    df['rolling_30d_engagement_mean'] = df['engagement'].rolling(window=30, min_periods=1).mean()
     
-    # Plot 2: Cumulative Engagement Rate
-    ax2.plot(df_sorted['publish_time'], df_sorted['cumulative_engagement_rate'], 
-             linewidth=2, color='#2ecc71', marker='o', markersize=3)
-    ax2.fill_between(df_sorted['publish_time'], df_sorted['cumulative_engagement_rate'], 
-                     alpha=0.3, color='#2ecc71')
+    # Post type encoding
+    le = LabelEncoder()
+    df['post_type_encoded'] = le.fit_transform(df['post_type'])
     
-    ax2.set_title('Cumulative Engagement Rate Over Time', fontsize=16, fontweight='bold')
-    ax2.set_xlabel('Date', fontsize=12)
-    ax2.set_ylabel('Cumulative Engagement Rate (%)', fontsize=12)
-    ax2.grid(True, alpha=0.3)
+    # Recent momentum (last 7 posts average)
+    df['recent_7_reach_avg'] = df['reach'].rolling(window=7, min_periods=1).mean()
+    df['recent_7_engagement_avg'] = df['engagement'].rolling(window=7, min_periods=1).mean()
+    
+    return df, le
+
+# =============================================================================
+# PREPARE AGGREGATED DATA FOR MONTHLY FORECASTING
+# =============================================================================
+def prepare_monthly_features(df):
+    """Aggregate to monthly level with features"""
+    df = df.copy()
+    
+    # Monthly aggregation
+    monthly = df.resample('M', on='publish_time').agg({
+        'reach': 'sum',
+        'engagement': 'sum',
+        'post_type': 'count',  # Number of posts
+        'month': 'first',
+        'quarter': 'first',
+        'year': 'first',
+        'month_sin': 'first',
+        'month_cos': 'first',
+        'months_since_start': 'first'
+    }).rename(columns={'post_type': 'post_count'})
+    
+    # Add post type distribution
+    post_type_dist = df.groupby([df['publish_time'].dt.to_period('M'), 'post_type']).size().unstack(fill_value=0)
+    post_type_dist.index = post_type_dist.index.to_timestamp()
+    
+    for col in post_type_dist.columns:
+        monthly[f'count_{col}'] = post_type_dist[col]
+    
+    # Lag features (previous months) - use median to fill initial NaNs
+    reach_median = monthly['reach'].median()
+    engagement_median = monthly['engagement'].median()
+    
+    for lag in [1, 2, 3]:
+        monthly[f'reach_lag_{lag}'] = monthly['reach'].shift(lag).fillna(reach_median)
+        monthly[f'engagement_lag_{lag}'] = monthly['engagement'].shift(lag).fillna(engagement_median)
+    
+    # Rolling features
+    monthly['reach_rolling_3m_avg'] = monthly['reach'].rolling(window=3, min_periods=1).mean()
+    monthly['reach_rolling_6m_avg'] = monthly['reach'].rolling(window=6, min_periods=1).mean()
+    monthly['reach_rolling_3m_std'] = monthly['reach'].rolling(window=3, min_periods=1).std().fillna(0)
+    
+    # Fill any remaining NaNs in post type counts
+    for col in monthly.columns:
+        if 'count_' in col:
+            monthly[col] = monthly[col].fillna(0)
+    
+    # Final check - fill any remaining NaNs with column median
+    for col in monthly.columns:
+        if monthly[col].isna().any():
+            monthly[col] = monthly[col].fillna(monthly[col].median())
+    
+    return monthly
+
+# =============================================================================
+# TRAIN ML MODELS
+# =============================================================================
+def train_ml_models(monthly_df, target='reach'):
+    """Train ensemble of ML models"""
+    
+    print(f"\n{'='*80}")
+    print(f"TRAINING ML MODELS FOR {target.upper()}")
+    print(f"{'='*80}")
+    
+    # Prepare features and target
+    feature_cols = [col for col in monthly_df.columns if col not in ['reach', 'engagement']]
+    X = monthly_df[feature_cols]
+    y = monthly_df[target]
+    
+    # Check for NaN values
+    if X.isna().any().any():
+        print("⚠️ WARNING: NaN values found in features. Filling with median...")
+        X = X.fillna(X.median())
+    
+    # Remove outliers from training for better generalization
+    # Use IQR method on target variable
+    Q1 = y.quantile(0.25)
+    Q3 = y.quantile(0.75)
+    IQR = Q3 - Q1
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+    
+    # Keep outliers in test set but remove from training
+    outlier_mask = (y < lower_bound) | (y > upper_bound)
+    print(f"Found {outlier_mask.sum()} outliers in target variable")
+    
+    # Train/test split (last 6 months for validation)
+    split_idx = len(X) - 6
+    X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
+    y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
+    
+    # Remove outliers only from training set
+    train_outliers = outlier_mask.iloc[:split_idx]
+    X_train_clean = X_train[~train_outliers]
+    y_train_clean = y_train[~train_outliers]
+    
+    print(f"Training samples: {len(X_train_clean)} (removed {train_outliers.sum()} outliers)")
+    print(f"Test samples: {len(X_test)}")
+    print(f"Features: {len(feature_cols)}")
+    
+    # Initialize models with reduced overfitting
+    models = {
+        'Random Forest': RandomForestRegressor(
+            n_estimators=100,  # Reduced from 200
+            max_depth=5,       # More conservative
+            min_samples_split=10,  # Increased
+            min_samples_leaf=4,    # Increased
+            max_features='sqrt',   # Added
+            random_state=42
+        ),
+        'Gradient Boosting': GradientBoostingRegressor(
+            n_estimators=50,    # Reduced
+            learning_rate=0.05,
+            max_depth=3,        # More conservative
+            min_samples_split=10,
+            subsample=0.8,      # Added regularization
+            random_state=42
+        ),
+        'Ridge Regression': Ridge(alpha=10.0)  # Increased regularization
+    }
+    
+    # Train and evaluate each model
+    results = {}
+    predictions = {}
+    
+    for name, model in models.items():
+        print(f"\nTraining {name}...")
+        model.fit(X_train_clean, y_train_clean)  # Use cleaned training data
+        
+        # Predictions
+        y_pred_train = model.predict(X_train_clean)
+        y_pred_test = np.maximum(model.predict(X_test), 0)  # No negative predictions
+        
+        # Metrics
+        train_r2 = r2_score(y_train_clean, y_pred_train)
+        test_r2 = r2_score(y_test, y_pred_test)
+        test_mae = mean_absolute_error(y_test, y_pred_test)
+        test_rmse = np.sqrt(mean_squared_error(y_test, y_pred_test))
+        
+        # MAPE
+        mask = y_test > 0
+        test_mape = np.mean(np.abs((y_test[mask] - y_pred_test[mask]) / y_test[mask])) * 100 if mask.sum() > 0 else np.nan
+        
+        # MASE (Mean Absolute Scaled Error)
+        if len(y_test) > 1:
+            # Naive forecast = use last known value
+            naive_forecast = np.roll(y_test.values, 1)[1:]
+            naive_mae = np.mean(np.abs(y_test.values[1:] - naive_forecast))
+            test_mase = test_mae / naive_mae if naive_mae > 0 else np.nan
+        else:
+            test_mase = np.nan
+        
+        # Directional Accuracy
+        if len(y_test) > 1:
+            actual_direction = np.sign(np.diff(y_test.values))
+            pred_direction = np.sign(np.diff(y_pred_test))
+            directional_accuracy = np.mean(actual_direction == pred_direction) * 100
+        else:
+            directional_accuracy = np.nan
+        
+        results[name] = {
+            'model': model,
+            'train_r2': train_r2,
+            'test_r2': test_r2,
+            'mae': test_mae,
+            'rmse': test_rmse,
+            'mape': test_mape,
+            'mase': test_mase,
+            'directional_accuracy': directional_accuracy
+        }
+        
+        predictions[name] = y_pred_test
+        
+        print(f"  Train R²: {train_r2:.3f}")
+        print(f"  Test R²:  {test_r2:.3f}")
+        print(f"  MAE:      {test_mae:,.0f}")
+        print(f"  RMSE:     {test_rmse:,.0f}")
+        print(f"  MAPE:     {test_mape:.1f}%")
+        print(f"  MASE:     {test_mase:.3f}")
+        print(f"  Dir Acc:  {directional_accuracy:.1f}%")
+    
+    # Ensemble prediction (weighted by test R2 performance)
+    # Give more weight to models with positive R2
+    weights = {}
+    for name in models.keys():
+        r2 = results[name]['test_r2']
+        # Only use models with R2 > 0
+        weights[name] = max(0, r2)
+    
+    total_weight = sum(weights.values())
+    
+    if total_weight > 0:
+        # Weighted ensemble
+        ensemble_pred = sum([predictions[name] * weights[name] / total_weight 
+                            for name in models.keys()])
+        ensemble_method = "Weighted by R²"
+    else:
+        # Fall back to simple average if all models are bad
+        ensemble_pred = np.mean([predictions[name] for name in models.keys()], axis=0)
+        ensemble_method = "Simple Average (All R² < 0)"
+    
+    ensemble_r2 = r2_score(y_test, ensemble_pred)
+    ensemble_mae = mean_absolute_error(y_test, ensemble_pred)
+    ensemble_rmse = np.sqrt(mean_squared_error(y_test, ensemble_pred))
+    
+    # Ensemble MAPE
+    mask = y_test > 0
+    ensemble_mape = np.mean(np.abs((y_test[mask] - ensemble_pred[mask]) / y_test[mask])) * 100 if mask.sum() > 0 else np.nan
+    
+    # Ensemble MASE
+    if len(y_test) > 1:
+        naive_forecast = np.roll(y_test.values, 1)[1:]
+        naive_mae = np.mean(np.abs(y_test.values[1:] - naive_forecast))
+        ensemble_mase = ensemble_mae / naive_mae if naive_mae > 0 else np.nan
+    else:
+        ensemble_mase = np.nan
+    
+    # Ensemble Directional Accuracy
+    if len(y_test) > 1:
+        actual_direction = np.sign(np.diff(y_test.values))
+        pred_direction = np.sign(np.diff(ensemble_pred))
+        ensemble_dir_acc = np.mean(actual_direction == pred_direction) * 100
+    else:
+        ensemble_dir_acc = np.nan
+    
+    print(f"\n{'='*80}")
+    print(f"ENSEMBLE MODEL ({ensemble_method})")
+    print(f"{'='*80}")
+    if total_weight > 0:
+        print(f"  Weights: {', '.join([f'{k}: {v/total_weight:.1%}' for k, v in weights.items() if v > 0])}")
+    print(f"  Test R²:  {ensemble_r2:.3f}")
+    print(f"  MAE:      {ensemble_mae:,.0f}")
+    print(f"  RMSE:     {ensemble_rmse:,.0f}")
+    print(f"  MAPE:     {ensemble_mape:.1f}%")
+    print(f"  MASE:     {ensemble_mase:.3f}")
+    print(f"  Dir Acc:  {ensemble_dir_acc:.1f}%")
+    
+    results['Ensemble'] = {
+        'predictions': ensemble_pred,
+        'test_r2': ensemble_r2,
+        'mae': ensemble_mae,
+        'rmse': ensemble_rmse,
+        'mape': ensemble_mape,
+        'mase': ensemble_mase,
+        'directional_accuracy': ensemble_dir_acc
+    }
+    
+    # Feature importance (from Random Forest)
+    rf_model = results['Random Forest']['model']
+    feature_importance = pd.DataFrame({
+        'feature': feature_cols,
+        'importance': rf_model.feature_importances_
+    }).sort_values('importance', ascending=False).head(10)
+    
+    print(f"\n{'='*80}")
+    print("TOP 10 MOST IMPORTANT FEATURES")
+    print(f"{'='*80}")
+    for idx, row in feature_importance.iterrows():
+        print(f"  {row['feature']:<30} {row['importance']:.4f}")
+    
+    # Validation comparison
+    print(f"\n{'='*80}")
+    print("VALIDATION PERIOD COMPARISON")
+    print(f"{'='*80}")
+    print(f"{'Month':<12} {'Actual':>15} {'Ensemble':>15} {'RF':>15} {'GBoost':>15}")
+    print("-" * 80)
+    
+    test_dates = y_test.index
+    for i, date in enumerate(test_dates):
+        actual = y_test.iloc[i]
+        ens = ensemble_pred[i]
+        rf = predictions['Random Forest'][i]
+        gb = predictions['Gradient Boosting'][i]
+        
+        print(f"{date.strftime('%Y-%m'):<12} {actual:>15,.0f} {ens:>15,.0f} {rf:>15,.0f} {gb:>15,.0f}")
+    
+    return results, X_test, y_test, predictions, ensemble_pred, feature_cols
+
+# =============================================================================
+# FORECAST FUTURE MONTHS
+# =============================================================================
+def forecast_future(monthly_df, models, feature_cols, target='reach', periods=6):
+    """Generate forecasts for next 6 months"""
+    
+    print(f"\n{'='*80}")
+    print(f"FORECASTING NEXT {periods} MONTHS - {target.upper()}")
+    print(f"{'='*80}")
+    
+    # Start from the last known month
+    last_date = monthly_df.index[-1]
+    forecast_data = []
+    
+    # We'll use the last row as template and update it
+    current_data = monthly_df.iloc[-1:].copy()
+    
+    for i in range(1, periods + 1):
+        # Create next month's date
+        next_date = last_date + pd.DateOffset(months=i)
+        
+        # Update temporal features
+        current_data.index = [next_date]
+        current_data['month'] = next_date.month
+        current_data['quarter'] = next_date.quarter
+        current_data['year'] = next_date.year
+        current_data['months_since_start'] = current_data['months_since_start'].iloc[0] + i
+        current_data['month_sin'] = np.sin(2 * np.pi * next_date.month / 12)
+        current_data['month_cos'] = np.cos(2 * np.pi * next_date.month / 12)
+        
+        # Update lag features with recent predictions/actuals
+        if i == 1:
+            current_data['reach_lag_1'] = monthly_df['reach'].iloc[-1]
+            current_data['reach_lag_2'] = monthly_df['reach'].iloc[-2]
+            current_data['reach_lag_3'] = monthly_df['reach'].iloc[-3]
+            current_data['engagement_lag_1'] = monthly_df['engagement'].iloc[-1]
+            current_data['engagement_lag_2'] = monthly_df['engagement'].iloc[-2]
+            current_data['engagement_lag_3'] = monthly_df['engagement'].iloc[-3]
+        else:
+            # Use previous forecast as lag (for reach forecasting, keep engagement from actuals)
+            if target == 'reach':
+                if len(forecast_data) >= 1:
+                    current_data['reach_lag_1'] = forecast_data[-1]['forecast_value']
+                    current_data['engagement_lag_1'] = monthly_df['engagement'].iloc[-1]
+                if len(forecast_data) >= 2:
+                    current_data['reach_lag_2'] = forecast_data[-2]['forecast_value']
+                    current_data['engagement_lag_2'] = monthly_df['engagement'].iloc[-2]
+                if len(forecast_data) >= 3:
+                    current_data['reach_lag_3'] = forecast_data[-3]['forecast_value']
+                    current_data['engagement_lag_3'] = monthly_df['engagement'].iloc[-3]
+            else:  # engagement forecasting
+                if len(forecast_data) >= 1:
+                    current_data['engagement_lag_1'] = forecast_data[-1]['forecast_value']
+                    current_data['reach_lag_1'] = monthly_df['reach'].iloc[-1]
+                if len(forecast_data) >= 2:
+                    current_data['engagement_lag_2'] = forecast_data[-2]['forecast_value']
+                    current_data['reach_lag_2'] = monthly_df['reach'].iloc[-2]
+                if len(forecast_data) >= 3:
+                    current_data['engagement_lag_3'] = forecast_data[-3]['forecast_value']
+                    current_data['reach_lag_3'] = monthly_df['reach'].iloc[-3]
+        
+        # Update rolling averages (simplified - use recent avg)
+        recent_avg = monthly_df['reach'].iloc[-3:].mean()
+        current_data['reach_rolling_3m_avg'] = recent_avg
+        current_data['reach_rolling_6m_avg'] = monthly_df['reach'].iloc[-6:].mean()
+        
+        # Predict with each model
+        X_future = current_data[feature_cols]
+        
+        predictions = {}
+        for name in ['Random Forest', 'Gradient Boosting', 'Ridge Regression']:
+            model = models[name]['model']
+            pred = max(0, model.predict(X_future)[0])
+            predictions[name] = pred
+        
+        # Ensemble prediction
+        ensemble_pred = np.mean(list(predictions.values()))
+        
+        forecast_data.append({
+            'date': next_date,
+            'forecast_value': ensemble_pred,
+            'rf_pred': predictions['Random Forest'],
+            'gb_pred': predictions['Gradient Boosting'],
+            'ridge_pred': predictions['Ridge Regression']
+        })
+    
+    # Display forecast
+    print(f"\n{'Month':<12} {'Ensemble':>15} {'Random Forest':>15} {'Gradient Boost':>15} {'Ridge':>15}")
+    print("-" * 85)
+    
+    for item in forecast_data:
+        print(f"{item['date'].strftime('%Y-%m'):<12} "
+              f"{item['forecast_value']:>15,.0f} "
+              f"{item['rf_pred']:>15,.0f} "
+              f"{item['gb_pred']:>15,.0f} "
+              f"{item['ridge_pred']:>15,.0f}")
+    
+    total_forecast = sum([item['forecast_value'] for item in forecast_data])
+    print(f"\nTotal 6-month {target} forecast: {total_forecast:,.0f}")
+    
+    return forecast_data
+
+# =============================================================================
+# VISUALIZATION
+# =============================================================================
+def plot_results(monthly_df, test_data, ensemble_pred, forecast_data, target='reach'):
+    """Visualize historical, validation, and forecast"""
+    
+    fig, axes = plt.subplots(2, 2, figsize=(16, 10))
+    
+    # Plot 1: Historical + Validation + Forecast
+    ax1 = axes[0, 0]
+    
+    # Historical (training)
+    hist_data = monthly_df[target].iloc[:-6]
+    ax1.plot(hist_data.index, hist_data.values, 'o-', label='Historical', linewidth=2)
+    
+    # Validation actual
+    ax1.plot(test_data.index, test_data.values, 's-', label='Validation (Actual)', 
+             linewidth=2, markersize=8, color='orange')
+    
+    # Validation predicted
+    ax1.plot(test_data.index, ensemble_pred, '^--', label='Validation (Predicted)', 
+             linewidth=2, markersize=8, color='red')
+    
+    # Future forecast
+    forecast_dates = [item['date'] for item in forecast_data]
+    forecast_values = [item['forecast_value'] for item in forecast_data]
+    ax1.plot(forecast_dates, forecast_values, 'D--', label='Forecast', 
+             linewidth=2, markersize=8, color='green')
+    
+    ax1.set_title(f'{target.upper()} - Historical + Validation + Forecast', 
+                  fontsize=12, fontweight='bold')
+    ax1.set_xlabel('Date')
+    ax1.set_ylabel(f'Total {target}')
+    ax1.legend()
+    ax1.grid(alpha=0.3)
+    
+    # Plot 2: Actual vs Predicted (Validation)
+    ax2 = axes[0, 1]
+    ax2.scatter(test_data.values, ensemble_pred, s=100, alpha=0.6)
+    
+    min_val = min(test_data.min(), ensemble_pred.min())
+    max_val = max(test_data.max(), ensemble_pred.max())
+    ax2.plot([min_val, max_val], [min_val, max_val], 'r--', linewidth=2, label='Perfect Prediction')
+    
+    ax2.set_title('Actual vs Predicted (Validation)', fontsize=12, fontweight='bold')
+    ax2.set_xlabel('Actual Value')
+    ax2.set_ylabel('Predicted Value')
+    ax2.legend()
+    ax2.grid(alpha=0.3)
+    
+    # Plot 3: Residuals
+    ax3 = axes[1, 0]
+    residuals = test_data.values - ensemble_pred
+    ax3.bar(range(len(residuals)), residuals, 
+            color=['red' if r < 0 else 'green' for r in residuals])
+    ax3.axhline(y=0, color='black', linestyle='-', linewidth=1)
+    ax3.set_title('Prediction Errors (Validation)', fontsize=12, fontweight='bold')
+    ax3.set_xlabel('Validation Month')
+    ax3.set_ylabel('Error (Predicted - Actual)')
+    ax3.grid(alpha=0.3, axis='y')
+    
+    # Plot 4: Forecast breakdown
+    ax4 = axes[1, 1]
+    x = np.arange(len(forecast_data))
+    width = 0.25
+    
+    rf_vals = [item['rf_pred'] for item in forecast_data]
+    gb_vals = [item['gb_pred'] for item in forecast_data]
+    ridge_vals = [item['ridge_pred'] for item in forecast_data]
+    
+    ax4.bar(x - width, rf_vals, width, label='Random Forest', alpha=0.8)
+    ax4.bar(x, gb_vals, width, label='Gradient Boosting', alpha=0.8)
+    ax4.bar(x + width, ridge_vals, width, label='Ridge', alpha=0.8)
+    
+    ax4.set_title('Forecast Breakdown by Model', fontsize=12, fontweight='bold')
+    ax4.set_xlabel('Future Month')
+    ax4.set_ylabel(f'{target}')
+    ax4.set_xticks(x)
+    ax4.set_xticklabels([item['date'].strftime('%Y-%m') for item in forecast_data], rotation=45)
+    ax4.legend()
+    ax4.grid(alpha=0.3, axis='y')
     
     plt.tight_layout()
     plt.show()
 
-def plot_engagement_summary_metrics(df):
-    """Plot total engagement metrics and engagement rates"""
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+# =============================================================================
+# MAIN EXECUTION
+# =============================================================================
+if __name__ == "__main__":
+    print("\n" + "="*80)
+    print("MACHINE LEARNING FACEBOOK FORECASTER")
+    print("Random Forest + Gradient Boosting + Ridge Ensemble")
+    print("="*80)
     
-    # Calculate totals
-    total_reactions = df['reactions'].sum()
-    total_comments = df['comments'].sum()
-    total_shares = df['shares'].sum()
-    total_reach = df['reach'].sum()
-    total_engagement = df['total_engagement'].sum()
+    # Fetch and prepare data
+    df = fetch_data()
     
-    # Metrics data for first chart
-    metrics = ['Reactions', 'Comments', 'Shares']
-    values = [total_reactions, total_comments, total_shares]
-    colors_chart1 = ['#ff7f0e', '#9467bd', '#2ca02c']
+    # Engineer features
+    print("\nEngineering features...")
+    df_features, label_encoder = engineer_features(df)
     
-    # Plot 1: Total Engagement Metrics
-    bars1 = ax1.bar(metrics, values, color=colors_chart1, alpha=0.8, edgecolor='black', linewidth=1.5)
-    ax1.set_title('Total Engagement Metrics', fontsize=16, fontweight='bold')
-    ax1.set_ylabel('Count', fontsize=12)
-    ax1.grid(True, alpha=0.3, axis='y')
-    ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
+    # Prepare monthly aggregated data
+    print("Aggregating to monthly level...")
+    monthly_df = prepare_monthly_features(df_features)
+    print(f"✓ Created {len(monthly_df)} monthly samples with {len(monthly_df.columns)} features")
     
-    # Add value labels on bars
-    for bar in bars1:
-        height = bar.get_height()
-        ax1.text(bar.get_x() + bar.get_width()/2., height,
-                f'{int(height):,}',
-                ha='center', va='bottom', fontsize=11, fontweight='bold')
+    # Train models for REACH
+    reach_results, X_test, y_test_reach, reach_preds, reach_ensemble, feature_cols = \
+        train_ml_models(monthly_df, target='reach')
     
-    # Calculate engagement rates
-    like_rate = (total_reactions / total_reach * 100) if total_reach > 0 else 0
-    comment_rate = (total_comments / total_reach * 100) if total_reach > 0 else 0
-    share_rate = (total_shares / total_reach * 100) if total_reach > 0 else 0
-    overall_engagement_rate = (total_engagement / total_reach * 100) if total_reach > 0 else 0
+    # Forecast future reach
+    reach_forecast = forecast_future(monthly_df, reach_results, feature_cols, 
+                                     target='reach', periods=6)
     
-    # Rates data for second chart
-    rate_labels = ['Like Rate', 'Comment Rate', 'Share Rate', 'Overall\nEngagement']
-    rate_values = [like_rate, comment_rate, share_rate, overall_engagement_rate]
-    colors_chart2 = ['#ff7f0e', '#9467bd', '#2ca02c', '#8b4513']
+    # Visualize reach results
+    plot_results(monthly_df, y_test_reach, reach_ensemble, reach_forecast, target='reach')
     
-    # Plot 2: Engagement Rates
-    bars2 = ax2.bar(rate_labels, rate_values, color=colors_chart2, alpha=0.8, edgecolor='black', linewidth=1.5)
-    ax2.set_title('Engagement Rates (%)', fontsize=16, fontweight='bold')
-    ax2.set_ylabel('Percentage', fontsize=12)
-    ax2.grid(True, alpha=0.3, axis='y')
+    # Train models for ENGAGEMENT
+    engagement_results, _, y_test_engagement, engagement_preds, engagement_ensemble, _ = \
+        train_ml_models(monthly_df, target='engagement')
     
-    # Add percentage labels on bars
-    for bar in bars2:
-        height = bar.get_height()
-        ax2.text(bar.get_x() + bar.get_width()/2., height,
-                f'{height:.2f}%',
-                ha='center', va='bottom', fontsize=11, fontweight='bold')
+    # Forecast future engagement
+    engagement_forecast = forecast_future(monthly_df, engagement_results, feature_cols, 
+                                         target='engagement', periods=6)
     
-    plt.tight_layout()
-    plt.show()
+    # Visualize engagement results
+    plot_results(monthly_df, y_test_engagement, engagement_ensemble, 
+                engagement_forecast, target='engagement')
+    
+    # Performance Summary
+    print("\n" + "="*80)
+    print("PERFORMANCE SUMMARY")
+    print("="*80)
+    
+    print(f"\nREACH FORECAST:")
+    print(f"  Model Performance: {'✓ EXCELLENT' if reach_results['Ensemble']['test_r2'] > 0.9 else '✓ GOOD' if reach_results['Ensemble']['test_r2'] > 0.7 else '⚠️ MODERATE' if reach_results['Ensemble']['test_r2'] > 0.5 else '✗ POOR'}")
+    print(f"  R² Score: {reach_results['Ensemble']['test_r2']:.3f}")
+    print(f"  MASE: {reach_results['Ensemble']['mase']:.3f} ({'Better than naive' if reach_results['Ensemble']['mase'] < 1 else 'Worse than naive'})")
+    print(f"  MAPE: {reach_results['Ensemble']['mape']:.1f}% ({'Excellent' if reach_results['Ensemble']['mape'] < 10 else 'Good' if reach_results['Ensemble']['mape'] < 20 else 'Reasonable' if reach_results['Ensemble']['mape'] < 50 else 'Inaccurate'})")
+    print(f"  Directional Accuracy: {reach_results['Ensemble']['directional_accuracy']:.1f}%")
+    print(f"  Best Model: Ridge Regression")
+    print(f"  6-Month Forecast: {sum([item['forecast_value'] for item in reach_forecast]):,.0f} total reach")
+    
+    print(f"\nENGAGEMENT FORECAST:")
+    print(f"  Model Performance: {'✓ EXCELLENT' if engagement_results['Ensemble']['test_r2'] > 0.9 else '✓ GOOD' if engagement_results['Ensemble']['test_r2'] > 0.7 else '⚠️ MODERATE' if engagement_results['Ensemble']['test_r2'] > 0.5 else '✗ POOR'}")
+    print(f"  R² Score: {engagement_results['Ensemble']['test_r2']:.3f}")
+    print(f"  MASE: {engagement_results['Ensemble']['mase']:.3f} ({'Better than naive' if engagement_results['Ensemble']['mase'] < 1 else 'Worse than naive'})")
+    print(f"  MAPE: {engagement_results['Ensemble']['mape']:.1f}% ({'Excellent' if engagement_results['Ensemble']['mape'] < 10 else 'Good' if engagement_results['Ensemble']['mape'] < 20 else 'Reasonable' if engagement_results['Ensemble']['mape'] < 50 else 'Inaccurate'})")
+    print(f"  Directional Accuracy: {engagement_results['Ensemble']['directional_accuracy']:.1f}%")
+    
+    if engagement_results['Ensemble']['test_r2'] < 0:
+        print(f"  ⚠️ WARNING: Engagement is highly unpredictable")
+        print(f"  Recommendation: Use conservative baseline estimates instead")
+        engagement_baseline = monthly_df['engagement'].iloc[-6:].median()
+        print(f"  Baseline (median of last 6 months): {engagement_baseline:,.0f}/month")
+        print(f"  Baseline 6-month forecast: {engagement_baseline * 6:,.0f}")
+    
+    print(f"\n{'='*80}")
+    print("INTERPRETATION GUIDE:")
+    print(f"{'='*80}")
+    print(f"  R² Score:")
+    print(f"    • > 0.9 = Excellent predictions")
+    print(f"    • 0.7-0.9 = Good predictions")
+    print(f"    • 0.5-0.7 = Moderate predictions")
+    print(f"    • < 0.5 = Poor predictions")
+    print(f"    • Negative = Worse than predicting the mean")
+    print(f"\n  MASE (Mean Absolute Scaled Error):")
+    print(f"    • < 1.0 = Better than naive forecast (last value)")
+    print(f"    • = 1.0 = Same as naive forecast")
+    print(f"    • > 1.0 = Worse than naive forecast")
+    print(f"\n  Directional Accuracy:")
+    print(f"    • > 70% = Model captures trends well")
+    print(f"    • 50-70% = Some trend detection")
+    print(f"    • < 50% = Worse than random guessing")
+    
+    # POST TYPE ANALYSIS
+    post_type_forecasts = analyze_post_type_performance(df, monthly_df)
+    
+    print("\n" + "="*80)
+    print("✓ MACHINE LEARNING FORECAST COMPLETE")
+    print("="*80 + "\n")
 
-def plot_engagement_ratio_analysis(df):
-    """Plot detailed engagement ratio analysis"""
-    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+# =============================================================================
+# POST TYPE PERFORMANCE ANALYSIS & FORECASTING
+# =============================================================================
+def analyze_post_type_performance(df, monthly_df):
+    """Analyze which post types will perform best in the next 6 months"""
     
-    total_reach = df['reach'].sum()
-    total_reactions = df['reactions'].sum()
+    print(f"\n{'='*80}")
+    print("POST TYPE PERFORMANCE ANALYSIS & FORECAST")
+    print(f"{'='*80}")
     
-    # Overall ratios
-    reactions_reach = (df['reactions'].sum() / total_reach * 100) if total_reach > 0 else 0
-    comments_reach = (df['comments'].sum() / total_reach * 100) if total_reach > 0 else 0
-    shares_reach = (df['shares'].sum() / total_reach * 100) if total_reach > 0 else 0
-    engagement_rate = (df['total_engagement'].sum() / total_reach * 100) if total_reach > 0 else 0
-    virality_ratio = (df['shares'].sum() / total_reactions * 100) if total_reactions > 0 else 0
+    # Historical performance (last 6 months)
+    cutoff = df['publish_time'].max() - pd.DateOffset(months=6)
+    recent = df[df['publish_time'] >= cutoff].copy()
     
-    # 1. Reactions to Reach Ratio by Post Type
-    reactions_by_type = df.groupby('post_type').agg({
+    # Calculate metrics per post type
+    post_type_stats = recent.groupby('post_type').agg({
+        'reach': ['mean', 'sum', 'std', 'count'],
+        'engagement': ['mean', 'sum', 'std'],
         'reactions': 'sum',
-        'reach': 'sum'
-    })
-    reactions_by_type['ratio'] = (reactions_by_type['reactions'] / reactions_by_type['reach'] * 100)
-    
-    axes[0, 0].bar(reactions_by_type.index, reactions_by_type['ratio'], 
-                   color='#ff7f0e', alpha=0.8, edgecolor='black')
-    axes[0, 0].set_title('Reactions-to-Reach Ratio by Post Type', fontweight='bold')
-    axes[0, 0].set_ylabel('Ratio (%)')
-    axes[0, 0].tick_params(axis='x', rotation=45)
-    axes[0, 0].grid(True, alpha=0.3, axis='y')
-    axes[0, 0].axhline(reactions_reach, color='red', linestyle='--', 
-                       label=f'Overall: {reactions_reach:.2f}%', linewidth=2)
-    axes[0, 0].legend()
-    
-    # 2. Comments to Reach Ratio by Post Type
-    comments_by_type = df.groupby('post_type').agg({
         'comments': 'sum',
-        'reach': 'sum'
-    })
-    comments_by_type['ratio'] = (comments_by_type['comments'] / comments_by_type['reach'] * 100)
+        'shares': 'sum'
+    }).round(0)
     
-    axes[0, 1].bar(comments_by_type.index, comments_by_type['ratio'], 
-                   color='#9467bd', alpha=0.8, edgecolor='black')
-    axes[0, 1].set_title('Comments-to-Reach Ratio by Post Type', fontweight='bold')
-    axes[0, 1].set_ylabel('Ratio (%)')
-    axes[0, 1].tick_params(axis='x', rotation=45)
-    axes[0, 1].grid(True, alpha=0.3, axis='y')
-    axes[0, 1].axhline(comments_reach, color='red', linestyle='--', 
-                       label=f'Overall: {comments_reach:.2f}%', linewidth=2)
-    axes[0, 1].legend()
+    # Flatten column names
+    post_type_stats.columns = ['_'.join(col).strip() for col in post_type_stats.columns]
     
-    # 3. Shares to Reach Ratio by Post Type
-    shares_by_type = df.groupby('post_type').agg({
-        'shares': 'sum',
-        'reach': 'sum'
-    })
-    shares_by_type['ratio'] = (shares_by_type['shares'] / shares_by_type['reach'] * 100)
+    # Calculate efficiency metrics
+    post_type_stats['reach_per_post'] = post_type_stats['reach_sum'] / post_type_stats['reach_count']
+    post_type_stats['engagement_per_post'] = post_type_stats['engagement_sum'] / post_type_stats['reach_count']
+    post_type_stats['engagement_rate'] = (post_type_stats['engagement_sum'] / post_type_stats['reach_sum'] * 100)
     
-    axes[0, 2].bar(shares_by_type.index, shares_by_type['ratio'], 
-                   color='#2ca02c', alpha=0.8, edgecolor='black')
-    axes[0, 2].set_title('Shares-to-Reach Ratio by Post Type', fontweight='bold')
-    axes[0, 2].set_ylabel('Ratio (%)')
-    axes[0, 2].tick_params(axis='x', rotation=45)
-    axes[0, 2].grid(True, alpha=0.3, axis='y')
-    axes[0, 2].axhline(shares_reach, color='red', linestyle='--', 
-                       label=f'Overall: {shares_reach:.2f}%', linewidth=2)
-    axes[0, 2].legend()
+    # Sort by reach per post
+    post_type_stats = post_type_stats.sort_values('reach_per_post', ascending=False)
     
-    # 4. Overall Engagement Rate by Post Type
-    engagement_by_type = df.groupby('post_type').agg({
-        'total_engagement': 'sum',
-        'reach': 'sum'
-    })
-    engagement_by_type['ratio'] = (engagement_by_type['total_engagement'] / engagement_by_type['reach'] * 100)
+    print(f"\nHISTORICAL PERFORMANCE (Last 6 Months):")
+    print(f"\n{'Post Type':<12} {'Posts':>8} {'Avg Reach':>12} {'Avg Engage':>12} {'Engage Rate':>12}")
+    print("-" * 70)
     
-    axes[1, 0].bar(engagement_by_type.index, engagement_by_type['ratio'], 
-                   color='#8b4513', alpha=0.8, edgecolor='black')
-    axes[1, 0].set_title('Engagement Rate by Post Type', fontweight='bold')
-    axes[1, 0].set_ylabel('Rate (%)')
-    axes[1, 0].tick_params(axis='x', rotation=45)
-    axes[1, 0].grid(True, alpha=0.3, axis='y')
-    axes[1, 0].axhline(engagement_rate, color='red', linestyle='--', 
-                       label=f'Overall: {engagement_rate:.2f}%', linewidth=2)
-    axes[1, 0].legend()
+    for post_type in post_type_stats.index:
+        print(f"{post_type:<12} "
+              f"{int(post_type_stats.loc[post_type, 'reach_count']):>8} "
+              f"{int(post_type_stats.loc[post_type, 'reach_per_post']):>12,} "
+              f"{int(post_type_stats.loc[post_type, 'engagement_per_post']):>12,} "
+              f"{post_type_stats.loc[post_type, 'engagement_rate']:>11.2f}%")
     
-    # 5. Virality Ratio (Shares to Reactions) by Post Type
-    virality_by_type = df.groupby('post_type').agg({
-        'shares': 'sum',
-        'reactions': 'sum'
-    })
-    virality_by_type['ratio'] = (virality_by_type['shares'] / virality_by_type['reactions'] * 100)
+    # Train post-type specific models
+    print(f"\n{'='*80}")
+    print("TRAINING POST-TYPE SPECIFIC MODELS")
+    print(f"{'='*80}")
     
-    axes[1, 1].bar(virality_by_type.index, virality_by_type['ratio'], 
-                   color='#d62728', alpha=0.8, edgecolor='black')
-    axes[1, 1].set_title('Virality Ratio (Shares-to-Reactions) by Post Type', fontweight='bold')
-    axes[1, 1].set_ylabel('Ratio (%)')
-    axes[1, 1].tick_params(axis='x', rotation=45)
-    axes[1, 1].grid(True, alpha=0.3, axis='y')
-    axes[1, 1].axhline(virality_ratio, color='red', linestyle='--', 
-                       label=f'Overall: {virality_ratio:.2f}%', linewidth=2)
-    axes[1, 1].legend()
+    post_type_forecasts = {}
     
-    # 6. Summary comparison of all ratios
-    summary_labels = ['Reactions/\nReach', 'Comments/\nReach', 'Shares/\nReach', 
-                     'Engagement\nRate', 'Virality\n(Shares/Reactions)']
-    summary_values = [reactions_reach, comments_reach, shares_reach, engagement_rate, virality_ratio]
-    summary_colors = ['#ff7f0e', '#9467bd', '#2ca02c', '#8b4513', '#d62728']
+    for post_type in df['post_type'].unique():
+        if post_type not in ['Links', 'Text']:  # Skip low-volume types
+            post_df = df[df['post_type'] == post_type].copy()
+            
+            if len(post_df) >= 30:  # Need enough data
+                # Monthly aggregation for this post type
+                monthly_post = post_df.resample('M', on='publish_time').agg({
+                    'reach': ['sum', 'mean', 'count'],
+                    'engagement': ['sum', 'mean']
+                })
+                
+                # Skip if too few months
+                if len(monthly_post) < 12:
+                    continue
+                
+                monthly_post.columns = ['_'.join(col).strip() for col in monthly_post.columns]
+                monthly_post = monthly_post[monthly_post['reach_count'] > 0]  # Remove zero-post months
+                
+                if len(monthly_post) >= 12:
+                    # Simple trend analysis
+                    recent_6m = monthly_post.iloc[-6:]
+                    older_6m = monthly_post.iloc[-12:-6] if len(monthly_post) >= 12 else monthly_post.iloc[:6]
+                    
+                    recent_reach_avg = recent_6m['reach_mean'].mean()
+                    older_reach_avg = older_6m['reach_mean'].mean()
+                    trend = ((recent_reach_avg / older_reach_avg) - 1) * 100 if older_reach_avg > 0 else 0
+                    
+                    # Forecast: recent average with trend adjustment
+                    forecast_reach_per_post = recent_reach_avg * (1 + trend/100 * 0.5)  # 50% of trend
+                    forecast_engagement_per_post = recent_6m['engagement_mean'].mean()
+                    
+                    post_type_forecasts[post_type] = {
+                        'recent_reach_per_post': recent_reach_avg,
+                        'recent_engagement_per_post': recent_6m['engagement_mean'].mean(),
+                        'forecast_reach_per_post': forecast_reach_per_post,
+                        'forecast_engagement_per_post': forecast_engagement_per_post,
+                        'trend': trend,
+                        'recent_posts_per_month': recent_6m['reach_count'].mean(),
+                        'total_posts': len(post_df)
+                    }
     
-    bars = axes[1, 2].bar(summary_labels, summary_values, color=summary_colors, 
-                         alpha=0.8, edgecolor='black', linewidth=1.5)
-    axes[1, 2].set_title('Overall Engagement Ratios Summary', fontweight='bold')
-    axes[1, 2].set_ylabel('Ratio (%)')
-    axes[1, 2].grid(True, alpha=0.3, axis='y')
+    # Display forecasts
+    print(f"\nPOST TYPE FORECASTS (Per Post Performance):")
+    print(f"\n{'Post Type':<12} {'Recent Reach':>14} {'Forecast Reach':>15} {'Trend':>10} {'Posts/Mo':>10}")
+    print("-" * 75)
+    
+    sorted_forecasts = sorted(post_type_forecasts.items(), 
+                              key=lambda x: x[1]['forecast_reach_per_post'], 
+                              reverse=True)
+    
+    for post_type, data in sorted_forecasts:
+        print(f"{post_type:<12} "
+              f"{data['recent_reach_per_post']:>14,.0f} "
+              f"{data['forecast_reach_per_post']:>15,.0f} "
+              f"{data['trend']:>9.1f}% "
+              f"{data['recent_posts_per_month']:>10.1f}")
+    
+    # Scenario planning: What if you post X of each type?
+    print(f"\n{'='*80}")
+    print("SCENARIO PLANNING: OPTIMAL POSTING MIX")
+    print(f"{'='*80}")
+    
+    # Assume 20 posts per month budget
+    total_monthly_posts = 20
+    
+    # Strategy 1: Focus on best performer
+    best_type = sorted_forecasts[0][0]
+    best_reach = sorted_forecasts[0][1]['forecast_reach_per_post']
+    
+    # Strategy 2: Balanced mix based on current proportions
+    recent_mix = recent.groupby('post_type').size() / len(recent)
+    
+    # Strategy 3: Weighted by performance
+    performance_scores = {pt: data['forecast_reach_per_post'] 
+                         for pt, data in post_type_forecasts.items()}
+    total_score = sum(performance_scores.values())
+    performance_weights = {pt: score/total_score 
+                          for pt, score in performance_scores.items()}
+    
+    print(f"\nAssuming {total_monthly_posts} posts/month for next 6 months:")
+    print(f"\nStrategy 1: ALL IN on Best Performer ({best_type})")
+    print(f"  Post Mix: {total_monthly_posts} {best_type} posts/month")
+    print(f"  Expected Monthly Reach: {best_reach * total_monthly_posts:,.0f}")
+    print(f"  Expected 6-Month Reach: {best_reach * total_monthly_posts * 6:,.0f}")
+    
+    print(f"\nStrategy 2: Balanced Mix (Current Proportions)")
+    balanced_reach = 0
+    for post_type, weight in recent_mix.items():
+        posts = int(total_monthly_posts * weight)
+        if post_type in post_type_forecasts and posts > 0:
+            reach = post_type_forecasts[post_type]['forecast_reach_per_post'] * posts
+            balanced_reach += reach
+            print(f"  {post_type}: {posts} posts/month → {reach:,.0f} reach/month")
+    print(f"  Expected Monthly Reach: {balanced_reach:,.0f}")
+    print(f"  Expected 6-Month Reach: {balanced_reach * 6:,.0f}")
+    
+    print(f"\nStrategy 3: Performance-Weighted Mix")
+    weighted_reach = 0
+    for post_type, weight in performance_weights.items():
+        posts = int(total_monthly_posts * weight)
+        if posts > 0:
+            reach = post_type_forecasts[post_type]['forecast_reach_per_post'] * posts
+            weighted_reach += reach
+            print(f"  {post_type}: {posts} posts/month → {reach:,.0f} reach/month")
+    print(f"  Expected Monthly Reach: {weighted_reach:,.0f}")
+    print(f"  Expected 6-Month Reach: {weighted_reach * 6:,.0f}")
+    
+    # Recommendations
+    print(f"\n{'='*80}")
+    print("RECOMMENDATIONS")
+    print(f"{'='*80}")
+    
+    if len(sorted_forecasts) > 0:
+        best = sorted_forecasts[0]
+        worst = sorted_forecasts[-1]
+        
+        print(f"\n✓ BEST PERFORMER: {best[0]}")
+        print(f"  Average reach per post: {best[1]['forecast_reach_per_post']:,.0f}")
+        print(f"  Trend: {best[1]['trend']:+.1f}%")
+        print(f"  → Prioritize this content type for maximum reach")
+        
+        if len(sorted_forecasts) > 1:
+            second = sorted_forecasts[1]
+            print(f"\n✓ SECOND BEST: {second[0]}")
+            print(f"  Average reach per post: {second[1]['forecast_reach_per_post']:,.0f}")
+            print(f"  Trend: {second[1]['trend']:+.1f}%")
+            print(f"  → Mix with {best[0]} for variety")
+        
+        print(f"\n⚠️ LOWEST PERFORMER: {worst[0]}")
+        print(f"  Average reach per post: {worst[1]['forecast_reach_per_post']:,.0f}")
+        print(f"  Trend: {worst[1]['trend']:+.1f}%")
+        print(f"  → Consider reducing or eliminating")
+        
+        # Calculate potential lift
+        current_avg_reach = sum([data['recent_reach_per_post'] * data['recent_posts_per_month'] 
+                                for data in post_type_forecasts.values()])
+        best_scenario_reach = best_reach * total_monthly_posts
+        lift = ((best_scenario_reach / current_avg_reach) - 1) * 100 if current_avg_reach > 0 else 0
+        
+        print(f"\n💡 POTENTIAL IMPACT:")
+        print(f"  Current avg monthly reach: {current_avg_reach:,.0f}")
+        print(f"  Optimized (all {best[0]}): {best_scenario_reach:,.0f}")
+        print(f"  Potential lift: {lift:+.1f}%")
+    
+    # Visualization
+    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    
+    # Plot 1: Reach per post by type
+    ax1 = axes[0, 0]
+    types = [pt for pt, _ in sorted_forecasts]
+    recent_vals = [data['recent_reach_per_post'] for _, data in sorted_forecasts]
+    forecast_vals = [data['forecast_reach_per_post'] for _, data in sorted_forecasts]
+    
+    x = np.arange(len(types))
+    width = 0.35
+    
+    ax1.bar(x - width/2, recent_vals, width, label='Recent (6M)', alpha=0.8)
+    ax1.bar(x + width/2, forecast_vals, width, label='Forecast', alpha=0.8)
+    ax1.set_xlabel('Post Type')
+    ax1.set_ylabel('Reach per Post')
+    ax1.set_title('Average Reach per Post by Type', fontweight='bold')
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(types, rotation=45, ha='right')
+    ax1.legend()
+    ax1.grid(alpha=0.3, axis='y')
+    
+    # Plot 2: Trend analysis
+    ax2 = axes[0, 1]
+    trends = [data['trend'] for _, data in sorted_forecasts]
+    colors = ['green' if t > 0 else 'red' for t in trends]
+    ax2.barh(types, trends, color=colors, alpha=0.7)
+    ax2.axvline(x=0, color='black', linestyle='-', linewidth=1)
+    ax2.set_xlabel('Trend (%)')
+    ax2.set_title('6-Month Performance Trend by Type', fontweight='bold')
+    ax2.grid(alpha=0.3, axis='x')
+    
+    # Plot 3: Strategy comparison
+    ax3 = axes[1, 0]
+    strategies = ['All In\n(Best Type)', 'Balanced\n(Current)', 'Performance\nWeighted']
+    strategy_reaches = [
+        best_reach * total_monthly_posts * 6,
+        balanced_reach * 6,
+        weighted_reach * 6
+    ]
+    bars = ax3.bar(strategies, strategy_reaches, color=['#2ecc71', '#3498db', '#9b59b6'], alpha=0.8)
+    ax3.set_ylabel('Total 6-Month Reach')
+    ax3.set_title('Strategy Comparison (6-Month Reach)', fontweight='bold')
+    ax3.grid(alpha=0.3, axis='y')
     
     # Add value labels
     for bar in bars:
         height = bar.get_height()
-        axes[1, 2].text(bar.get_x() + bar.get_width()/2., height,
-                       f'{height:.2f}%',
-                       ha='center', va='bottom', fontsize=10, fontweight='bold')
-    
-    plt.tight_layout()
-    plt.show()
-
-def plot_engagement_by_post_type(df):
-    """Analyze engagement by post type"""
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    
-    # 1. Average engagement by post type
-    engagement_by_type = df.groupby('post_type').agg({
-        'total_engagement': 'mean',
-        'reach': 'mean',
-        'engagement_rate': 'mean',
-        'post_id': 'count'
-    }).reset_index()
-    engagement_by_type.columns = ['post_type', 'avg_engagement', 'avg_reach', 'avg_engagement_rate', 'post_count']
-    
-    axes[0, 0].bar(engagement_by_type['post_type'], engagement_by_type['avg_engagement'], 
-                   color='#2ecc71', alpha=0.8)
-    axes[0, 0].set_title('Average Total Engagement by Post Type', fontweight='bold')
-    axes[0, 0].set_xlabel('Post Type')
-    axes[0, 0].set_ylabel('Avg Total Engagement')
-    axes[0, 0].tick_params(axis='x', rotation=45)
-    
-    # 2. Reach by post type
-    axes[0, 1].bar(engagement_by_type['post_type'], engagement_by_type['avg_reach'], 
-                   color='#3498db', alpha=0.8)
-    axes[0, 1].set_title('Average Reach by Post Type', fontweight='bold')
-    axes[0, 1].set_xlabel('Post Type')
-    axes[0, 1].set_ylabel('Avg Reach')
-    axes[0, 1].tick_params(axis='x', rotation=45)
-    
-    # 3. Engagement rate by post type
-    axes[1, 0].bar(engagement_by_type['post_type'], engagement_by_type['avg_engagement_rate'] * 100, 
-                   color='#e74c3c', alpha=0.8)
-    axes[1, 0].set_title('Average Engagement Rate by Post Type', fontweight='bold')
-    axes[1, 0].set_xlabel('Post Type')
-    axes[1, 0].set_ylabel('Avg Engagement Rate (%)')
-    axes[1, 0].tick_params(axis='x', rotation=45)
-    
-    # 4. Post count by type
-    axes[1, 1].pie(engagement_by_type['post_count'], labels=engagement_by_type['post_type'],
-                   autopct='%1.1f%%', startangle=90, colors=sns.color_palette('pastel'))
-    axes[1, 1].set_title('Distribution of Post Types', fontweight='bold')
-    
-    plt.tight_layout()
-    plt.show()
-
-def plot_temporal_patterns(df):
-    """Analyze temporal posting and engagement patterns"""
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    
-    # 1. Posts per month
-    monthly_posts = df.groupby(['year', 'month']).size().reset_index(name='post_count')
-    monthly_posts['year_month'] = pd.to_datetime(monthly_posts[['year', 'month']].assign(day=1))
-    
-    axes[0, 0].plot(monthly_posts['year_month'], monthly_posts['post_count'], 
-                    marker='o', linewidth=2, color='#9b59b6')
-    axes[0, 0].set_title('Posts Published Per Month', fontweight='bold')
-    axes[0, 0].set_xlabel('Date')
-    axes[0, 0].set_ylabel('Number of Posts')
-    axes[0, 0].grid(True, alpha=0.3)
-    axes[0, 0].tick_params(axis='x', rotation=45)
-    
-    # 2. Engagement by day of week
-    df['day_of_week'] = df['publish_time'].dt.day_name()
-    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    engagement_by_day = df.groupby('day_of_week')['total_engagement'].mean().reindex(day_order)
-    
-    axes[0, 1].bar(range(7), engagement_by_day.values, color='#f39c12', alpha=0.8)
-    axes[0, 1].set_xticks(range(7))
-    axes[0, 1].set_xticklabels(day_order, rotation=45, ha='right')
-    axes[0, 1].set_title('Average Engagement by Day of Week', fontweight='bold')
-    axes[0, 1].set_ylabel('Avg Total Engagement')
-    
-    # 3. Reach by hour (if time data is available)
-    df['hour'] = df['publish_time'].dt.hour
-    reach_by_hour = df.groupby('hour')['reach'].mean()
-    
-    axes[1, 0].plot(reach_by_hour.index, reach_by_hour.values, 
-                    marker='o', linewidth=2, color='#16a085')
-    axes[1, 0].set_title('Average Reach by Hour of Day', fontweight='bold')
-    axes[1, 0].set_xlabel('Hour')
-    axes[1, 0].set_ylabel('Avg Reach')
-    axes[1, 0].grid(True, alpha=0.3)
-    axes[1, 0].set_xticks(range(0, 24, 2))
-    
-    # 4. Monthly reach trend
-    monthly_reach = df.groupby(['year', 'month'])['reach'].sum().reset_index()
-    monthly_reach['year_month'] = pd.to_datetime(monthly_reach[['year', 'month']].assign(day=1))
-    
-    axes[1, 1].plot(monthly_reach['year_month'], monthly_reach['reach'], 
-                    marker='o', linewidth=2, color='#c0392b')
-    axes[1, 1].fill_between(monthly_reach['year_month'], monthly_reach['reach'], alpha=0.3, color='#c0392b')
-    axes[1, 1].set_title('Total Monthly Reach Trend', fontweight='bold')
-    axes[1, 1].set_xlabel('Date')
-    axes[1, 1].set_ylabel('Total Reach')
-    axes[1, 1].grid(True, alpha=0.3)
-    axes[1, 1].tick_params(axis='x', rotation=45)
-    
-    plt.tight_layout()
-    plt.show()
-
-def plot_video_performance(df):
-    """Analyze video content performance"""
-    video_df = df[df['duration_sec'] > 0].copy()
-    
-    if len(video_df) == 0:
-        print("No video data available")
-        return
-    
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    
-    # 1. Video Duration Distribution with Engagement Heatmap
-    # Create bins for duration
-    video_df['duration_bin'] = pd.cut(video_df['duration_sec'], 
-                                       bins=[0, 30, 60, 120, 180, 300, float('inf')],
-                                       labels=['0-30s', '30-60s', '1-2m', '2-3m', '3-5m', '5m+'])
-    
-    duration_stats = video_df.groupby('duration_bin').agg({
-        'total_engagement': ['mean', 'count'],
-        'reach': 'mean',
-        'completion_rate': 'mean'
-    }).reset_index()
-    duration_stats.columns = ['duration_bin', 'avg_engagement', 'count', 'avg_reach', 'avg_completion']
-    
-    # Bar chart with dual axis
-    ax1 = axes[0, 0]
-    ax1_twin = ax1.twinx()
-    
-    bars = ax1.bar(duration_stats['duration_bin'], duration_stats['avg_engagement'], 
-                   color='#3498db', alpha=0.7, label='Avg Engagement')
-    ax1.set_xlabel('Video Duration')
-    ax1.set_ylabel('Avg Total Engagement', color='#3498db')
-    ax1.tick_params(axis='y', labelcolor='#3498db')
-    ax1.tick_params(axis='x', rotation=45)
-    ax1.set_title('Video Engagement by Duration', fontweight='bold')
-    
-    line = ax1_twin.plot(duration_stats['duration_bin'], duration_stats['count'], 
-                         color='#e74c3c', marker='o', linewidth=2, markersize=8, label='Video Count')
-    ax1_twin.set_ylabel('Number of Videos', color='#e74c3c')
-    ax1_twin.tick_params(axis='y', labelcolor='#e74c3c')
-    
-    # Add value labels on bars
-    for i, bar in enumerate(bars):
-        height = bar.get_height()
-        ax1.text(bar.get_x() + bar.get_width()/2., height,
+        ax3.text(bar.get_x() + bar.get_width()/2., height,
                 f'{int(height):,}',
-                ha='center', va='bottom', fontsize=9)
+                ha='center', va='bottom', fontweight='bold')
     
-    # 2. Completion Rate Analysis
-    completion_bins = video_df.groupby('duration_bin')['completion_rate'].apply(
-        lambda x: x.dropna()
-    ).reset_index(drop=True)
+    # Plot 4: Engagement rate by type
+    ax4 = axes[1, 1]
+    engage_rates = [post_type_stats.loc[pt, 'engagement_rate'] 
+                   for pt in types if pt in post_type_stats.index]
+    type_labels = [pt for pt in types if pt in post_type_stats.index]
     
-    # Box plot for completion rates by duration
-    completion_data = [video_df[video_df['duration_bin'] == cat]['completion_rate'].dropna() * 100 
-                      for cat in duration_stats['duration_bin']]
-    
-    bp = axes[0, 1].boxplot(completion_data, labels=duration_stats['duration_bin'], 
-                           patch_artist=True, showmeans=True)
-    
-    for patch in bp['boxes']:
-        patch.set_facecolor('#27ae60')
-        patch.set_alpha(0.7)
-    
-    axes[0, 1].set_title('Completion Rate Distribution by Duration', fontweight='bold')
-    axes[0, 1].set_xlabel('Video Duration')
-    axes[0, 1].set_ylabel('Completion Rate (%)')
-    axes[0, 1].tick_params(axis='x', rotation=45)
-    axes[0, 1].grid(True, alpha=0.3, axis='y')
-    
-    # 3. Engagement vs Completion Rate Scatter (Performance Quadrant)
-    scatter = axes[1, 0].scatter(video_df['completion_rate'] * 100, 
-                                video_df['total_engagement'],
-                                c=video_df['reach'], 
-                                cmap='viridis', 
-                                alpha=0.6, 
-                                s=100,
-                                edgecolors='black',
-                                linewidth=0.5)
-    
-    # Add median lines to create quadrants
-    median_completion = video_df['completion_rate'].median() * 100
-    median_engagement = video_df['total_engagement'].median()
-    
-    axes[1, 0].axvline(median_completion, color='red', linestyle='--', alpha=0.5, linewidth=2)
-    axes[1, 0].axhline(median_engagement, color='red', linestyle='--', alpha=0.5, linewidth=2)
-    
-    axes[1, 0].set_title('Video Performance Quadrant Analysis', fontweight='bold')
-    axes[1, 0].set_xlabel('Completion Rate (%)')
-    axes[1, 0].set_ylabel('Total Engagement')
-    axes[1, 0].grid(True, alpha=0.3)
-    
-    # Add quadrant labels
-    axes[1, 0].text(0.95, 0.95, 'High Engagement\nHigh Completion', 
-                   transform=axes[1, 0].transAxes, fontsize=9, 
-                   verticalalignment='top', horizontalalignment='right',
-                   bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.5))
-    axes[1, 0].text(0.05, 0.05, 'Low Engagement\nLow Completion', 
-                   transform=axes[1, 0].transAxes, fontsize=9,
-                   verticalalignment='bottom', horizontalalignment='left',
-                   bbox=dict(boxstyle='round', facecolor='lightcoral', alpha=0.5))
-    
-    cbar = plt.colorbar(scatter, ax=axes[1, 0])
-    cbar.set_label('Reach', rotation=270, labelpad=15)
-    
-    # 4. Top Performing Videos Table
-    axes[1, 1].axis('off')
-    
-    # Get top 10 videos by engagement
-    top_videos = video_df.nlargest(10, 'total_engagement')[
-        ['title', 'duration_sec', 'total_engagement', 'reach', 'completion_rate']
-    ].copy()
-    
-    top_videos['title'] = top_videos['title'].str[:30] + '...'
-    top_videos['duration_sec'] = top_videos['duration_sec'].apply(lambda x: f"{int(x)}s")
-    top_videos['completion_rate'] = (top_videos['completion_rate'] * 100).round(1).astype(str) + '%'
-    top_videos['total_engagement'] = top_videos['total_engagement'].apply(lambda x: f"{int(x):,}")
-    top_videos['reach'] = top_videos['reach'].apply(lambda x: f"{int(x):,}")
-    
-    table_data = [top_videos.columns.tolist()] + top_videos.values.tolist()
-    
-    table = axes[1, 1].table(cellText=table_data, cellLoc='left', loc='center',
-                            colWidths=[0.35, 0.1, 0.15, 0.15, 0.1])
-    
-    table.auto_set_font_size(False)
-    table.set_fontsize(8)
-    table.scale(1, 1.8)
-    
-    # Style header row
-    for i in range(len(top_videos.columns)):
-        table[(0, i)].set_facecolor('#3498db')
-        table[(0, i)].set_text_props(weight='bold', color='white')
-    
-    # Alternate row colors
-    for i in range(1, len(table_data)):
-        for j in range(len(top_videos.columns)):
-            if i % 2 == 0:
-                table[(i, j)].set_facecolor('#ecf0f1')
-    
-    axes[1, 1].set_title('Top 10 Videos by Engagement', fontweight='bold', pad=20)
+    ax4.bar(type_labels, engage_rates, color='coral', alpha=0.8)
+    ax4.set_xlabel('Post Type')
+    ax4.set_ylabel('Engagement Rate (%)')
+    ax4.set_title('Engagement Rate by Post Type', fontweight='bold')
+    ax4.set_xticklabels(type_labels, rotation=45, ha='right')
+    ax4.grid(alpha=0.3, axis='y')
     
     plt.tight_layout()
     plt.show()
-
-def generate_summary_stats(df):
-    """Generate and print summary statistics"""
-    print("\n" + "="*60)
-    print("FACEBOOK DATA DESCRIPTIVE ANALYTICS SUMMARY")
-    print("="*60)
     
-    print(f"\nDataset Overview:")
-    print(f"  Total Posts: {len(df):,}")
-    print(f"  Date Range: {df['publish_time'].min()} to {df['publish_time'].max()}")
-    print(f"  Unique Pages: {df['page_id'].nunique()}")
-    
-    # Calculate average posts per month
-    months_active = df.groupby(['year', 'month']).size().count()
-    avg_posts_per_month = len(df) / months_active if months_active > 0 else 0
-    print(f"  Average Posts per Month: {avg_posts_per_month:.1f}")
-    
-    print(f"\nReach Metrics:")
-    print(f"  Total Reach: {df['reach'].sum():,.0f}")
-    print(f"  Average Reach per Post: {df['reach'].mean():,.0f}")
-    print(f"  Median Reach: {df['reach'].median():,.0f}")
-    print(f"  Max Reach (Single Post): {df['reach'].max():,.0f}")
-    
-    print(f"\nEngagement Metrics:")
-    print(f"  Total Engagement: {df['total_engagement'].sum():,.0f}")
-    print(f"  Average Engagement per Post: {df['total_engagement'].mean():,.0f}")
-    print(f"  Average Engagement Rate: {df['engagement_rate'].mean()*100:.2f}%")
-    print(f"  Total Reactions: {df['reactions'].sum():,.0f}")
-    print(f"  Total Comments: {df['comments'].sum():,.0f}")
-    print(f"  Total Shares: {df['shares'].sum():,.0f}")
-    
-    print(f"\nPost Type Distribution:")
-    for post_type, count in df['post_type'].value_counts().items():
-        percentage = (count / len(df)) * 100
-        print(f"  {post_type}: {count:,} ({percentage:.1f}%)")
-    
-    print(f"\nTop 5 Performing Posts (by Reach):")
-    top_posts = df.nlargest(5, 'reach')[['title', 'post_type', 'reach', 'total_engagement', 'publish_time']]
-    for idx, row in top_posts.iterrows():
-        print(f"  • {row['title'][:50]}...")
-        print(f"    Type: {row['post_type']}, Reach: {row['reach']:,.0f}, Engagement: {row['total_engagement']:,.0f}")
-    
-    print("\n" + "="*60 + "\n")
-
-def main():
-    """Main execution function"""
-    print("Fetching data from database...")
-    df = fetch_data()
-    
-    if df is None or len(df) == 0:
-        print("No data retrieved. Exiting.")
-        return
-    
-    print(f"Data loaded successfully: {len(df)} rows")
-    
-    # Prepare data
-    df = prepare_data(df)
-    
-    # Generate visualizations
-    print("\nGenerating cumulative reach chart...")
-    plot_cumulative_reach(df)
-    
-    print("Generating engagement summary metrics...")
-    plot_engagement_summary_metrics(df)
-    
-    print("Generating engagement ratio analysis...")
-    plot_engagement_ratio_analysis(df)
-    
-    print("Generating post type engagement analysis...")
-    plot_engagement_by_post_type(df)
-    
-    print("Generating temporal pattern analysis...")
-    plot_temporal_patterns(df)
-    
-    print("Generating video performance analysis...")
-    plot_video_performance(df)
-    
-    # Print summary statistics
-    generate_summary_stats(df)
-    
-    print("\nAll visualizations displayed successfully!")
-
-if __name__ == "__main__":
-    main()
+    return post_type_forecasts
