@@ -219,15 +219,21 @@ def get_engagement_distribution(conn):
 def export_analytics_to_csv():
     print("Starting TikTok Analytics CSV Export...\n")
     
-    # Use a single fixed folder name (no timestamp)
-    output_dir = "tiktok_analytics_export"
+    # Define the target directory path
+    base_path = r"C:\Sugarcane_Artist_Management\public"
+    output_dir = os.path.join(base_path, "tiktok_analytics_export")
     
     # Create directory if it doesn't exist
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-        print(f"✓ Created output directory: {output_dir}\n")
-    else:
-        print(f"✓ Using existing directory: {output_dir} (files will be overwritten)\n")
+    try:
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+            print(f"✓ Created output directory: {output_dir}\n")
+        else:
+            print(f"✓ Using existing directory: {output_dir} (files will be overwritten)\n")
+    except Exception as e:
+        print(f"❌ Error creating directory: {str(e)}")
+        print(f"   Make sure the path exists: {base_path}")
+        return
     
     max_retries, retry_delay, conn = 3, 2, None
 
@@ -257,15 +263,15 @@ def export_analytics_to_csv():
         # 1. Overview Metrics
         print("1. Exporting overview metrics...")
         overview = get_overview_metrics(conn)
-        overview.to_csv(f"{output_dir}/01_overview_metrics.csv", index=False)
+        overview.to_csv(os.path.join(output_dir, "01_overview_metrics.csv"), index=False)
         print("   ✓ Saved: 01_overview_metrics.csv")
         
         # 2. Top Performing Videos
         print("\n2. Exporting top performing videos...")
         top_videos = get_top_performing_videos(conn, limit=50)
-        top_videos["by_views"].to_csv(f"{output_dir}/02_top_videos_by_views.csv", index=False)
-        top_videos["by_engagement"].to_csv(f"{output_dir}/03_top_videos_by_engagement.csv", index=False)
-        top_videos["by_engagement_rate"].to_csv(f"{output_dir}/04_top_videos_by_engagement_rate.csv", index=False)
+        top_videos["by_views"].to_csv(os.path.join(output_dir, "02_top_videos_by_views.csv"), index=False)
+        top_videos["by_engagement"].to_csv(os.path.join(output_dir, "03_top_videos_by_engagement.csv"), index=False)
+        top_videos["by_engagement_rate"].to_csv(os.path.join(output_dir, "04_top_videos_by_engagement_rate.csv"), index=False)
         print("   ✓ Saved: 02_top_videos_by_views.csv")
         print("   ✓ Saved: 03_top_videos_by_engagement.csv")
         print("   ✓ Saved: 04_top_videos_by_engagement_rate.csv")
@@ -273,9 +279,9 @@ def export_analytics_to_csv():
         # 3. Temporal Analysis
         print("\n3. Exporting temporal analysis...")
         temporal = get_temporal_analysis(conn)
-        temporal["monthly"].to_csv(f"{output_dir}/05_monthly_stats.csv", index=False)
-        temporal["day_of_week"].to_csv(f"{output_dir}/06_day_of_week_stats.csv", index=False)
-        temporal["yearly"].to_csv(f"{output_dir}/07_yearly_monthly_breakdown.csv", index=False)
+        temporal["monthly"].to_csv(os.path.join(output_dir, "05_monthly_stats.csv"), index=False)
+        temporal["day_of_week"].to_csv(os.path.join(output_dir, "06_day_of_week_stats.csv"), index=False)
+        temporal["yearly"].to_csv(os.path.join(output_dir, "07_yearly_monthly_breakdown.csv"), index=False)
         print("   ✓ Saved: 05_monthly_stats.csv")
         print("   ✓ Saved: 06_day_of_week_stats.csv")
         print("   ✓ Saved: 07_yearly_monthly_breakdown.csv")
@@ -284,19 +290,19 @@ def export_analytics_to_csv():
         print("\n4. Exporting content analysis...")
         content = get_content_analysis(conn)
         if not content["post_type"].empty:
-            content["post_type"].to_csv(f"{output_dir}/08_post_type_analysis.csv", index=False)
+            content["post_type"].to_csv(os.path.join(output_dir, "08_post_type_analysis.csv"), index=False)
             print("   ✓ Saved: 08_post_type_analysis.csv")
         if not content["duration"].empty:
-            content["duration"].to_csv(f"{output_dir}/09_duration_analysis.csv", index=False)
+            content["duration"].to_csv(os.path.join(output_dir, "09_duration_analysis.csv"), index=False)
             print("   ✓ Saved: 09_duration_analysis.csv")
         if not content["sound"].empty:
-            content["sound"].to_csv(f"{output_dir}/10_sound_analysis.csv", index=False)
+            content["sound"].to_csv(os.path.join(output_dir, "10_sound_analysis.csv"), index=False)
             print("   ✓ Saved: 10_sound_analysis.csv")
         
         # 5. Engagement Distribution
         print("\n5. Exporting engagement distribution...")
         engagement_dist = get_engagement_distribution(conn)
-        engagement_dist.to_csv(f"{output_dir}/11_engagement_distribution.csv", index=False)
+        engagement_dist.to_csv(os.path.join(output_dir, "11_engagement_distribution.csv"), index=False)
         print("   ✓ Saved: 11_engagement_distribution.csv")
         
         # 6. Export full dataset
@@ -307,7 +313,7 @@ def export_analytics_to_csv():
         ORDER BY publish_time DESC;
         """
         full_data = execute_query(conn, full_query)
-        full_data.to_csv(f"{output_dir}/12_full_dataset.csv", index=False)
+        full_data.to_csv(os.path.join(output_dir, "12_full_dataset.csv"), index=False)
         print("   ✓ Saved: 12_full_dataset.csv")
         
         # Create a summary file with last export time
@@ -320,13 +326,13 @@ def export_analytics_to_csv():
             "Total Likes": [overview["total_likes"].iloc[0]],
             "Output Directory": [output_dir]
         }
-        pd.DataFrame(summary).to_csv(f"{output_dir}/00_export_summary.csv", index=False)
+        pd.DataFrame(summary).to_csv(os.path.join(output_dir, "00_export_summary.csv"), index=False)
         print("   ✓ Saved: 00_export_summary.csv")
         
         print(f"\n{'='*60}")
         print("✅ All data exported successfully!")
         print(f"{'='*60}")
-        print(f"\nLocation: ./{output_dir}/")
+        print(f"\nLocation: {output_dir}")
         print(f"Total files: 13 CSV files")
         print(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"\nFiles exported:")
