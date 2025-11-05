@@ -1,6 +1,4 @@
 {
-  "/favicon.ico/route": "app/favicon.ico/route.js",
   "/page": "app/page.js",
-  "/tiktok/page": "app/tiktok/page.js",
-  "/spotify/page": "app/spotify/page.js"
+  "/tiktok/page": "app/tiktok/page.js"
 }
