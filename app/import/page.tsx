@@ -18,30 +18,7 @@ export default function ImportDashboard() {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadStatus, setUploadStatus] = useState<string>("")
   const [uploadProgress, setUploadProgress] = useState<number>(0)
-  const [recentImports, setRecentImports] = useState<ImportRecord[]>([
-    {
-      fileName: "youtube_analytics_2024.csv",
-      type: "CSV",
-      date: "2024-01-15",
-      status: "Success",
-      records: 1250,
-      dataType: "YOUTUBE",
-    },
-    {
-      fileName: "instagram_data.xlsx",
-      type: "Excel",
-      date: "2024-01-14",
-      status: "Success",
-      records: 890,
-    },
-    {
-      fileName: "spotify_metrics.json",
-      type: "JSON",
-      date: "2024-01-13",
-      status: "Processing",
-      records: 2100,
-    },
-  ])
+  const [recentImports, setRecentImports] = useState<ImportRecord[]>([])
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -62,7 +39,7 @@ export default function ImportDashboard() {
         xhr.upload.addEventListener("progress", (event) => {
           if (event.lengthComputable) {
             const percentComplete = (event.loaded / event.total) * 100
-            setUploadProgress(Math.min(percentComplete, 90)) // Cap at 90% until complete
+            setUploadProgress(Math.min(percentComplete, 90))
           }
         })
 
@@ -114,7 +91,6 @@ export default function ImportDashboard() {
       setUploadStatus(`Error: ${error instanceof Error ? error.message : "Upload failed"}`)
     } finally {
       setIsUploading(false)
-      // Reset file input
       event.target.value = ""
     }
   }
@@ -151,8 +127,7 @@ export default function ImportDashboard() {
           </div>
         )}
 
-        {/* Import Options Section */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* CSV Import Card */}
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col justify-between">
             <div>
@@ -164,7 +139,10 @@ export default function ImportDashboard() {
                 </div>
                 <h2 className="ml-3 text-xl font-semibold text-gray-900">CSV Import</h2>
               </div>
-              <p className="text-gray-600 mb-6">Upload your analytics data using CSV format.</p>
+              <p className="text-gray-600 mb-6">
+                Upload your analytics data in CSV format. The system will automatically detect the platform (YouTube,
+                TikTok, Spotify, Meta).
+              </p>
             </div>
             <label className="w-full bg-[#3396D3] hover:bg-[#2A75A4] text-white font-semibold py-2 px-4 rounded-lg transition duration-200 text-center cursor-pointer">
               {isUploading ? "Processing..." : "Choose CSV File"}
@@ -183,7 +161,9 @@ export default function ImportDashboard() {
                 </div>
                 <h2 className="ml-3 text-xl font-semibold text-gray-900">Excel Import</h2>
               </div>
-              <p className="text-gray-600 mb-6">Upload your data using Excel spreadsheets (.xlsx).</p>
+              <p className="text-gray-600 mb-6">
+                Upload your data using Excel spreadsheets (.xlsx). The system will automatically detect the platform.
+              </p>
             </div>
             <label className="w-full bg-[#3396D3] hover:bg-[#2A75A4] text-white font-semibold py-2 px-4 rounded-lg transition duration-200 text-center cursor-pointer">
               {isUploading ? "Processing..." : "Choose Excel File"}
@@ -193,47 +173,49 @@ export default function ImportDashboard() {
         </section>
 
         {/* Import History Section */}
-        <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4">Recent Imports</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="pb-3 text-gray-600 font-medium">File Name</th>
-                  <th className="pb-3 text-gray-600 font-medium">Type</th>
-                  <th className="pb-3 text-gray-600 font-medium">Date</th>
-                  <th className="pb-3 text-gray-600 font-medium">Status</th>
-                  <th className="pb-3 text-gray-600 font-medium">Records</th>
-                  <th className="pb-3 text-gray-600 font-medium">Data Type</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentImports.map((record, index) => (
-                  <tr key={index} className="border-b border-gray-100">
-                    <td className="py-3 text-gray-900">{record.fileName}</td>
-                    <td className="py-3 text-gray-600">{record.type}</td>
-                    <td className="py-3 text-gray-600">{record.date}</td>
-                    <td className="py-3">
-                      <span
-                        className={`px-2 py-1 rounded-full text-sm ${
-                          record.status === "Success"
-                            ? "bg-green-100 text-green-800"
-                            : record.status === "Processing"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {record.status}
-                      </span>
-                    </td>
-                    <td className="py-3 text-gray-600">{record.records.toLocaleString()}</td>
-                    <td className="py-3 text-gray-600">{record.dataType || "-"}</td>
+        {recentImports.length > 0 && (
+          <section className="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 className="text-xl font-semibold mb-4">Recent Imports</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="pb-3 text-gray-600 font-medium">File Name</th>
+                    <th className="pb-3 text-gray-600 font-medium">Type</th>
+                    <th className="pb-3 text-gray-600 font-medium">Date</th>
+                    <th className="pb-3 text-gray-600 font-medium">Status</th>
+                    <th className="pb-3 text-gray-600 font-medium">Records</th>
+                    <th className="pb-3 text-gray-600 font-medium">Data Type</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                </thead>
+                <tbody>
+                  {recentImports.map((record, index) => (
+                    <tr key={index} className="border-b border-gray-100">
+                      <td className="py-3 text-gray-900">{record.fileName}</td>
+                      <td className="py-3 text-gray-600">{record.type}</td>
+                      <td className="py-3 text-gray-600">{record.date}</td>
+                      <td className="py-3">
+                        <span
+                          className={`px-2 py-1 rounded-full text-sm ${
+                            record.status === "Success"
+                              ? "bg-green-100 text-green-800"
+                              : record.status === "Processing"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {record.status}
+                        </span>
+                      </td>
+                      <td className="py-3 text-gray-600">{record.records.toLocaleString()}</td>
+                      <td className="py-3 text-gray-600">{record.dataType || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         {/* Import Guidelines */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
@@ -242,10 +224,13 @@ export default function ImportDashboard() {
             <p>• Ensure your data files are properly formatted with headers</p>
             <p>• Maximum file size: 50MB per upload</p>
             <p>• Supported formats: CSV and XLSX files</p>
-            <p>• System automatically detects META (Facebook), YOUTUBE, or TIKTOK data</p>
+            <p>• System automatically detects META (Facebook), YOUTUBE, TIKTOK, or SPOTIFY data</p>
             <p>• META data requires: post_id, page_name, publish_time columns</p>
             <p>• YOUTUBE data requires: Video title, Video ID, Video publish time columns</p>
             <p>• TIKTOK data requires: tiktok_video_id, content_link, video_title columns</p>
+            <p>
+              • SPOTIFY data requires: song, listeners, streams columns (optional: saves, release_date, date, followers)
+            </p>
             <p>• Data will be processed and loaded into the database immediately</p>
           </div>
         </section>

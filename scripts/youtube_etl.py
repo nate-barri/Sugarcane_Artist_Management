@@ -16,6 +16,13 @@ db_params = {
     'port': os.environ.get('PGPORT', '5432')
 }
 
+if sys.stdout.encoding != 'utf-8':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+if sys.stderr.encoding != 'utf-8':
+    import io
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 # ---------- Helpers ----------
 def remove_emoji(text):
     if not isinstance(text, str):

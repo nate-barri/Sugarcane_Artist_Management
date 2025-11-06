@@ -5,23 +5,61 @@ import { spawn } from "child_process"
 import { tmpdir } from "os"
 
 // Helper function to detect data type from CSV headers
-async function detectDataType(filePath: string): Promise<"META" | "YOUTUBE" | "TIKTOK" | "UNKNOWN"> {
+async function detectDataType(filePath: string): Promise<"META" | "YOUTUBE" | "TIKTOK" | "SPOTIFY" | "UNKNOWN"> {
   const fs = require("fs").promises
   const content = await fs.readFile(filePath, "utf-8")
   const firstLine = content.split("\n")[0].toLowerCase()
+  const secondLine = content.split("\n")[1]?.toLowerCase() || ""
 
-  if (firstLine.includes("tiktok_video_id") || firstLine.includes("content_link")) {
+  // TikTok detection
+  if (
+    firstLine.includes("tiktok_video_id") ||
+    firstLine.includes("content_link") ||
+    (firstLine.includes("video_id") && firstLine.includes("views") && firstLine.includes("likes"))
+  ) {
     return "TIKTOK"
   }
 
-  // Check for Facebook/Meta specific columns
-  if (firstLine.includes("post_id") || firstLine.includes("page_name") || firstLine.includes("permalink")) {
+  // Facebook/Meta detection
+  if (
+    firstLine.includes("post_id") ||
+    firstLine.includes("page_name") ||
+    firstLine.includes("permalink") ||
+    (firstLine.includes("reach") && firstLine.includes("engagement"))
+  ) {
     return "META"
   }
 
-  // Check for YouTube specific columns
-  if (firstLine.includes("video title") || firstLine.includes("video id") || firstLine.includes("video publish time")) {
+  // YouTube detection
+  if (
+    firstLine.includes("video title") ||
+    firstLine.includes("video id") ||
+    firstLine.includes("video publish time") ||
+    firstLine.includes("watch time") ||
+    (firstLine.includes("title") && firstLine.includes("views") && firstLine.includes("watch"))
+  ) {
     return "YOUTUBE"
+  }
+
+  // Spotify detection
+  if (
+    (firstLine.includes("song") || firstLine.includes("track")) &&
+    (firstLine.includes("listeners") ||
+      firstLine.includes("streams") ||
+      firstLine.includes("followers") ||
+      firstLine.includes("releases"))
+  ) {
+    return "SPOTIFY"
+  }
+
+  // Additional heuristic: check second line for data patterns if first line is unclear
+  if (secondLine) {
+    const dataLines = [firstLine, secondLine].join(",").toLowerCase()
+
+    if (dataLines.includes("tiktok") || dataLines.includes("video_id")) return "TIKTOK"
+    if (dataLines.includes("facebook") || dataLines.includes("page_name")) return "META"
+    if (dataLines.includes("youtube") || dataLines.includes("watch time")) return "YOUTUBE"
+    if (dataLines.includes("spotify") || dataLines.includes("listeners")) return "SPOTIFY"
   }
 
   return "UNKNOWN"
@@ -173,7 +211,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Unable to detect data type. Please ensure your CSV has the correct headers for META, YOUTUBE, or TIKTOK data.",
+            "Unable to detect data type. Please ensure your CSV has the correct headers for META, YOUTUBE, TIKTOK, or SPOTIFY data.",
         },
         { status: 400 },
       )
@@ -183,6 +221,7 @@ export async function POST(request: NextRequest) {
       META: "facebook_etl.py",
       YOUTUBE: "youtube_etl.py",
       TIKTOK: "tiktok_etl.py",
+      SPOTIFY: "spotify_etl.py",
     }
     const scriptName = scriptMap[dataType]
     const result = await executePythonScript(scriptName, tempFilePath, pythonCmd)

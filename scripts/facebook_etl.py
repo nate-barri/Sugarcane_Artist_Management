@@ -6,6 +6,13 @@ import os
 from datetime import datetime
 from psycopg2.extras import execute_values
 
+if sys.stdout.encoding != 'utf-8':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+if sys.stderr.encoding != 'utf-8':
+    import io
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 db_params = {
     'dbname': os.environ.get('PGDATABASE', 'neondb'),
     'user': os.environ.get('PGUSER', 'neondb_owner'),

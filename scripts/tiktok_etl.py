@@ -17,6 +17,13 @@ db_params = {
     'port': os.environ.get('PGPORT', '5432')
 }
 
+if sys.stdout.encoding != 'utf-8':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+if sys.stderr.encoding != 'utf-8':
+    import io
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 # ================= HELPERS =================
 def read_csv_robust(path):
     for enc in ("utf-8-sig", "cp1252", "latin1"):

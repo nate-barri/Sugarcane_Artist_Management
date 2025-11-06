@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@mui/material": "^7.3.5",
     "@neondatabase/serverless": "^1.0.2",
     "@stackframe/react": "^2.8.44",
     "@stackframe/stack": "^2.8.47",

@@ -122,7 +122,7 @@ export default function TikTokDashboard() {
       ]
     : []
 
-  const PIE_COLORS = ["#1e40af", "#3b82f6", "#60a5fa", "#93c5fd"]
+  const PIE_COLORS = ["#f59e0b", "#10b981", "#ec4899", "#8b5cf6"]
 
   const handleApplyFilter = () => {
     setStartDate(tempStartDate)
@@ -235,17 +235,24 @@ export default function TikTokDashboard() {
         {/* Top Videos */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-xl font-semibold mb-4 text-[#123458]">Top 10 Videos by Views</h2>
-          <div className="h-96">
+          <div className="space-y-2 max-h-96 overflow-y-auto">
             {topVideos.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topVideos} layout="vertical" margin={{ top: 5, right: 30, left: 200, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tickFormatter={fmtCompact} />
-                  <YAxis dataKey="title" type="category" width={190} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v) => fmtInt(v as number)} />
-                  <Bar dataKey="views" fill="#0c4d8f" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="space-y-2">
+                {topVideos.map((video, index) => (
+                  <div
+                    key={video.video_id}
+                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-gray-500 font-semibold text-sm">#{index + 1}</span>
+                        <p className="text-gray-800 font-medium truncate flex-1">{video.title}</p>
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1">{fmtInt(video.views)} views</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="text-gray-500">No data available</div>
             )}
