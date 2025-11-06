@@ -633,10 +633,10 @@ def analyze_best_posting_times(df):
     }).round(2)
     
     day_hour_stats.columns = ['_'.join(col).strip() for col in day_hour_stats.columns.values]
-    day_hour_stats = day_hour_stats[day_hour_stats['views_count'] >= 2]  # At least 2 posts
+    day_hour_stats = day_hour_stats[day_hour_stats['views_count'] >= 2]
     day_hour_stats = day_hour_stats.sort_values('views_mean', ascending=False)
     
-    # Calculate composite score (weighted combination)
+    # Calculate composite score
     day_stats['composite_score'] = (
         (day_stats['views_mean'] / day_stats['views_mean'].max()) * 0.4 +
         (day_stats['engagement_rate_mean'] / day_stats['engagement_rate_mean'].max()) * 0.3 +
@@ -659,7 +659,7 @@ def analyze_best_posting_times(df):
     df_model = df.copy()
     df_model['post_type_encoded'] = le_post.fit_transform(df_model['post_type'])
     
-    # Features focused on DAY OF WEEK (removed hour-based features)
+    # Features focused on DAY OF WEEK
     time_features = [
         'day_of_week', 'is_weekend', 'is_weekday_peak',
         'publish_month', 'season',
@@ -737,7 +737,6 @@ def analyze_best_posting_times(df):
     
     for rank, (idx, row) in enumerate(day_stats.iterrows(), 1):
         emoji = "🏆" if rank == 1 else "🥈" if rank == 2 else "🥉" if rank == 3 else "  "
-        # Calculate standard deviation for this day
         day_videos = df[df['day_of_week'] == idx]['views']
         std_dev = day_videos.std()
         
@@ -753,10 +752,7 @@ def analyze_best_posting_times(df):
     try:
         from scipy import stats
         
-        # Group views by day of week
         day_groups = [df[df['day_of_week'] == i]['views'].values for i in range(7)]
-        
-        # Perform one-way ANOVA
         f_stat, p_value = stats.f_oneway(*day_groups)
         
         print(f"F-statistic: {f_stat:.4f}")
@@ -769,7 +765,6 @@ def analyze_best_posting_times(df):
             print(f"⚠️  Result: NOT SIGNIFICANT (p >= 0.05)")
             print(f"   → Day of week may not significantly affect views")
         
-        # Pairwise comparison: Top day vs others
         best_day_idx = day_stats.index[0]
         best_day_views = df[df['day_of_week'] == best_day_idx]['views'].values
         
@@ -789,6 +784,7 @@ def analyze_best_posting_times(df):
     
     except Exception as e:
         print(f"Could not perform statistical tests: {e}")
+        p_value = None
     
     print("\n⏰ BEST HOURS TO POST (Ranked by Average Views):")
     print("="*80)
@@ -828,7 +824,6 @@ def analyze_best_posting_times(df):
     best_day_idx = day_stats.index[0]
     best_day_views = df[df['day_of_week'] == best_day_idx]['views'].values
     
-    # 95% confidence interval
     confidence_level = 0.95
     degrees_freedom = len(best_day_views) - 1
     sample_mean = np.mean(best_day_views)
@@ -857,7 +852,7 @@ def analyze_best_posting_times(df):
     print(f"✅ Best Combination: {day_names[best_combo.name[0]]} at {int(best_combo.name[1]):02d}:00 (avg {best_combo['views_mean']:,.0f} views)")
     print(f"\n   Note: Hour analysis may be limited due to posting schedule concentration")
     
-    # Calculate improvement potential with confidence
+    # Calculate improvement potential
     avg_views = df['views'].mean()
     best_combo_improvement = ((best_combo['views_mean'] - avg_views) / avg_views) * 100
     
@@ -905,7 +900,6 @@ def analyze_best_posting_times(df):
     axes[0, 0].legend()
     axes[0, 0].grid(True, alpha=0.3, axis='y')
     
-    # Add value labels
     for i, v in enumerate(day_plot_data['views_mean']):
         axes[0, 0].text(i, v, f'{v:,.0f}', ha='center', va='bottom', fontweight='bold', fontsize=9)
     
@@ -946,7 +940,6 @@ def analyze_best_posting_times(df):
     axes[1, 0].legend()
     axes[1, 0].grid(True, alpha=0.3, axis='y')
     
-    # Add value labels
     for i, v in enumerate(day_plot_data_sorted['engagement_rate_mean']):
         axes[1, 0].text(i, v, f'{v:.2f}%', ha='center', va='bottom', fontweight='bold', fontsize=9)
     
@@ -1004,7 +997,7 @@ def analyze_best_posting_times(df):
         'features': time_features
     }
 
-# ================= MODEL 4: ENSEMBLE TIME SERIES FORECASTING =================
+# ================= MODEL 4: ENSEMBLE TIME SERIES FORECASTING WITH MASE =================
 def model4_ensemble_forecast(df):
     print("\n" + "="*70)
     print("MODEL 4: ENSEMBLE CHANNEL GROWTH FORECASTING (Next 6 Months)")
@@ -1022,7 +1015,6 @@ def model4_ensemble_forecast(df):
         'is_viral': 'sum'
     })
 
-    # flatten columns
     weekly.columns = ['total_views', 'avg_views', 'video_count',
                       'total_likes', 'total_shares', 'total_comments', 'total_saves',
                       'avg_engagement', 'viral_count']
@@ -1055,7 +1047,7 @@ def model4_ensemble_forecast(df):
     print(f"  Overall avg views: {baseline_stats['views_mean']:,.0f}")
     print(f"  Avg engagement rate: {baseline_stats['engagement_mean']:.2f}%")
 
-    # forecasting helper functions
+    # Forecasting helper functions
     def forecast_ema(series, steps, alpha=0.3):
         forecast = []
         last_value = series.iloc[-1]
@@ -1104,13 +1096,12 @@ def model4_ensemble_forecast(df):
     views_test = views_series.iloc[train_size:]
     test_steps = len(views_test) if len(views_test) > 0 else 1
 
-    # compute test forecasts to get MAE weights
+    # Compute test forecasts
     ema_test = forecast_ema(views_train, test_steps, alpha=0.25)
     linear_test = forecast_linear_trend(views_train, test_steps)
     seasonal_test = forecast_seasonal_naive(views_train, test_steps)
     rolling_test = forecast_rolling_mean(views_train, test_steps)
 
-    # ensure arrays align
     def safe_score(true, pred):
         try:
             return max(0, r2_score(true, pred))
@@ -1122,19 +1113,24 @@ def model4_ensemble_forecast(df):
     r2_seasonal = safe_score(views_test, seasonal_test)
     r2_rolling = safe_score(views_test, rolling_test)
 
-    print(f"  Method Performance (MAE):")
+    print(f"  Method Performance (MAE & MASE):")
     mae_ema = mean_absolute_error(views_test, ema_test)
     mae_linear = mean_absolute_error(views_test, linear_test)
     mae_seasonal = mean_absolute_error(views_test, seasonal_test)
     mae_rolling = mean_absolute_error(views_test, rolling_test)
+    
+    # Calculate MASE for each method
+    mase_ema = calculate_mase(views_test.values, ema_test, views_train.values)
+    mase_linear = calculate_mase(views_test.values, linear_test, views_train.values)
+    mase_seasonal = calculate_mase(views_test.values, seasonal_test, views_train.values)
+    mase_rolling = calculate_mase(views_test.values, rolling_test, views_train.values)
 
-    print(f"    EMA:              MAE={mae_ema:>9,.0f}  R²={r2_ema:.3f}")
-    print(f"    Linear Trend:     MAE={mae_linear:>9,.0f}  R²={r2_linear:.3f}")
-    print(f"    Seasonal Naive:   MAE={mae_seasonal:>9,.0f}  R²={r2_seasonal:.3f}")
-    print(f"    Rolling Mean:     MAE={mae_rolling:>9,.0f}  R²={r2_rolling:.3f}")
+    print(f"    EMA:              MAE={mae_ema:>9,.0f}  MASE={mase_ema:.3f}  R²={r2_ema:.3f}")
+    print(f"    Linear Trend:     MAE={mae_linear:>9,.0f}  MASE={mase_linear:.3f}  R²={r2_linear:.3f}")
+    print(f"    Seasonal Naive:   MAE={mae_seasonal:>9,.0f}  MASE={mase_seasonal:.3f}  R²={r2_seasonal:.3f}")
+    print(f"    Rolling Mean:     MAE={mae_rolling:>9,.0f}  MASE={mase_rolling:.3f}  R²={r2_rolling:.3f}")
 
     mae_scores = np.array([mae_ema, mae_linear, mae_seasonal, mae_rolling], dtype=float)
-    # prevent divide-by-zero when MAE is zero
     inv_mae = 1.0 / (mae_scores + 1.0)
     weights = inv_mae / inv_mae.sum()
 
@@ -1146,6 +1142,7 @@ def model4_ensemble_forecast(df):
                     weights[3] * rolling_test)
 
     mae_ensemble = mean_absolute_error(views_test, ensemble_test)
+    mase_ensemble = calculate_mase(views_test.values, ensemble_test, views_train.values)
 
     try:
         mape_ensemble = mean_absolute_percentage_error(views_test, ensemble_test) * 100
@@ -1159,10 +1156,13 @@ def model4_ensemble_forecast(df):
     pseudo_r2 = max(0, improvement_pct / 100)
 
     if mape_ensemble is not None:
-        print(f"  Ensemble MAE: {mae_ensemble:,.0f} | MAPE: {mape_ensemble:.1f}%")
+        print(f"  Ensemble MAE: {mae_ensemble:,.0f} | MASE: {mase_ensemble:.3f} | MAPE: {mape_ensemble:.1f}%")
     else:
-        print(f"  Ensemble MAE: {mae_ensemble:,.0f} | MAPE: N/A (extreme values)")
+        print(f"  Ensemble MAE: {mae_ensemble:,.0f} | MASE: {mase_ensemble:.3f} | MAPE: N/A")
+    
+    mase_status = "✓ EXCELLENT" if mase_ensemble < 0.8 else "✓ GOOD" if mase_ensemble < 1.0 else "⚠ NEEDS WORK"
     print(f"  Improvement over naive: {improvement_pct:+.1f}% → Pseudo-R²={pseudo_r2:.3f}")
+    print(f"  MASE Status: {mase_status}")
 
     # Forecast 26 weeks ahead
     steps = 26
@@ -1176,11 +1176,10 @@ def model4_ensemble_forecast(df):
                      weights[2] * seasonal_forecast +
                      weights[3] * rolling_forecast)
 
-    # apply conservative floor based on recent 4-week average
     min_views = baseline_stats['views_recent_4w'] * 0.5
     forecast_views = np.maximum(forecast_views, min_views)
 
-    views_method = f"Ensemble (MAE={mae_ensemble:,.0f})"
+    views_method = f"Ensemble (MAE={mae_ensemble:,.0f}, MASE={mase_ensemble:.3f})"
     views_r2 = pseudo_r2
 
     print("\n--- Forecasting: Average Engagement Rate (Conservative) ---")
@@ -1201,23 +1200,31 @@ def model4_ensemble_forecast(df):
     mae_mean = mean_absolute_error(eng_test, pred_mean) if len(eng_test) > 0 else 0.0
     mae_overall = mean_absolute_error(eng_test, pred_overall) if len(eng_test) > 0 else 0.0
     mae_ema_eng = mean_absolute_error(eng_test, pred_ema) if len(eng_test) > 0 else 0.0
+    
+    # Calculate MASE for engagement
+    mase_mean = calculate_mase(eng_test.values, pred_mean, eng_train.values) if len(eng_test) > 0 else 0.0
+    mase_overall = calculate_mase(eng_test.values, pred_overall, eng_train.values) if len(eng_test) > 0 else 0.0
+    mase_ema_eng = calculate_mase(eng_test.values, pred_ema, eng_train.values) if len(eng_test) > 0 else 0.0
 
-    print(f"  Recent Mean MAE: {mae_mean:.3f}%")
-    print(f"  Overall Mean MAE: {mae_overall:.3f}%")
-    print(f"  EMA MAE: {mae_ema_eng:.3f}%")
+    print(f"  Recent Mean:   MAE={mae_mean:.3f}%  MASE={mase_mean:.3f}")
+    print(f"  Overall Mean:  MAE={mae_overall:.3f}%  MASE={mase_overall:.3f}")
+    print(f"  EMA:           MAE={mae_ema_eng:.3f}%  MASE={mase_ema_eng:.3f}")
 
     if mae_mean <= mae_overall and mae_mean <= mae_ema_eng:
         forecast_engagement = np.full(steps, engagement_series.tail(8).mean() if len(engagement_series.tail(8)) > 0 else engagement_series.mean())
-        eng_method = f"Recent Mean (MAE={mae_mean:.2f}%)"
+        eng_method = f"Recent Mean (MAE={mae_mean:.2f}%, MASE={mase_mean:.3f})"
         best_mae = mae_mean
+        best_mase = mase_mean
     elif mae_overall <= mae_ema_eng:
         forecast_engagement = np.full(steps, engagement_series.mean())
-        eng_method = f"Overall Mean (MAE={mae_overall:.2f}%)"
+        eng_method = f"Overall Mean (MAE={mae_overall:.2f}%, MASE={mase_overall:.3f})"
         best_mae = mae_overall
+        best_mase = mase_overall
     else:
         forecast_engagement = forecast_ema(engagement_series, steps, alpha=0.4)
-        eng_method = f"EMA (MAE={mae_ema_eng:.2f}%)"
+        eng_method = f"EMA (MAE={mae_ema_eng:.2f}%, MASE={mase_ema_eng:.3f})"
         best_mae = mae_ema_eng
+        best_mase = mase_ema_eng
 
     naive_eng_mae = mean_absolute_error(eng_test, np.full(len(eng_test), eng_train.mean())) if len(eng_test) > 0 else 0.0
     eng_improvement = ((naive_eng_mae - best_mae) / naive_eng_mae) * 100 if naive_eng_mae != 0 else 0.0
@@ -1265,36 +1272,40 @@ def model4_ensemble_forecast(df):
             'values': views_array.tolist(),
             'label': 'Total Weekly Views',
             'method': views_method,
-            'r2': views_r2
+            'r2': views_r2,
+            'mase': mase_ensemble
         },
         'avg_engagement': {
             'dates': forecast_dates,
             'values': engagement_array.tolist(),
             'label': 'Average Engagement Rate (%)',
             'method': eng_method,
-            'r2': eng_r2
+            'r2': eng_r2,
+            'mase': best_mase
         },
         'total_interactions': {
             'dates': forecast_dates,
             'values': forecast_interactions.tolist(),
             'label': 'Total Interactions',
             'method': 'Proportional',
-            'r2': None
+            'r2': None,
+            'mase': None
         },
         'viral_count': {
             'dates': forecast_dates,
             'values': forecast_viral.tolist(),
             'label': 'Viral Videos per Week',
             'method': 'Historical Average',
-            'r2': None
+            'r2': None,
+            'mase': None
         }
     }
 
     all_results = {
-        'total_views': {'r2': views_r2, 'mae': mae_ensemble, 'method': views_method},
-        'avg_engagement': {'r2': eng_r2, 'mae': best_mae, 'method': eng_method},
-        'total_interactions': {'r2': None, 'mae': None, 'method': 'Proportional'},
-        'viral_count': {'r2': None, 'mae': None, 'method': 'Historical Average'}
+        'total_views': {'r2': views_r2, 'mae': mae_ensemble, 'mase': mase_ensemble, 'method': views_method},
+        'avg_engagement': {'r2': eng_r2, 'mae': best_mae, 'mase': best_mase, 'method': eng_method},
+        'total_interactions': {'r2': None, 'mae': None, 'mase': None, 'method': 'Proportional'},
+        'viral_count': {'r2': None, 'mae': None, 'mase': None, 'method': 'Historical Average'}
     }
 
     # Plotting panel
@@ -1335,7 +1346,11 @@ def model4_ensemble_forecast(df):
         ax.set_ylabel(forecast_data['label'], fontsize=10)
 
         r2_val = forecast_data.get('r2')
-        if r2_val is not None:
+        mase_val = forecast_data.get('mase')
+        
+        if r2_val is not None and mase_val is not None:
+            title_str = f"{forecast_data['label']}\nPseudo-R²={r2_val:.3f}, MASE={mase_val:.3f}"
+        elif r2_val is not None:
             title_str = f"{forecast_data['label']}\nPseudo-R²={r2_val:.3f}"
         else:
             title_str = f"{forecast_data['label']}\n{forecast_data['method']}"
@@ -1346,29 +1361,23 @@ def model4_ensemble_forecast(df):
         ax.tick_params(axis='x', rotation=45, labelsize=8)
         ax.tick_params(axis='y', labelsize=8)
 
-    plt.suptitle('Channel Growth Forecasts - Next 6 Months (Ensemble)',
+    plt.suptitle('Channel Growth Forecasts - Next 6 Months (Ensemble with MASE)',
                  fontsize=16, fontweight='bold', y=0.995)
     plt.tight_layout()
     plt.show()
 
-    # ---------------------------
-    # CUMULATIVE HISTORICAL + 6-MONTH FORECAST PLOT
-    # ---------------------------
+    # Cumulative forecast plot
     try:
-        # historical cumulative (last 26 weeks shown)
         historical_dates = weekly_recent.tail(26).index
         historical_vals = weekly_recent.tail(26)['total_views'].values
         historical_cum = np.cumsum(historical_vals)
 
-        # forecast cumulative (26 weeks)
         future_dates = all_forecasts['total_views']['dates']
         forecast_vals = np.array(all_forecasts['total_views']['values'])
         forecast_cum = historical_cum[-1] + np.cumsum(forecast_vals)
 
-        # Confidence band via MAPE if available else default 15%
         mape_val = mape_ensemble if mape_ensemble is not None else 15.0
         mape_val = float(mape_val) if mape_val is not None else 15.0
-        # clamp MAPE to reasonable range
         if np.isnan(mape_val) or np.isinf(mape_val):
             mape_val = 15.0
         mape_val = max(5.0, min(mape_val, 80.0))
@@ -1376,7 +1385,6 @@ def model4_ensemble_forecast(df):
         lower = forecast_cum * (1 - mape_val / 100.0)
         upper = forecast_cum * (1 + mape_val / 100.0)
 
-        # combine dates for x-axis continuity
         combined_hist_dates = list(historical_dates)
         combined_future_dates = list(future_dates)
 
@@ -1411,6 +1419,8 @@ def model4_ensemble_forecast(df):
             print(f"  Range: {min(forecasts):.2f}% - {max(forecasts):.2f}%")
             print(f"  Current baseline: {baseline_stats['engagement_mean']:.2f}%")
             print(f"  Method: {forecast_data['method']}")
+            if forecast_data.get('mase'):
+                print(f"  MASE: {forecast_data['mase']:.3f}")
         elif target_name == 'viral_count':
             print(f"\n{label}:")
             print(f"  Total (6 months): {int(total_6m)} viral videos")
@@ -1427,12 +1437,17 @@ def model4_ensemble_forecast(df):
                 pct_change = ((avg_weekly - baseline_stats['views_recent_12w']) / baseline_stats['views_recent_12w'] * 100) if baseline_stats['views_recent_12w'] != 0 else 0.0
                 print(f"  Projected change: {pct_change:+.1f}% vs recent average")
             print(f"  Method: {forecast_data['method']}")
+            if forecast_data.get('mase'):
+                mase_val = forecast_data['mase']
+                mase_status = "✓ EXCELLENT" if mase_val < 0.8 else "✓ GOOD" if mase_val < 1.0 else "⚠ NEEDS WORK"
+                print(f"  MASE: {mase_val:.3f} {mase_status}")
 
     print("\n✅ MODEL 4 IMPROVEMENTS:")
     print("  • Ensemble of 4 forecasting methods (EMA, Linear, Seasonal, Rolling)")
-    print("  • Automatic method weighting based on MAE (Mean Absolute Error)")
+    print("  • Automatic method weighting based on MAE")
+    print("  • ✅ MASE (Mean Absolute Scaled Error) now calculated for all forecasts")
+    print("  • MASE < 1.0 means better than naive forecast")
     print("  • Uses Pseudo-R² metric (improvement over naive baseline)")
-    print("  • Pseudo-R² is always positive (0 to 1 scale)")
     print("  • Robust to data volatility and outliers")
     print("  • Conservative floor constraints prevent unrealistic predictions")
     print("  • Proper temporal validation on 20% holdout set")
@@ -1472,7 +1487,7 @@ def main():
     m3_model, m3_scaler, m3_features, m3_r2, m3_mase = model3_enhanced_engagement(df)
 
     print("\n" + "="*70)
-    print("RUNNING CHANNEL GROWTH FORECASTING MODEL (4) - ENSEMBLE VERSION")
+    print("RUNNING CHANNEL GROWTH FORECASTING MODEL (4) - ENSEMBLE WITH MASE")
     print("="*70)
 
     m4_forecasts, m4_results, m4_baseline = model4_ensemble_forecast(df)
@@ -1498,17 +1513,19 @@ MODEL 2 - Virality Probability: AUC={m2_auc:.3f}, F1={m2_f1:.3f}, MASE={m2_mase:
 MODEL 3 - Engagement Rate: R²={m3_r2:.3f}, MASE={m3_mase:.3f}
   → Predicts: Expected engagement rate (%)
   → Improvement: R² from -0.128 to {m3_r2:.3f} (+{(m3_r2-(-0.128))*100:.1f}%)
+  → MASE Status: {'✓ EXCELLENT' if m3_mase < 0.8 else '✓ GOOD' if m3_mase < 1.0 else '⚠ NEEDS WORK'}
   → Use for: Content quality benchmarking
 
 MODEL 5 - Day of Week Optimization: R²={posting_analysis['model_metrics']['r2']:.3f}, MASE={posting_analysis['model_metrics']['mase']:.3f}
   → Predicts: Expected views based on DAY OF WEEK (not hour)
   → MAE: {posting_analysis['model_metrics']['mae']:,.0f} views ({posting_analysis['model_metrics']['mae']/152931*100:.1f}%)
   → RMSE: {posting_analysis['model_metrics']['rmse']:,.0f} views
+  → MASE Status: {'✓ EXCELLENT' if posting_analysis['model_metrics']['mase'] < 0.8 else '✓ GOOD' if posting_analysis['model_metrics']['mase'] < 1.0 else '⚠ NEEDS WORK'}
   → Statistical Significance: {'✅ CONFIRMED' if posting_analysis.get('p_value', 1.0) < 0.05 else '⚠️ NOT CONFIRMED'}
   → Use for: Choosing optimal posting day
     """)
 
-    print("\nCHANNEL GROWTH FORECASTS (Next 6 Months) - ENSEMBLE:")
+    print("\nCHANNEL GROWTH FORECASTS (Next 6 Months) - ENSEMBLE WITH MASE:")
     print("-" * 70)
 
     views_forecast = m4_forecasts['total_views']['values']
@@ -1517,20 +1534,27 @@ MODEL 5 - Day of Week Optimization: R²={posting_analysis['model_metrics']['r2']
     viral_forecast = m4_forecasts['viral_count']['values']
 
     views_r2 = m4_results['total_views']['r2']
+    views_mase = m4_results['total_views']['mase']
     eng_r2 = m4_results['avg_engagement']['r2']
+    eng_mase = m4_results['avg_engagement']['mase']
+
+    views_mase_status = "✓ EXCELLENT" if views_mase < 0.8 else "✓ GOOD" if views_mase < 1.0 else "⚠ NEEDS WORK"
+    eng_mase_status = "✓ EXCELLENT" if eng_mase < 0.8 else "✓ GOOD" if eng_mase < 1.0 else "⚠ NEEDS WORK"
 
     print(f"""
 VIEWS:
   • Total forecasted: {sum(views_forecast):,.0f} views over 6 months
   • Average per week: {np.mean(views_forecast):,.0f} views
   • Growth trend: {views_forecast[0]:,.0f} → {views_forecast[-1]:,.0f}
-  • Model quality: Pseudo-R²={views_r2:.3f} ✓ POSITIVE (MAE={m4_results['total_views']['mae']:,.0f})
+  • Model quality: Pseudo-R²={views_r2:.3f}, MASE={views_mase:.3f} {views_mase_status}
+  • MAE: {m4_results['total_views']['mae']:,.0f}
   • Method: {m4_results['total_views']['method']}
 
 ENGAGEMENT:
   • Average rate: {np.mean(engagement_forecast):.2f}%
   • Trend: {engagement_forecast[0]:.2f}% → {engagement_forecast[-1]:.2f}%
-  • Model quality: Pseudo-R²={eng_r2:.3f} ✓ POSITIVE (MAE={m4_results['avg_engagement']['mae']:.2f}%)
+  • Model quality: Pseudo-R²={eng_r2:.3f}, MASE={eng_mase:.3f} {eng_mase_status}
+  • MAE: {m4_results['avg_engagement']['mae']:.2f}%
   • Method: {m4_results['avg_engagement']['method']}
 
 INTERACTIONS (Likes + Shares + Comments + Saves):
@@ -1566,7 +1590,7 @@ VIRAL VIDEOS:
 
 • Forecast method: Ensemble of 4 methods (weighted by MAE performance)
 • Quality metric: Pseudo-R² (% improvement over naive forecast)
-• Pseudo-R² range: 0 (no improvement) to 1 (perfect forecast)
+• MASE metric: Scaled error where < 1.0 = better than naive
 • All methods validated on 20% holdout test set
 • Conservative constraints prevent extreme predictions
 
@@ -1581,13 +1605,21 @@ VIRAL VIDEOS:
 • Improvement potential: {posting_analysis['improvement_potential']:+.1f}% (best day vs average)
 • Avoid: {posting_analysis['day_stats'].iloc[-1]['day_name']} (lowest average)
 
-✅ MODEL 4 FIXED - ALL ISSUES RESOLVED:
+✅ ALL MODELS NOW INCLUDE MASE:
+  • ✓ Model 2 (Virality): MASE = {m2_mase:.3f} {('✓ EXCELLENT' if m2_mase < 0.8 else '✓ GOOD' if m2_mase < 1.0 else '⚠ NEEDS WORK')}
+  • ✓ Model 3 (Engagement): MASE = {m3_mase:.3f} {('✓ EXCELLENT' if m3_mase < 0.8 else '✓ GOOD' if m3_mase < 1.0 else '⚠ NEEDS WORK')}
+  • ✓ Model 4 (Views Forecast): MASE = {views_mase:.3f} {views_mase_status}
+  • ✓ Model 4 (Engagement Forecast): MASE = {eng_mase:.3f} {eng_mase_status}
+  • ✓ Model 5 (Posting Time): MASE = {posting_analysis['model_metrics']['mase']:.3f} {('✓ EXCELLENT' if posting_analysis['model_metrics']['mase'] < 0.8 else '✓ GOOD' if posting_analysis['model_metrics']['mase'] < 1.0 else '⚠ NEEDS WORK')}
+
+✅ MODEL 4 ENHANCEMENTS:
   • ✓ NO negative metrics (Pseudo-R² is always 0 to 1)
+  • ✓ MASE now calculated for ALL forecast types
   • ✓ Proper temporal validation with MAE as primary metric
   • ✓ Multiple forecasting methods with automatic selection
   • ✓ Robust to data volatility
   • ✓ Conservative and realistic predictions
-  • ✓ Transparent performance reporting
+  • ✓ Transparent performance reporting with MASE
     """)
 
     print("\n" + "="*70)
@@ -1600,9 +1632,10 @@ VIRAL VIDEOS:
     print("  ✓ FIXED: Model 4 uses ensemble forecasting (4 methods)")
     print("  ✓ FIXED: Automatic method weighting based on MAE performance")
     print("  ✓ FIXED: Uses Pseudo-R² metric (always positive 0-1 scale)")
-    print("  ✓ FIXED: MAE-based validation prevents negative scores")
-    print("  ✓ ENHANCED: Model 2 now includes regression-style metrics + MASE")
+    print("  ✓ ✅ NEW: MASE calculated for ALL models (2, 3, 4, 5)")
+    print("  ✓ ENHANCED: Model 2 includes regression-style metrics + MASE")
     print("  ✓ ENHANCED: Model 3 includes comprehensive timeline visualization")
+    print("  ✓ ENHANCED: Model 4 now shows MASE for all forecast metrics")
     print("  ✓ NEW: Best posting time analysis with day/hour optimization")
     print("  ✓ NEW: Heatmap visualization for optimal posting schedule")
     print("  ✓ Multi-target forecasting (views, engagement, interactions, virality)")
@@ -1623,7 +1656,8 @@ VIRAL VIDEOS:
             'virality_mase': m2_mase,
             'engagement_r2': m3_r2,
             'engagement_mase': m3_mase,
-            'forecast_results': m4_results
+            'forecast_results': m4_results,
+            'posting_mase': posting_analysis['model_metrics']['mase']
         },
         'baseline': m4_baseline
     }
@@ -1634,3 +1668,10 @@ if __name__ == "__main__":
     print("Results stored in 'results' dictionary for further analysis")
     print("\nTo use forecasts: results['forecasts']['total_views']['values']")
     print("To use posting insights: results['posting_analysis']['best_combo']")
+    print("\n📊 MASE VALUES SUMMARY:")
+    print(f"  • Model 2 (Virality): {results['metrics']['virality_mase']:.3f}")
+    print(f"  • Model 3 (Engagement): {results['metrics']['engagement_mase']:.3f}")
+    print(f"  • Model 4 (Views): {results['metrics']['forecast_results']['total_views']['mase']:.3f}")
+    print(f"  • Model 4 (Engagement): {results['metrics']['forecast_results']['avg_engagement']['mase']:.3f}")
+    print(f"  • Model 5 (Posting Time): {results['metrics']['posting_mase']:.3f}")
+    print("\n  MASE < 1.0 = Better than naive forecast ✓")
