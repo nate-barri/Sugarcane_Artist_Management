@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server"
 import { executeQuery } from "@/lib/db-utils"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const startDate = searchParams.get("startDate") || "2021-01-01"
+    const endDate = searchParams.get("endDate") || "2025-12-31"
+
     const query = `
       WITH duration_buckets AS (
         SELECT 
@@ -23,6 +27,8 @@ export async function GET() {
           views, likes, shares, comments_added, saves
         FROM public.tt_video_etl
         WHERE duration_sec IS NOT NULL AND views IS NOT NULL
+          AND DATE(publish_time) >= $1
+          AND DATE(publish_time) <= $2
       )
       SELECT duration_bucket, COUNT(*) as video_count,
              AVG(views) as avg_views, AVG(likes) as avg_likes,
@@ -32,7 +38,7 @@ export async function GET() {
       ORDER BY sort_order;
     `
 
-    const result = await executeQuery(query)
+    const result = await executeQuery(query, [startDate, endDate])
 
     return NextResponse.json({
       duration: result.map((row: any) => ({

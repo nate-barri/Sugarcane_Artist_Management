@@ -5,16 +5,20 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const limit = Number.parseInt(searchParams.get("limit") || "10", 10)
+    const startDate = searchParams.get("startDate") || "2021-01-01"
+    const endDate = searchParams.get("endDate") || "2025-12-31"
 
     const queryByViews = `
       SELECT video_id, title, views, likes, shares, comments_added, saves, publish_time, url
       FROM public.tt_video_etl
       WHERE views IS NOT NULL
+        AND DATE(publish_time) >= $1
+        AND DATE(publish_time) <= $2
       ORDER BY views DESC
-      LIMIT $1;
+      LIMIT $3;
     `
 
-    const result = await executeQuery(queryByViews, [limit])
+    const result = await executeQuery(queryByViews, [startDate, endDate, limit])
 
     return NextResponse.json({
       videos: result.map((row: any) => ({

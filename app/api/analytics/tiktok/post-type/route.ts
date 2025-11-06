@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server"
 import { executeQuery } from "@/lib/db-utils"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const startDate = searchParams.get("startDate") || "2021-01-01"
+    const endDate = searchParams.get("endDate") || "2025-12-31"
+
     const query = `
       SELECT post_type, COUNT(*) as video_count,
              AVG(views) as avg_views, AVG(likes) as avg_likes,
@@ -10,11 +14,13 @@ export async function GET() {
              SUM(views) as total_views
       FROM public.tt_video_etl
       WHERE post_type IS NOT NULL AND views IS NOT NULL
+        AND DATE(publish_time) >= $1
+        AND DATE(publish_time) <= $2
       GROUP BY post_type
       ORDER BY total_views DESC;
     `
 
-    const result = await executeQuery(query)
+    const result = await executeQuery(query, [startDate, endDate])
 
     return NextResponse.json({
       post_type: result.map((row: any) => ({

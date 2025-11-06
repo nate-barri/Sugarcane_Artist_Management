@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server"
 import { executeQuery } from "@/lib/db-utils"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const startDate = searchParams.get("startDate") || "2021-01-01"
+    const endDate = searchParams.get("endDate") || "2025-12-31"
+
     const query = `
       SELECT 
         COUNT(*) as total_videos,
@@ -19,10 +23,12 @@ export async function GET() {
         AVG(duration_sec) as avg_duration_seconds,
         COUNT(DISTINCT CONCAT(publish_year, '-', publish_month)) as total_months
       FROM public.tt_video_etl
-      WHERE views IS NOT NULL;
+      WHERE views IS NOT NULL
+        AND DATE(publish_time) >= $1
+        AND DATE(publish_time) <= $2;
     `
 
-    const result = await executeQuery(query)
+    const result = await executeQuery(query, [startDate, endDate])
     const row = result[0] || {}
 
     const total_views = Number(row.total_views) || 0

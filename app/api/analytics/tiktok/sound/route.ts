@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server"
 import { executeQuery } from "@/lib/db-utils"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const startDate = searchParams.get("startDate") || "2021-01-01"
+    const endDate = searchParams.get("endDate") || "2025-12-31"
+
     const query = `
       SELECT 
         CASE 
@@ -16,12 +20,14 @@ export async function GET() {
       FROM public.tt_video_etl
       WHERE views IS NOT NULL
         AND LOWER(TRIM(sound_used)) NOT IN ('sunet original', 'please', 'apt. - rose')
+        AND DATE(publish_time) >= $1
+        AND DATE(publish_time) <= $2
       GROUP BY sound_category
       ORDER BY total_views DESC
       LIMIT 20;
     `
 
-    const result = await executeQuery(query)
+    const result = await executeQuery(query, [startDate, endDate])
 
     return NextResponse.json({
       sound: result.map((row: any) => ({

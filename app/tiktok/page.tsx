@@ -13,18 +13,25 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ScatterChart,
-  Scatter,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts"
 
 export default function TikTokDashboard() {
+  const [tempStartDate, setTempStartDate] = useState<string>("2021-01-01")
+  const [tempEndDate, setTempEndDate] = useState<string>("2025-12-31")
+  const [startDate, setStartDate] = useState<string>("2021-01-01")
+  const [endDate, setEndDate] = useState<string>("2025-12-31")
+
   const [overview, setOverview] = useState<any>({})
   const [topVideos, setTopVideos] = useState<any[]>([])
   const [monthly, setMonthly] = useState<any[]>([])
   const [postType, setPostType] = useState<any[]>([])
   const [duration, setDuration] = useState<any[]>([])
   const [sound, setSound] = useState<any[]>([])
-  const [engagement, setEngagement] = useState<any[]>([])
+  const [engagementDist, setEngagementDist] = useState<any>(null)
+  const [engagementRates, setEngagementRates] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,15 +41,17 @@ export default function TikTokDashboard() {
         setLoading(true)
         setError(null)
 
+        const dateParams = `startDate=${startDate}&endDate=${endDate}`
+
         const [overviewRes, videosRes, temporalRes, postTypeRes, durationRes, soundRes, engagementRes] =
           await Promise.all([
-            fetch("/api/analytics/tiktok/overview"),
-            fetch("/api/analytics/tiktok/top-videos?limit=10"),
-            fetch("/api/analytics/tiktok/temporal"),
-            fetch("/api/analytics/tiktok/post-type"),
-            fetch("/api/analytics/tiktok/duration"),
-            fetch("/api/analytics/tiktok/sound"),
-            fetch("/api/analytics/tiktok/engagement-distribution"),
+            fetch(`/api/analytics/tiktok/overview?${dateParams}`),
+            fetch(`/api/analytics/tiktok/top-videos?limit=10&${dateParams}`),
+            fetch(`/api/analytics/tiktok/temporal?${dateParams}`),
+            fetch(`/api/analytics/tiktok/post-type?${dateParams}`),
+            fetch(`/api/analytics/tiktok/duration?${dateParams}`),
+            fetch(`/api/analytics/tiktok/sound?${dateParams}`),
+            fetch(`/api/analytics/tiktok/engagement-distribution?${dateParams}`),
           ])
 
         if (!overviewRes.ok) throw new Error("Failed to fetch overview")
@@ -71,7 +80,8 @@ export default function TikTokDashboard() {
 
         if (!engagementRes.ok) throw new Error("Failed to fetch engagement data")
         const engagementData = await engagementRes.json()
-        setEngagement(engagementData.engagement_distribution || [])
+        setEngagementDist(engagementData.engagement_distribution)
+        setEngagementRates(engagementData.engagement_rates)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load data")
       } finally {
@@ -80,7 +90,7 @@ export default function TikTokDashboard() {
     }
 
     fetchAllData()
-  }, [])
+  }, [startDate, endDate])
 
   const fmtInt = (n?: number) => (typeof n === "number" && Number.isFinite(n) ? n.toLocaleString() : "—")
   const fmtPct = (n?: number) => {
@@ -89,6 +99,42 @@ export default function TikTokDashboard() {
   }
   const fmtCompact = (n: number) =>
     n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : `${n}`
+
+  const barChartData = engagementDist
+    ? [
+        {
+          name: "Metrics",
+          Views: engagementDist.total_views,
+          Likes: engagementDist.total_likes,
+          Shares: engagementDist.total_shares,
+          Comments: engagementDist.total_comments,
+          Saves: engagementDist.total_saves,
+        },
+      ]
+    : []
+
+  const pieChartData = engagementRates
+    ? [
+        { name: "Like Rate", value: engagementRates.like_rate },
+        { name: "Share Rate", value: engagementRates.share_rate },
+        { name: "Comment Rate", value: engagementRates.comment_rate },
+        { name: "Engagement Rate", value: engagementRates.engagement_rate },
+      ]
+    : []
+
+  const PIE_COLORS = ["#1e40af", "#3b82f6", "#60a5fa", "#93c5fd"]
+
+  const handleApplyFilter = () => {
+    setStartDate(tempStartDate)
+    setEndDate(tempEndDate)
+  }
+
+  const handleResetFilters = () => {
+    setTempStartDate("2021-01-01")
+    setTempEndDate("2025-12-31")
+    setStartDate("2021-01-01")
+    setEndDate("2025-12-31")
+  }
 
   if (loading) {
     return (
@@ -123,23 +169,66 @@ export default function TikTokDashboard() {
           <h1 className="text-3xl font-bold">TikTok Analytics Dashboard</h1>
         </header>
 
-        {/* KPIs */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-sm font-medium text-gray-600">Total Videos</h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{fmtInt(overview.total_videos)}</p>
+        <section className="bg-white p-6 rounded-lg shadow-md mb-8 text-[#123458]">
+          <h3 className="text-lg font-semibold mb-4">Date Range Filter</h3>
+          <div className="flex gap-4 items-end">
+            <div className="flex flex-col">
+              <label className="text-sm font-medium mb-2">Start Date</label>
+              <input
+                type="date"
+                value={tempStartDate}
+                onChange={(e) => setTempStartDate(e.target.value)}
+                min="2021-01-01"
+                max="2025-12-31"
+                className="px-4 py-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium mb-2">End Date</label>
+              <input
+                type="date"
+                value={tempEndDate}
+                onChange={(e) => setTempEndDate(e.target.value)}
+                min="2021-01-01"
+                max="2025-12-31"
+                className="px-4 py-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+            <button
+              onClick={handleApplyFilter}
+              className="px-4 py-2 bg-[#1e7a96] text-white rounded-lg hover:bg-[#155a73] font-medium"
+            >
+              Apply Filter
+            </button>
+            <button
+              onClick={handleResetFilters}
+              className="px-4 py-2 bg-[#3396D3] text-white rounded-lg hover:bg-[#2A75A4]"
+            >
+              Reset Filters
+            </button>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-sm font-medium text-gray-600">Total Views</h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{fmtCompact(overview.total_views)}</p>
+        </section>
+
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+          <div className="bg-white p-4 rounded-lg shadow-md">
+            <h3 className="text-xs font-medium text-gray-600 uppercase">Total Videos</h3>
+            <p className="text-2xl font-bold text-gray-900 mt-2">{fmtInt(overview.total_videos)}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-sm font-medium text-gray-600">Engagement Rate</h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{fmtPct(overview.engagement_rate)}</p>
+          <div className="bg-white p-4 rounded-lg shadow-md">
+            <h3 className="text-xs font-medium text-gray-600 uppercase">Total Views</h3>
+            <p className="text-2xl font-bold text-gray-900 mt-2">{fmtCompact(overview.total_views)}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-sm font-medium text-gray-600">Avg Videos/Month</h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{fmtInt(overview.avg_videos_per_month)}</p>
+          <div className="bg-white p-4 rounded-lg shadow-md">
+            <h3 className="text-xs font-medium text-gray-600 uppercase">Total Likes</h3>
+            <p className="text-2xl font-bold text-gray-900 mt-2">{fmtCompact(overview.total_likes)}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-md">
+            <h3 className="text-xs font-medium text-gray-600 uppercase">Total Shares</h3>
+            <p className="text-2xl font-bold text-gray-900 mt-2">{fmtCompact(overview.total_shares)}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow-md">
+            <h3 className="text-xs font-medium text-gray-600 uppercase">Engagement Rate</h3>
+            <p className="text-2xl font-bold text-gray-900 mt-2">{fmtPct(overview.engagement_rate)}</p>
           </div>
         </section>
 
@@ -224,8 +313,10 @@ export default function TikTokDashboard() {
                     <YAxis />
                     <Tooltip formatter={(v) => fmtInt(v as number)} />
                     <Legend />
-                    <Bar dataKey="avg_views" fill="#06b6d4" name="Avg Views" />
-                    <Bar dataKey="avg_engagement" fill="#14b8a6" name="Avg Engagement" />
+                    <Bar dataKey="video_count" stackId="a" fill="#06b6d4" name="Video Count" />
+                    <Bar dataKey="avg_views" stackId="a" fill="#f59e0b" name="Avg Views" />
+                    <Bar dataKey="avg_likes" stackId="a" fill="#ec4899" name="Avg Likes" />
+                    <Bar dataKey="avg_engagement" stackId="a" fill="#10b981" name="Avg Engagement" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -259,23 +350,66 @@ export default function TikTokDashboard() {
           </div>
         </section>
 
-        {/* Engagement Rate Distribution */}
-        <section className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Engagement Rate Distribution</h2>
-          <div className="h-96">
-            {engagement.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="views" name="Views" tickFormatter={fmtCompact} />
-                  <YAxis dataKey="engagement_rate" name="Engagement Rate %" />
-                  <Tooltip cursor={{ strokeDasharray: "3 3" }} formatter={(v) => fmtPct(v as number)} />
-                  <Scatter name="Videos" data={engagement.slice(0, 500)} fill="#10b981" />
-                </ScatterChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-gray-500">No data available</div>
-            )}
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Grouped Bar Chart for Engagement Metrics */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4 text-[#123458]">Engagement Distribution</h2>
+            <div className="h-96">
+              {barChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barChartData} margin={{ top: 5, right: 30, left: 60, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis
+                      scale="log"
+                      type="number"
+                      domain={[1, "dataMax"]}
+                      tickFormatter={fmtCompact}
+                      tick={{ fontSize: 14, fontWeight: 600 }}
+                      label={{ value: "Log Scale", angle: -90, position: "insideLeft", fontSize: 12, fontWeight: 600 }}
+                    />
+                    <Tooltip formatter={(v) => fmtCompact(v as number)} />
+                    <Legend />
+                    <Bar dataKey="Views" fill="#0c4d8f" />
+                    <Bar dataKey="Likes" fill="#f59e0b" />
+                    <Bar dataKey="Shares" fill="#10b981" />
+                    <Bar dataKey="Comments" fill="#ec4899" />
+                    <Bar dataKey="Saves" fill="#8b5cf6" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-gray-500">No data available</div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4 text-[#123458]">Engagement Rate Distribution</h2>
+            <div className="h-96">
+              {pieChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                    <Pie
+                      data={pieChartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value }) => `${name}: ${value.toFixed(2)}%`}
+                      outerRadius={130}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {pieChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v) => `${(v as number).toFixed(2)}%`} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-gray-500">No data available</div>
+              )}
+            </div>
           </div>
         </section>
       </main>
