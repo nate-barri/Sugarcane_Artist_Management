@@ -93,7 +93,7 @@ def prepare_data(df):
     return df
 
 def plot_cumulative_reach(df):
-    """Plot cumulative reach growth over time"""
+    """Plot cumulative reach growth over time with median and average reach"""
     # Sort by publish time and calculate cumulative metrics
     df_sorted = df.sort_values('publish_time').copy()
     df_sorted['cumulative_reach'] = df_sorted['reach'].cumsum()
@@ -106,8 +106,13 @@ def plot_cumulative_reach(df):
         0
     )
     
-    # Create figure with 2 subplots
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+    # Calculate rolling average and median reach
+    window_size = min(10, len(df_sorted))  # Use 10-post rolling window or less if fewer posts
+    df_sorted['rolling_avg_reach'] = df_sorted['reach'].rolling(window=window_size, min_periods=1).mean()
+    df_sorted['rolling_median_reach'] = df_sorted['reach'].rolling(window=window_size, min_periods=1).median()
+    
+    # Create figure with 3 subplots
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(14, 14))
     
     # Plot 1: Cumulative Reach
     ax1.plot(df_sorted['publish_time'], df_sorted['cumulative_reach'], 
@@ -132,12 +137,42 @@ def plot_cumulative_reach(df):
     ax2.set_ylabel('Cumulative Engagement Rate (%)', fontsize=12)
     ax2.grid(True, alpha=0.3)
     
+    # Plot 3: Rolling Average and Median Reach
+    ax3.plot(df_sorted['publish_time'], df_sorted['rolling_avg_reach'], 
+             linewidth=2, color='#e74c3c', marker='o', markersize=3, label='Rolling Average')
+    ax3.plot(df_sorted['publish_time'], df_sorted['rolling_median_reach'], 
+             linewidth=2, color='#9b59b6', marker='s', markersize=3, label='Rolling Median')
+    ax3.fill_between(df_sorted['publish_time'], df_sorted['rolling_avg_reach'], 
+                     alpha=0.2, color='#e74c3c')
+    
+    # Add overall average and median as horizontal lines
+    overall_avg = df_sorted['reach'].mean()
+    overall_median = df_sorted['reach'].median()
+    ax3.axhline(overall_avg, color='#c0392b', linestyle='--', linewidth=2, 
+                label=f'Overall Avg: {overall_avg:,.0f}')
+    ax3.axhline(overall_median, color='#8e44ad', linestyle='--', linewidth=2, 
+                label=f'Overall Median: {overall_median:,.0f}')
+    
+    ax3.set_title(f'Rolling Average & Median Reach (Window: {window_size} posts)', 
+                  fontsize=16, fontweight='bold')
+    ax3.set_xlabel('Date', fontsize=12)
+    ax3.set_ylabel('Reach', fontsize=12)
+    ax3.grid(True, alpha=0.3)
+    ax3.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
+    ax3.legend(loc='best', fontsize=10)
+    
     plt.tight_layout()
     plt.show()
 
 def plot_engagement_summary_metrics(df):
-    """Plot total engagement metrics and engagement rates"""
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    """Plot total engagement metrics and engagement rates with reach statistics"""
+    fig = plt.figure(figsize=(18, 10))
+    gs = fig.add_gridspec(2, 3, hspace=0.3, wspace=0.3)
+    
+    ax1 = fig.add_subplot(gs[0, 0])
+    ax2 = fig.add_subplot(gs[0, 1])
+    ax3 = fig.add_subplot(gs[0, 2])
+    ax4 = fig.add_subplot(gs[1, :])
     
     # Calculate totals
     total_reactions = df['reactions'].sum()
@@ -153,8 +188,8 @@ def plot_engagement_summary_metrics(df):
     
     # Plot 1: Total Engagement Metrics
     bars1 = ax1.bar(metrics, values, color=colors_chart1, alpha=0.8, edgecolor='black', linewidth=1.5)
-    ax1.set_title('Total Engagement Metrics', fontsize=16, fontweight='bold')
-    ax1.set_ylabel('Count', fontsize=12)
+    ax1.set_title('Total Engagement Metrics', fontsize=14, fontweight='bold')
+    ax1.set_ylabel('Count', fontsize=11)
     ax1.grid(True, alpha=0.3, axis='y')
     ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
     
@@ -163,7 +198,7 @@ def plot_engagement_summary_metrics(df):
         height = bar.get_height()
         ax1.text(bar.get_x() + bar.get_width()/2., height,
                 f'{int(height):,}',
-                ha='center', va='bottom', fontsize=11, fontweight='bold')
+                ha='center', va='bottom', fontsize=10, fontweight='bold')
     
     # Calculate engagement rates
     like_rate = (total_reactions / total_reach * 100) if total_reach > 0 else 0
@@ -178,8 +213,8 @@ def plot_engagement_summary_metrics(df):
     
     # Plot 2: Engagement Rates
     bars2 = ax2.bar(rate_labels, rate_values, color=colors_chart2, alpha=0.8, edgecolor='black', linewidth=1.5)
-    ax2.set_title('Engagement Rates (%)', fontsize=16, fontweight='bold')
-    ax2.set_ylabel('Percentage', fontsize=12)
+    ax2.set_title('Engagement Rates (%)', fontsize=14, fontweight='bold')
+    ax2.set_ylabel('Percentage', fontsize=11)
     ax2.grid(True, alpha=0.3, axis='y')
     
     # Add percentage labels on bars
@@ -187,9 +222,44 @@ def plot_engagement_summary_metrics(df):
         height = bar.get_height()
         ax2.text(bar.get_x() + bar.get_width()/2., height,
                 f'{height:.2f}%',
-                ha='center', va='bottom', fontsize=11, fontweight='bold')
+                ha='center', va='bottom', fontsize=10, fontweight='bold')
     
-    plt.tight_layout()
+    # Plot 3: Reach Statistics
+    avg_reach = df['reach'].mean()
+    median_reach = df['reach'].median()
+    max_reach = df['reach'].max()
+    
+    reach_metrics = ['Average\nReach', 'Median\nReach', 'Max\nReach']
+    reach_values = [avg_reach, median_reach, max_reach]
+    colors_chart3 = ['#3498db', '#9b59b6', '#e74c3c']
+    
+    bars3 = ax3.bar(reach_metrics, reach_values, color=colors_chart3, alpha=0.8, edgecolor='black', linewidth=1.5)
+    ax3.set_title('Reach Statistics', fontsize=14, fontweight='bold')
+    ax3.set_ylabel('Reach', fontsize=11)
+    ax3.grid(True, alpha=0.3, axis='y')
+    ax3.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
+    
+    # Add value labels on bars
+    for bar in bars3:
+        height = bar.get_height()
+        ax3.text(bar.get_x() + bar.get_width()/2., height,
+                f'{int(height):,}',
+                ha='center', va='bottom', fontsize=10, fontweight='bold')
+    
+    # Plot 4: Reach Distribution Histogram
+    ax4.hist(df['reach'], bins=50, color='#3498db', alpha=0.7, edgecolor='black')
+    ax4.axvline(avg_reach, color='#e74c3c', linestyle='--', linewidth=2, 
+                label=f'Average: {avg_reach:,.0f}')
+    ax4.axvline(median_reach, color='#9b59b6', linestyle='--', linewidth=2, 
+                label=f'Median: {median_reach:,.0f}')
+    
+    ax4.set_title('Reach Distribution', fontsize=14, fontweight='bold')
+    ax4.set_xlabel('Reach', fontsize=11)
+    ax4.set_ylabel('Frequency', fontsize=11)
+    ax4.grid(True, alpha=0.3, axis='y')
+    ax4.legend(fontsize=11, loc='upper right')
+    ax4.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
+    
     plt.show()
 
 def plot_engagement_ratio_analysis(df):
@@ -314,45 +384,77 @@ def plot_engagement_ratio_analysis(df):
     plt.show()
 
 def plot_engagement_by_post_type(df):
-    """Analyze engagement by post type"""
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    """Analyze engagement by post type with median and average reach"""
+    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
     
     # 1. Average engagement by post type
     engagement_by_type = df.groupby('post_type').agg({
         'total_engagement': 'mean',
-        'reach': 'mean',
+        'reach': ['mean', 'median'],
         'engagement_rate': 'mean',
         'post_id': 'count'
     }).reset_index()
-    engagement_by_type.columns = ['post_type', 'avg_engagement', 'avg_reach', 'avg_engagement_rate', 'post_count']
+    engagement_by_type.columns = ['post_type', 'avg_engagement', 'avg_reach', 'median_reach', 'avg_engagement_rate', 'post_count']
     
     axes[0, 0].bar(engagement_by_type['post_type'], engagement_by_type['avg_engagement'], 
-                   color='#2ecc71', alpha=0.8)
+                   color='#2ecc71', alpha=0.8, edgecolor='black')
     axes[0, 0].set_title('Average Total Engagement by Post Type', fontweight='bold')
     axes[0, 0].set_xlabel('Post Type')
     axes[0, 0].set_ylabel('Avg Total Engagement')
     axes[0, 0].tick_params(axis='x', rotation=45)
+    axes[0, 0].grid(True, alpha=0.3, axis='y')
     
-    # 2. Reach by post type
+    # 2. Average reach by post type
     axes[0, 1].bar(engagement_by_type['post_type'], engagement_by_type['avg_reach'], 
-                   color='#3498db', alpha=0.8)
+                   color='#3498db', alpha=0.8, edgecolor='black', label='Average')
     axes[0, 1].set_title('Average Reach by Post Type', fontweight='bold')
     axes[0, 1].set_xlabel('Post Type')
     axes[0, 1].set_ylabel('Avg Reach')
     axes[0, 1].tick_params(axis='x', rotation=45)
+    axes[0, 1].grid(True, alpha=0.3, axis='y')
+    axes[0, 1].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
     
-    # 3. Engagement rate by post type
+    # 3. Median reach by post type
+    axes[0, 2].bar(engagement_by_type['post_type'], engagement_by_type['median_reach'], 
+                   color='#9b59b6', alpha=0.8, edgecolor='black')
+    axes[0, 2].set_title('Median Reach by Post Type', fontweight='bold')
+    axes[0, 2].set_xlabel('Post Type')
+    axes[0, 2].set_ylabel('Median Reach')
+    axes[0, 2].tick_params(axis='x', rotation=45)
+    axes[0, 2].grid(True, alpha=0.3, axis='y')
+    axes[0, 2].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
+    
+    # 4. Engagement rate by post type
     axes[1, 0].bar(engagement_by_type['post_type'], engagement_by_type['avg_engagement_rate'] * 100, 
-                   color='#e74c3c', alpha=0.8)
+                   color='#e74c3c', alpha=0.8, edgecolor='black')
     axes[1, 0].set_title('Average Engagement Rate by Post Type', fontweight='bold')
     axes[1, 0].set_xlabel('Post Type')
     axes[1, 0].set_ylabel('Avg Engagement Rate (%)')
     axes[1, 0].tick_params(axis='x', rotation=45)
+    axes[1, 0].grid(True, alpha=0.3, axis='y')
     
-    # 4. Post count by type
-    axes[1, 1].pie(engagement_by_type['post_count'], labels=engagement_by_type['post_type'],
+    # 5. Combined Average vs Median Reach Comparison
+    x = np.arange(len(engagement_by_type['post_type']))
+    width = 0.35
+    
+    axes[1, 1].bar(x - width/2, engagement_by_type['avg_reach'], width, 
+                   label='Average', color='#3498db', alpha=0.8, edgecolor='black')
+    axes[1, 1].bar(x + width/2, engagement_by_type['median_reach'], width,
+                   label='Median', color='#9b59b6', alpha=0.8, edgecolor='black')
+    
+    axes[1, 1].set_title('Average vs Median Reach by Post Type', fontweight='bold')
+    axes[1, 1].set_xlabel('Post Type')
+    axes[1, 1].set_ylabel('Reach')
+    axes[1, 1].set_xticks(x)
+    axes[1, 1].set_xticklabels(engagement_by_type['post_type'], rotation=45, ha='right')
+    axes[1, 1].legend()
+    axes[1, 1].grid(True, alpha=0.3, axis='y')
+    axes[1, 1].yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
+    
+    # 6. Post count by type
+    axes[1, 2].pie(engagement_by_type['post_count'], labels=engagement_by_type['post_type'],
                    autopct='%1.1f%%', startangle=90, colors=sns.color_palette('pastel'))
-    axes[1, 1].set_title('Distribution of Post Types', fontweight='bold')
+    axes[1, 2].set_title('Distribution of Post Types', fontweight='bold')
     
     plt.tight_layout()
     plt.show()
@@ -574,12 +676,15 @@ def generate_summary_stats(df):
     print(f"\nReach Metrics:")
     print(f"  Total Reach: {df['reach'].sum():,.0f}")
     print(f"  Average Reach per Post: {df['reach'].mean():,.0f}")
-    print(f"  Median Reach: {df['reach'].median():,.0f}")
+    print(f"  Median Reach per Post: {df['reach'].median():,.0f}")
     print(f"  Max Reach (Single Post): {df['reach'].max():,.0f}")
+    print(f"  Min Reach (Single Post): {df['reach'].min():,.0f}")
+    print(f"  Std Dev of Reach: {df['reach'].std():,.0f}")
     
     print(f"\nEngagement Metrics:")
     print(f"  Total Engagement: {df['total_engagement'].sum():,.0f}")
     print(f"  Average Engagement per Post: {df['total_engagement'].mean():,.0f}")
+    print(f"  Median Engagement per Post: {df['total_engagement'].median():,.0f}")
     print(f"  Average Engagement Rate: {df['engagement_rate'].mean()*100:.2f}%")
     print(f"  Total Reactions: {df['reactions'].sum():,.0f}")
     print(f"  Total Comments: {df['comments'].sum():,.0f}")
@@ -588,7 +693,10 @@ def generate_summary_stats(df):
     print(f"\nPost Type Distribution:")
     for post_type, count in df['post_type'].value_counts().items():
         percentage = (count / len(df)) * 100
+        avg_reach = df[df['post_type'] == post_type]['reach'].mean()
+        median_reach = df[df['post_type'] == post_type]['reach'].median()
         print(f"  {post_type}: {count:,} ({percentage:.1f}%)")
+        print(f"    - Avg Reach: {avg_reach:,.0f}, Median Reach: {median_reach:,.0f}")
     
     print(f"\nTop 5 Performing Posts (by Reach):")
     top_posts = df.nlargest(5, 'reach')[['title', 'post_type', 'reach', 'total_engagement', 'publish_time']]
@@ -613,16 +721,16 @@ def main():
     df = prepare_data(df)
     
     # Generate visualizations
-    print("\nGenerating cumulative reach chart...")
+    print("\nGenerating cumulative reach chart with median/average...")
     plot_cumulative_reach(df)
     
-    print("Generating engagement summary metrics...")
+    print("Generating engagement summary metrics with reach statistics...")
     plot_engagement_summary_metrics(df)
     
     print("Generating engagement ratio analysis...")
     plot_engagement_ratio_analysis(df)
     
-    print("Generating post type engagement analysis...")
+    print("Generating post type engagement analysis with median/average reach...")
     plot_engagement_by_post_type(df)
     
     print("Generating temporal pattern analysis...")
