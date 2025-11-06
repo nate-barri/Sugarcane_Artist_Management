@@ -6,7 +6,8 @@
   "/api/analytics/tiktok/duration/route": "app/api/analytics/tiktok/duration/route.js",
   "/api/analytics/tiktok/sound/route": "app/api/analytics/tiktok/sound/route.js",
   "/api/analytics/tiktok/engagement-distribution/route": "app/api/analytics/tiktok/engagement-distribution/route.js",
+  "/page": "app/page.js",
+  "/login/page": "app/login/page.js",
   "/import/page": "app/import/page.js",
-  "/tiktok/page": "app/tiktok/page.js",
-  "/youtube/page": "app/youtube/page.js"
+  "/tiktok/page": "app/tiktok/page.js"
 }
