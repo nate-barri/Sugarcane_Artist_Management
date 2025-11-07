@@ -26,45 +26,65 @@
       "static/chunks/main-app.js",
       "static/chunks/app/import/page.js"
     ],
-    "/tiktok/page": [
+    "/faq/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/tiktok/page.js"
+      "static/chunks/app/faq/page.js"
     ],
-    "/api/analytics/tiktok/overview/route": [
+    "/notifications/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/tiktok/overview/route.js"
+      "static/chunks/app/notifications/page.js"
     ],
-    "/api/analytics/tiktok/top-videos/route": [
+    "/youtube/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/tiktok/top-videos/route.js"
+      "static/chunks/app/youtube/page.js"
     ],
-    "/api/analytics/tiktok/temporal/route": [
+    "/api/analytics/youtube/overview/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/tiktok/temporal/route.js"
+      "static/chunks/app/api/analytics/youtube/overview/route.js"
     ],
-    "/api/analytics/tiktok/post-type/route": [
+    "/api/analytics/youtube/top-videos/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/tiktok/post-type/route.js"
+      "static/chunks/app/api/analytics/youtube/top-videos/route.js"
     ],
-    "/api/analytics/tiktok/duration/route": [
+    "/api/analytics/youtube/temporal/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/tiktok/duration/route.js"
+      "static/chunks/app/api/analytics/youtube/temporal/route.js"
     ],
-    "/api/analytics/tiktok/sound/route": [
+    "/api/analytics/youtube/duration/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/tiktok/sound/route.js"
+      "static/chunks/app/api/analytics/youtube/duration/route.js"
     ],
-    "/api/analytics/tiktok/engagement-distribution/route": [
+    "/api/analytics/youtube/day-of-week/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/tiktok/engagement-distribution/route.js"
+      "static/chunks/app/api/analytics/youtube/day-of-week/route.js"
+    ],
+    "/api/analytics/youtube/content-type-engagement/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/content-type-engagement/route.js"
+    ],
+    "/api/analytics/youtube/top-categories/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/top-categories/route.js"
+    ],
+    "/api/analytics/youtube/content-type/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/content-type/route.js"
+    ],
+    "/api/analytics/youtube/content-type-distribution/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/content-type-distribution/route.js"
     ]
   }
 }

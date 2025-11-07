@@ -1,13 +1,16 @@
 {
-  "/api/analytics/tiktok/overview/route": "app/api/analytics/tiktok/overview/route.js",
-  "/api/analytics/tiktok/top-videos/route": "app/api/analytics/tiktok/top-videos/route.js",
-  "/api/analytics/tiktok/temporal/route": "app/api/analytics/tiktok/temporal/route.js",
-  "/api/analytics/tiktok/post-type/route": "app/api/analytics/tiktok/post-type/route.js",
-  "/api/analytics/tiktok/duration/route": "app/api/analytics/tiktok/duration/route.js",
-  "/api/analytics/tiktok/sound/route": "app/api/analytics/tiktok/sound/route.js",
-  "/api/analytics/tiktok/engagement-distribution/route": "app/api/analytics/tiktok/engagement-distribution/route.js",
-  "/page": "app/page.js",
+  "/api/analytics/youtube/overview/route": "app/api/analytics/youtube/overview/route.js",
+  "/api/analytics/youtube/top-videos/route": "app/api/analytics/youtube/top-videos/route.js",
+  "/api/analytics/youtube/temporal/route": "app/api/analytics/youtube/temporal/route.js",
+  "/api/analytics/youtube/day-of-week/route": "app/api/analytics/youtube/day-of-week/route.js",
+  "/api/analytics/youtube/duration/route": "app/api/analytics/youtube/duration/route.js",
+  "/api/analytics/youtube/content-type-engagement/route": "app/api/analytics/youtube/content-type-engagement/route.js",
+  "/api/analytics/youtube/top-categories/route": "app/api/analytics/youtube/top-categories/route.js",
+  "/api/analytics/youtube/content-type/route": "app/api/analytics/youtube/content-type/route.js",
+  "/api/analytics/youtube/content-type-distribution/route": "app/api/analytics/youtube/content-type-distribution/route.js",
   "/login/page": "app/login/page.js",
   "/import/page": "app/import/page.js",
-  "/tiktok/page": "app/tiktok/page.js"
+  "/faq/page": "app/faq/page.js",
+  "/notifications/page": "app/notifications/page.js",
+  "/youtube/page": "app/youtube/page.js"
 }
