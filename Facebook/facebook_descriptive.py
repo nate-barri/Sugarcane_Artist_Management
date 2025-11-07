@@ -92,6 +92,111 @@ def prepare_data(df):
     
     return df
 
+def plot_stacked_engagement_rate_by_post_type(df):
+    """
+    Create a stacked bar chart showing the breakdown of engagement rate 
+    (reactions, comments, shares) for each post type
+    """
+    # Group by post type and calculate metrics
+    engagement_metrics = df.groupby('post_type').agg({
+        'reactions': 'sum',
+        'comments': 'sum',
+        'shares': 'sum',
+        'reach': 'sum'
+    }).reset_index()
+    
+    # Calculate rates as percentage of reach
+    engagement_metrics['Reactions Rate (%)'] = (
+        engagement_metrics['reactions'] / engagement_metrics['reach'] * 100
+    )
+    
+    engagement_metrics['Comments Rate (%)'] = (
+        engagement_metrics['comments'] / engagement_metrics['reach'] * 100
+    )
+    
+    engagement_metrics['Shares Rate (%)'] = (
+        engagement_metrics['shares'] / engagement_metrics['reach'] * 100
+    )
+    
+    # Calculate total engagement rate
+    engagement_metrics['Total Engagement Rate (%)'] = (
+        engagement_metrics['Reactions Rate (%)'] + 
+        engagement_metrics['Comments Rate (%)'] + 
+        engagement_metrics['Shares Rate (%)']
+    )
+    
+    # Sort by total engagement rate
+    engagement_metrics = engagement_metrics.sort_values('Total Engagement Rate (%)', ascending=False)
+    
+    # Prepare data for stacked bar chart
+    post_types = engagement_metrics['post_type'].values
+    reactions_rates = engagement_metrics['Reactions Rate (%)'].values
+    comments_rates = engagement_metrics['Comments Rate (%)'].values
+    shares_rates = engagement_metrics['Shares Rate (%)'].values
+    
+    # Create the stacked bar chart
+    fig, ax = plt.subplots(figsize=(14, 8))
+    
+    x = np.arange(len(post_types))
+    width = 0.6
+    
+    # Create stacked bars
+    p1 = ax.bar(x, reactions_rates, width, label='Reactions', 
+                color='#ff7f0e', alpha=0.9, edgecolor='black', linewidth=1)
+    p2 = ax.bar(x, comments_rates, width, bottom=reactions_rates, 
+                label='Comments', color='#9467bd', alpha=0.9, edgecolor='black', linewidth=1)
+    p3 = ax.bar(x, shares_rates, width, 
+                bottom=reactions_rates + comments_rates, 
+                label='Shares', color='#2ca02c', alpha=0.9, edgecolor='black', linewidth=1)
+    
+    # Add total engagement rate labels on top of bars
+    for i, (post_type, total_rate) in enumerate(zip(post_types, engagement_metrics['Total Engagement Rate (%)'])):
+        ax.text(i, total_rate + 0.2, f'{total_rate:.2f}%', 
+                ha='center', va='bottom', fontsize=11, fontweight='bold')
+    
+    # Add percentage labels for each segment (only if segment is large enough)
+    for i in range(len(post_types)):
+        # Reactions label
+        if reactions_rates[i] > 1:
+            ax.text(i, reactions_rates[i]/2, f'{reactions_rates[i]:.1f}%', 
+                   ha='center', va='center', fontsize=9, color='white', fontweight='bold')
+        
+        # Comments label
+        if comments_rates[i] > 0.5:
+            ax.text(i, reactions_rates[i] + comments_rates[i]/2, f'{comments_rates[i]:.1f}%', 
+                   ha='center', va='center', fontsize=9, color='white', fontweight='bold')
+        
+        # Shares label
+        if shares_rates[i] > 0.5:
+            ax.text(i, reactions_rates[i] + comments_rates[i] + shares_rates[i]/2, 
+                   f'{shares_rates[i]:.1f}%', 
+                   ha='center', va='center', fontsize=9, color='white', fontweight='bold')
+    
+    # Customize chart
+    ax.set_xlabel('Post Type', fontsize=13, fontweight='bold')
+    ax.set_ylabel('Engagement Rate (%)', fontsize=13, fontweight='bold')
+    ax.set_title('Engagement Rate Breakdown by Post Type\n(% of Reach)', 
+                 fontsize=16, fontweight='bold', pad=20)
+    ax.set_xticks(x)
+    ax.set_xticklabels(post_types, rotation=45, ha='right')
+    ax.legend(loc='upper right', fontsize=11, framealpha=0.9)
+    ax.grid(True, alpha=0.3, axis='y')
+    
+    plt.tight_layout()
+    plt.show()
+    
+    # Print summary table
+    print("\n" + "="*90)
+    print("ENGAGEMENT RATE BREAKDOWN BY POST TYPE")
+    print("="*90)
+    print(f"{'Post Type':<20} {'Reactions %':<15} {'Comments %':<15} {'Shares %':<15} {'Total %':<15}")
+    print("-"*90)
+    for _, row in engagement_metrics.iterrows():
+        print(f"{row['post_type']:<20} {row['Reactions Rate (%)']:<15.2f} "
+              f"{row['Comments Rate (%)']:<15.2f} {row['Shares Rate (%)']:<15.2f} "
+              f"{row['Total Engagement Rate (%)']:<15.2f}")
+    print("="*90 + "\n")
+
 def plot_cumulative_reach(df):
     """Plot cumulative reach growth over time with median and average reach"""
     # Sort by publish time and calculate cumulative metrics
@@ -729,6 +834,9 @@ def main():
     
     print("Generating engagement ratio analysis...")
     plot_engagement_ratio_analysis(df)
+    
+    print("Generating stacked engagement rate by post type...")
+    plot_stacked_engagement_rate_by_post_type(df)
     
     print("Generating post type engagement analysis with median/average reach...")
     plot_engagement_by_post_type(df)
