@@ -12,11 +12,9 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  PieChart,
-  Pie,
-  Cell,
   ComposedChart,
 } from "recharts"
+import jsPDF from "jspdf"
 
 export default function YouTubeDashboard() {
   const [tempStartDate, setTempStartDate] = useState<string>("2021-01-01")
@@ -35,6 +33,7 @@ export default function YouTubeDashboard() {
   const [contentEngagement, setContentEngagement] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [generatingReport, setGeneratingReport] = useState(false)
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -43,8 +42,6 @@ export default function YouTubeDashboard() {
         setError(null)
 
         const dateParams = `startDate=${startDate}&endDate=${endDate}`
-
-        console.log("[v0] Fetching YouTube data with date range:", { startDate, endDate })
 
         const [
           overviewRes,
@@ -90,7 +87,6 @@ export default function YouTubeDashboard() {
 
         if (!durationRes.ok) throw new Error("Failed to fetch duration data")
         const durationData = await durationRes.json()
-        console.log("[v0] Duration data received:", durationData)
         setDuration(durationData.duration || [])
 
         if (!dayRes.ok) throw new Error("Failed to fetch day of week data")
@@ -99,7 +95,6 @@ export default function YouTubeDashboard() {
 
         if (!distRes.ok) throw new Error("Failed to fetch content distribution")
         const distData = await distRes.json()
-        console.log("[v0] Content distribution data received:", distData)
         setContentDistribution(distData.distribution || [])
 
         if (!engRes.ok) throw new Error("Failed to fetch content engagement")
@@ -139,20 +134,256 @@ export default function YouTubeDashboard() {
     return null
   }
 
-  const categoryColors: Record<string, string> = {
-    leonora: "#e74c3c",
-    "kung maging akin ka": "#3498db",
-    "paalam, leonora": "#2ecc71",
-    dalangin: "#9b59b6",
-    paruparo: "#f1c40f",
-    gunita: "#e67e22",
-    "tanging ikaw": "#e91e63",
-    gabi: "#95a5a6",
-    shehan: "#f39c12",
+  const aggregateToYearly = (data: any[]) => {
+    const yearlyMap: { [key: string]: number } = {}
+    data.forEach((item) => {
+      const year = item.publish_year || "Unknown"
+      yearlyMap[year] = (yearlyMap[year] || 0) + (item.total_views || 0)
+    })
+    return Object.entries(yearlyMap)
+      .sort()
+      .map(([year, views]) => ({ year, views }))
   }
 
-  const getCategoryColor = (category: string) => {
-    return categoryColors[category?.toLowerCase()] || "#95a5a6"
+  const drawTable = (head: string[], body: (string | number)[][], startY: number, pdf: jsPDF, maxRows = 15) => {
+    let currentY = startY
+    const cellHeight = 6
+    const colWidths = head.length === 2 ? [80, 50] : [15, 105, 40]
+    const pageHeight = pdf.internal.pageSize.getHeight()
+
+    pdf.setFillColor(18, 52, 88)
+    pdf.setTextColor(255, 255, 255)
+    pdf.setFontSize(10)
+    pdf.setFont(undefined, "bold")
+
+    let xPos = 10
+    head.forEach((h, i) => {
+      pdf.rect(xPos, currentY, colWidths[i], cellHeight, "F")
+      pdf.text(h, xPos + 2, currentY + 4)
+      xPos += colWidths[i]
+    })
+    currentY += cellHeight
+
+    pdf.setTextColor(0, 0, 0)
+    pdf.setFont(undefined, "normal")
+    pdf.setFontSize(9)
+
+    body.slice(0, maxRows).forEach((row, idx) => {
+      if (currentY + cellHeight > pageHeight - 15) {
+        pdf.addPage()
+        currentY = 15
+      }
+
+      if (idx % 2 === 0) {
+        pdf.setFillColor(240, 240, 240)
+        xPos = 10
+        head.forEach((_, i) => {
+          pdf.rect(xPos, currentY, colWidths[i], cellHeight, "F")
+          xPos += colWidths[i]
+        })
+      }
+
+      xPos = 10
+      row.forEach((cell, i) => {
+        pdf.text(String(cell), xPos + 2, currentY + 4)
+        xPos += colWidths[i]
+      })
+
+      currentY += cellHeight
+    })
+
+    return currentY
+  }
+
+  const generateCSVReport = () => {
+    const yearlyTrend = aggregateToYearly(monthly)
+
+    const csvContent = [
+      ["YouTube Analytics Dashboard Report"],
+      [`Generated on: ${new Date().toLocaleString()}`],
+      [`Date Range: ${startDate} to ${endDate}`],
+      [],
+      ["OVERVIEW METRICS"],
+      ["Total Videos", fmtInt(overview.total_videos)],
+      ["Total Views", fmtCompact(overview.total_views)],
+      ["Total Likes", fmtCompact(overview.total_likes)],
+      ["Watch Time (hrs)", fmtCompact(overview.total_watch_time)],
+      ["Engagement Rate", fmtPct(overview.engagement_rate)],
+      [],
+      ["TOP 10 VIDEOS BY VIEWS"],
+      ["Rank", "Video Title", "Views"],
+      ...topVideos.slice(0, 10).map((video, idx) => [idx + 1, video.title, fmtCompact(video.views)]),
+      [],
+      ["TOP 10 CATEGORIES"],
+      ["Rank", "Category", "Views"],
+      ...topCategories.slice(0, 10).map((cat, idx) => [idx + 1, cat.category, fmtCompact(cat.total_views)]),
+      [],
+      ["YEARLY VIEWS TREND"],
+      ["Year", "Total Views"],
+      ...yearlyTrend.map((item) => [item.year, fmtCompact(item.views)]),
+      [],
+      ["CONTENT TYPE PERFORMANCE"],
+      ["Content Type", "Avg Views"],
+      ...contentType.map((ct) => [ct.content_type, fmtCompact(ct.avg_views)]),
+      [],
+      ["AVERAGE ENGAGEMENT BY DURATION"],
+      ["Duration", "Engagement Rate %"],
+      ...duration.map((d) => [d.duration_bucket, fmtPct(d.avg_engagement_rate)]),
+    ]
+
+    const csvString = csvContent.map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n")
+    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", `youtube-report-${new Date().toISOString().split("T")[0]}.csv`)
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const generatePDFReport = () => {
+    const pdf = new jsPDF()
+    const yearlyTrend = aggregateToYearly(monthly)
+    let yPosition = 15
+
+    pdf.setFontSize(18)
+    pdf.setTextColor(18, 52, 88)
+    pdf.setFont(undefined, "bold")
+    pdf.text("YouTube Analytics Dashboard Report", 10, yPosition)
+    yPosition += 12
+
+    pdf.setFontSize(10)
+    pdf.setTextColor(0, 0, 0)
+    pdf.setFont(undefined, "normal")
+    pdf.text(`Generated on: ${new Date().toLocaleString()}`, 10, yPosition)
+    yPosition += 5
+    pdf.text(`Date Range: ${startDate} to ${endDate}`, 10, yPosition)
+    yPosition += 12
+
+    pdf.setFontSize(14)
+    pdf.setFont(undefined, "bold")
+    pdf.setTextColor(18, 52, 88)
+    pdf.text("Overview Metrics", 10, yPosition)
+    yPosition += 8
+
+    pdf.setFontSize(10)
+    pdf.setFont(undefined, "normal")
+    pdf.setTextColor(0, 0, 0)
+    pdf.text(`Total Videos: ${fmtInt(overview.total_videos)}`, 10, yPosition)
+    yPosition += 5
+    pdf.text(`Total Views: ${fmtCompact(overview.total_views)}`, 10, yPosition)
+    yPosition += 5
+    pdf.text(`Total Likes: ${fmtCompact(overview.total_likes)}`, 10, yPosition)
+    yPosition += 5
+    pdf.text(`Watch Time: ${fmtCompact(overview.total_watch_time)} hours`, 10, yPosition)
+    yPosition += 5
+    pdf.text(`Engagement Rate: ${fmtPct(overview.engagement_rate)}`, 10, yPosition)
+    yPosition += 12
+
+    pdf.setFontSize(14)
+    pdf.setFont(undefined, "bold")
+    pdf.setTextColor(18, 52, 88)
+    pdf.text("Top 10 Videos by Views", 10, yPosition)
+    yPosition += 8
+    yPosition = drawTable(
+      ["Rank", "Video Title", "Views"],
+      topVideos.slice(0, 10).map((video, idx) => [idx + 1, video.title, fmtCompact(video.views)]),
+      yPosition,
+      pdf,
+      10,
+    )
+    yPosition += 8
+
+    if (yPosition > 240) {
+      pdf.addPage()
+      yPosition = 15
+    }
+
+    pdf.setFontSize(14)
+    pdf.setFont(undefined, "bold")
+    pdf.setTextColor(18, 52, 88)
+    pdf.text("Top 10 Categories", 10, yPosition)
+    yPosition += 8
+    yPosition = drawTable(
+      ["Rank", "Category", "Views"],
+      topCategories.slice(0, 10).map((cat, idx) => [idx + 1, cat.category, fmtCompact(cat.total_views)]),
+      yPosition,
+      pdf,
+      10,
+    )
+    yPosition += 8
+
+    if (yPosition > 240) {
+      pdf.addPage()
+      yPosition = 15
+    }
+
+    pdf.setFontSize(14)
+    pdf.setFont(undefined, "bold")
+    pdf.setTextColor(18, 52, 88)
+    pdf.text("Yearly Views Trend", 10, yPosition)
+    yPosition += 8
+    yPosition = drawTable(
+      ["Year", "Total Views"],
+      yearlyTrend.map((item) => [item.year, fmtCompact(item.views)]),
+      yPosition,
+      pdf,
+    )
+    yPosition += 8
+
+    if (yPosition > 240) {
+      pdf.addPage()
+      yPosition = 15
+    }
+
+    pdf.setFontSize(14)
+    pdf.setFont(undefined, "bold")
+    pdf.setTextColor(18, 52, 88)
+    pdf.text("Content Type Performance", 10, yPosition)
+    yPosition += 8
+    yPosition = drawTable(
+      ["Content Type", "Avg Views"],
+      contentType.map((ct) => [ct.content_type, fmtCompact(ct.avg_views)]),
+      yPosition,
+      pdf,
+    )
+    yPosition += 8
+
+    if (yPosition > 240) {
+      pdf.addPage()
+      yPosition = 15
+    }
+
+    pdf.setFontSize(14)
+    pdf.setFont(undefined, "bold")
+    pdf.setTextColor(18, 52, 88)
+    pdf.text("Engagement by Duration", 10, yPosition)
+    yPosition += 8
+    yPosition = drawTable(
+      ["Duration", "Engagement Rate %"],
+      duration.map((d) => [d.duration_bucket, fmtPct(d.avg_engagement_rate)]),
+      yPosition,
+      pdf,
+    )
+
+    pdf.save(`youtube-report-${new Date().toISOString().split("T")[0]}.pdf`)
+  }
+
+  const handleGenerateReport = async (format: "csv" | "pdf") => {
+    setGeneratingReport(true)
+    try {
+      if (format === "csv") {
+        generateCSVReport()
+      } else {
+        generatePDFReport()
+      }
+    } catch (err) {
+      console.error("Error generating report:", err)
+    } finally {
+      setGeneratingReport(false)
+    }
   }
 
   const handleApplyFilter = () => {
@@ -266,21 +497,21 @@ export default function YouTubeDashboard() {
         </section>
 
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Top 10 Songs</h2>
+          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Top 10 Videos</h2>
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {topCategories.length > 0 ? (
+            {topVideos.length > 0 ? (
               <div className="space-y-2">
-                {topCategories.map((song, index) => (
+                {topVideos.slice(0, 10).map((video, index) => (
                   <div
-                    key={song.category}
+                    key={video.video_id}
                     className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-2">
                         <span className="text-gray-500 font-semibold text-sm">#{index + 1}</span>
-                        <p className="text-gray-800 font-medium capitalize flex-1">{song.category}</p>
+                        <p className="text-gray-800 font-medium flex-1">{video.title}</p>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">{fmtCompact(song.total_views)} views</p>
+                      <p className="text-sm text-gray-500 mt-1">{fmtCompact(video.views)} views</p>
                     </div>
                   </div>
                 ))}
@@ -292,29 +523,21 @@ export default function YouTubeDashboard() {
         </section>
 
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Top 15 Videos by Views</h2>
-          <div className="space-y-2 max-h-[600px] overflow-y-auto">
-            {topVideos.length > 0 ? (
+          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Top 10 Categories</h2>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {topCategories.length > 0 ? (
               <div className="space-y-2">
-                {topVideos.map((video, index) => (
+                {topCategories.slice(0, 10).map((cat, index) => (
                   <div
-                    key={video.video_id}
+                    key={cat.category}
                     className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                   >
-                    <div
-                      className="w-1 h-12 rounded-full"
-                      style={{ backgroundColor: getCategoryColor(video.category) }}
-                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-2">
                         <span className="text-gray-500 font-semibold text-sm">#{index + 1}</span>
-                        <p className="text-gray-800 font-medium flex-1">{video.title}</p>
+                        <p className="text-gray-800 font-medium capitalize flex-1">{cat.category}</p>
                       </div>
-                      <div className="flex items-center gap-3 mt-1">
-                        <p className="text-sm text-gray-500">{fmtCompact(video.views)} views</p>
-                        <span className="text-xs text-gray-400">•</span>
-                        <p className="text-sm text-gray-400 capitalize">{video.category}</p>
-                      </div>
+                      <p className="text-sm text-gray-500 mt-1">{fmtCompact(cat.total_views)} views</p>
                     </div>
                   </div>
                 ))}
@@ -393,101 +616,22 @@ export default function YouTubeDashboard() {
           </div>
         </section>
 
-        <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-[#123458]">
-            POSTING DAY PERFORMANCE (Cumulative Performance, NOT Audience Activity)
-          </h2>
-          <div className="h-96">
-            {dayOfWeek.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dayOfWeek} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="day_of_week" />
-                  <YAxis label={{ value: "Total Engagement", angle: -90, position: "insideLeft" }} />
-                  <Tooltip formatter={(v) => fmtInt(v as number)} />
-                  <Legend />
-                  <Bar dataKey="mean_engagement" fill="#87ceeb" name="Mean Engagement" />
-                  <Bar dataKey="median_engagement" fill="#4682b4" name="Median Engagement" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-gray-500">No data available</div>
-            )}
-          </div>
-        </section>
-
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4 text-[#123458]">Average Views by Content Type</h2>
-            <div className="h-80">
-              {contentType.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={contentType} margin={{ top: 5, right: 30, left: 0, bottom: 80 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="content_type" angle={-45} textAnchor="end" height={100} />
-                    <YAxis tickFormatter={fmtCompact} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="avg_views" fill="#10b981" />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="text-gray-500">No data available</div>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4 text-[#123458]">Content Type Distribution</h2>
-            <div className="h-80">
-              {contentDistribution.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={contentDistribution}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ content_type, percentage }) => `${content_type}: ${percentage}%`}
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="video_count"
-                    >
-                      {contentDistribution.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={
-                            ["#7dd3c0", "#f7dc6f", "#bb8fce", "#f1948a", "#85c1e9", "#f8b88b", "#aed6f1"][index % 7]
-                          }
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="text-gray-500">No data available</div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Average Engagement Rate by Content Type</h2>
-          <div className="h-96">
-            {contentEngagement.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={contentEngagement} margin={{ top: 5, right: 30, left: 0, bottom: 80 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="content_type" angle={-45} textAnchor="end" height={100} />
-                  <YAxis label={{ value: "Engagement Rate (%)", angle: -90, position: "insideLeft" }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="avg_engagement_rate" fill="#9b59b6" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-gray-500">No data available</div>
-            )}
-          </div>
+        {/* Generate Report Buttons */}
+        <section className="flex justify-center gap-4 mb-8">
+          <button
+            onClick={() => handleGenerateReport("csv")}
+            disabled={generatingReport}
+            className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition disabled:opacity-50"
+          >
+            {generatingReport ? "Generating..." : "Download CSV Report"}
+          </button>
+          <button
+            onClick={() => handleGenerateReport("pdf")}
+            disabled={generatingReport}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition disabled:opacity-50"
+          >
+            {generatingReport ? "Generating..." : "Download PDF Report"}
+          </button>
         </section>
       </main>
     </div>
