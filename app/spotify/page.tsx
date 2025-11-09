@@ -2,6 +2,7 @@
 
 import Sidebar from "@/components/sidebar"
 import { useEffect, useState } from "react"
+import { ReferenceDot, Label } from "recharts"
 import {
   ResponsiveContainer,
   LineChart,
@@ -24,10 +25,16 @@ export default function SpotifyDashboard() {
   const [monthly, setMonthly] = useState<any[]>([])
   const [engagement, setEngagement] = useState<any[]>([])
   const [dailyStreams, setDailyStreams] = useState<any[]>([])
+  const [dailyListeners, setDailyListeners] = useState<any[]>([])
   const [songReleases, setSongReleases] = useState<any[]>([])
+  const [releaseMarkers, setReleaseMarkers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [generatingReport, setGeneratingReport] = useState(false)
+  // --- FOLLOWER GROWTH (new) ---
+  const [followerGrowth, setFollowerGrowth] = useState<any[]>([])
+  const [followerReleaseMarkers, setFollowerReleaseMarkers] = useState<any[]>([])
+
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -35,12 +42,23 @@ export default function SpotifyDashboard() {
         setLoading(true)
         setError(null)
 
-        const [overviewRes, topTracksRes, monthlyRes, engagementRes, dailyStreamsRes] = await Promise.all([
+        // ADD the sixth fetch at the end
+      const [
+          overviewRes,
+          topTracksRes,
+          monthlyRes,
+          engagementRes,
+          dailyStreamsRes,
+          dailyListenersRes,
+          followerGrowthRes, // NEW
+        ] = await Promise.all([
           fetch("/api/analytics/spotify/overview"),
           fetch("/api/analytics/spotify/top-tracks"),
           fetch("/api/analytics/spotify/monthly"),
           fetch("/api/analytics/spotify/engagement"),
           fetch("/api/analytics/spotify/daily-streams-with-releases"),
+          fetch("/api/analytics/spotify/daily-listeners-with-releases"),
+          fetch("/api/analytics/spotify/follower-growth-with-releases"), // NEW
         ])
 
         if (!overviewRes.ok) throw new Error("Failed to fetch overview")
@@ -69,6 +87,20 @@ export default function SpotifyDashboard() {
         const dailyStreamsData = await dailyStreamsRes.json()
         setDailyStreams(dailyStreamsData.daily_streams || [])
         setSongReleases(dailyStreamsData.song_releases || [])
+
+        if (!dailyListenersRes.ok) throw new Error("Failed to fetch daily listeners and releases")
+        const dailyListenersData = await dailyListenersRes.json()
+        // Route returns { daily, releases }
+        setDailyListeners(dailyListenersData.daily || [])
+        setReleaseMarkers(dailyListenersData.releases || [])
+
+        // --- FOLLOWER GROWTH (new endpoint mapping) ---
+        if (!followerGrowthRes.ok) throw new Error("Failed to fetch follower growth and releases")
+        const followerGrowthData = await followerGrowthRes.json()
+        // Route returns { follower_growth, song_releases } (with safe fallbacks)
+        setFollowerGrowth(followerGrowthData.follower_growth || followerGrowthData.data || [])
+        setFollowerReleaseMarkers(followerGrowthData.song_releases || followerGrowthData.releases || [])
+
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load data")
       } finally {
@@ -95,6 +127,39 @@ export default function SpotifyDashboard() {
     })
     return Object.entries(yearlyMap).map(([year, streams]) => ({ year, streams }))
   }
+
+  // Find nearest daily-streams point to a given date
+  const findNearestStreamPoint = (series: any[], targetDateStr: string) => {
+    if (!series?.length) return null
+    const target = new Date(targetDateStr).getTime()
+    let nearest = series[0]
+    let best = Math.abs(new Date(series[0].date).getTime() - target)
+    for (let i = 1; i < series.length; i++) {
+      const t = Math.abs(new Date(series[i].date).getTime() - target)
+      if (t < best) { best = t; nearest = series[i] }
+    }
+    return nearest // { date, streams }
+  }
+
+  // Find the nearest follower datapoint to a given date (string 'YYYY-MM-DD')
+  const findNearestFollowerPoint = (series: any[], targetDateStr: string) => {
+    if (!series?.length) return null;
+    const target = new Date(targetDateStr).getTime();
+
+    // binary-ish scan using linear (dataset is small enough); ok to keep simple
+    let nearest = series[0];
+    let best = Math.abs(new Date(series[0].date).getTime() - target);
+
+    for (let i = 1; i < series.length; i++) {
+      const t = Math.abs(new Date(series[i].date).getTime() - target);
+      if (t < best) {
+        best = t;
+        nearest = series[i];
+      }
+    }
+    return nearest; // { date, total_followers }
+  };
+
 
   const generateCSVReport = () => {
     const csvContent = [
@@ -273,10 +338,10 @@ export default function SpotifyDashboard() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-[#123458] text-white">
+      <div className="flex min-h-screen bg-[#D3D3D3] text-white">
         <Sidebar />
         <main className="flex-1 p-8 flex items-center justify-center">
-          <p className="text-xl">Loading dashboard data...</p>
+          <p className="text-xl text-[#123458]">Loading dashboard data...</p>
         </main>
       </div>
     )
@@ -284,7 +349,7 @@ export default function SpotifyDashboard() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen bg-[#123458] text-white">
+      <div className="flex min-h-screen bg-[#D3D3D3] text-white">
         <Sidebar />
         <main className="flex-1 p-8 flex items-center justify-center">
           <div className="bg-red-900 p-6 rounded-lg">
@@ -297,11 +362,11 @@ export default function SpotifyDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#123458] text-white">
+    <div className="flex min-h-screen bg-[#D3D3D3] text-white">
       <Sidebar />
       <main className="flex-1 p-8">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold">Spotify Analytics Dashboard</h1>
+          <h1 className="text-3xl font-bold text-[#123458]">Spotify Analytics Dashboard</h1>
         </header>
 
         {/* KPIs Section */}
@@ -350,35 +415,142 @@ export default function SpotifyDashboard() {
           <div className="h-96">
             {dailyStreams.length > 0 && songReleases.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dailyStreams} margin={{ top: 20, right: 30, left: 40, bottom: 60 }}>
+              <LineChart data={dailyStreams} margin={{ top: 20, right: 30, left: 40, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(value) =>
+                    new Date(value).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+                  }
+                  angle={-45}
+                  textAnchor="end"
+                />
+                <YAxis />
+                <Tooltip formatter={(value) => fmtInt(value as number)} />
+                <Legend />
+                <Line type="monotone" dataKey="streams" stroke="#1DB954" strokeWidth={2} name="Daily Streams" dot={false} />
+
+               {/* RED MARKERS FROM 'LEONORA' ONWARD (snap to nearest date) */}
+                {(() => {
+                  // find Leonora start (prefer exact match, else any title containing it, else earliest release)
+                  const exactLeonora = songReleases.find(
+                    (r: any) => (r.title || "").trim().toLowerCase() === "leonora"
+                  )
+                  const containsLeonora = songReleases.find(
+                    (r: any) => (r.title || "").toLowerCase().includes("leonora")
+                  )
+                  const earliest = songReleases[0]
+
+                  const startDateStr =
+                    exactLeonora?.release_date ??
+                    containsLeonora?.release_date ??
+                    earliest?.release_date
+
+                  // keep the full green line; only filter the markers
+                  const markersFromLeonora = songReleases.filter(
+                    (r: any) => (r.release_date ?? r.date) >= startDateStr
+                  )
+
+                  return markersFromLeonora.map((rel: any, i: number) => {
+                    const relDate = rel.release_date ?? rel.date
+                    const nearest = findNearestStreamPoint(dailyStreams, relDate) // <-- uses your helper
+                    if (!nearest) return null
+                    return (
+                      <ReferenceDot
+                        key={`${relDate}-${i}`}
+                        x={nearest.date}
+                        y={nearest.streams}
+                        r={5}
+                        fill="#E11D48"
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                        ifOverflow="discard"
+                      >
+                        <Label value={rel.title} position="top" offset={10} fill="#111827" fontSize={11} />
+                      </ReferenceDot>
+                    )
+                  })
+                })()}
+              </LineChart>
+            </ResponsiveContainer>
+            ) : (
+              <div className="text-gray-500">No data available</div>
+            )}
+          </div>
+        </section>
+
+        {/* Daily Listeners with Song Releases Section */}
+        <section className="bg-white p-6 rounded-lg shadow-md mb-8">
+          <h2 className="text-xl font-semibold mb-4 text-[#123458]">
+            Daily Listeners with Song Releases
+          </h2>
+          <div className="h-96">
+            {dailyListeners.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={dailyListeners}
+                  margin={{ top: 20, right: 30, left: 40, bottom: 60 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
                     dataKey="date"
                     tickFormatter={(value) =>
-                      new Date(value).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+                      new Date(value as string).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })
                     }
                     angle={-45}
                     textAnchor="end"
                   />
                   <YAxis />
-                  <Tooltip formatter={(value) => fmtInt(value)} />
+                  <Tooltip
+                    formatter={(value) => fmtInt(value as number)}
+                    labelFormatter={(value) =>
+                      new Date(value as string).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })
+                    }
+                  />
                   <Legend />
-                  <Line type="monotone" dataKey="streams" stroke="#1DB954" strokeWidth={2} name="Daily Streams" />
+                  <Line
+                    type="monotone"
+                    dataKey="listeners"
+                    stroke="#0c4d8f"
+                    strokeWidth={2}
+                    name="Daily Listeners"
+                    dot={false}
+                  />
 
-                  {/* Scatter plot for Song Releases */}
-                  <ScatterChart>
-                    <Scatter
-                      name="Song Releases"
-                      data={songReleases.map((release) => ({
-                        date: release.release_date,
-                        streams: dailyStreams.find((stream) => stream.date === release.release_date)?.streams || 0,
-                      }))}
-                      fill="#FF4444"
-                      line
-                      shape="circle"
-                      strokeWidth={2}
-                    />
-                  </ScatterChart>
+                  {/* RED MARKERS FOR RELEASES (using listeners series Y at same date) */}
+                  {releaseMarkers.map((rel: any, i: number) => {
+                    const y =
+                      dailyListeners.find((d: any) => d.date === rel.date)?.listeners ??
+                      0
+                    return (
+                      <ReferenceDot
+                        key={`${rel.date}-${i}`}
+                        x={rel.date}
+                        y={y}
+                        r={5}
+                        fill="#E11D48"
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                        ifOverflow="discard"
+                      >
+                        <Label
+                          value={rel.song ?? "Release"}
+                          position="top"
+                          offset={10}
+                          fill="#111827"
+                          fontSize={11}
+                        />
+                      </ReferenceDot>
+                    )
+                  })}
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -386,6 +558,105 @@ export default function SpotifyDashboard() {
             )}
           </div>
         </section>
+
+        {/* Follower Growth with Song Releases (START AT 'Leonora') */}
+        <section className="bg-white p-6 rounded-lg shadow-md mb-8">
+          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Follower Growth with Song Releases</h2>
+          <div className="h-96">
+            {followerGrowth.length > 0 ? (
+              (() => {
+                // --- choose start date (prefer exact 'Leonora', else any title containing 'Leonora', else earliest marker) ---
+                const exactLeonora = followerReleaseMarkers.find(
+                  (r: any) => (r.title || "").trim().toLowerCase() === "leonora"
+                )
+                const containsLeonora = followerReleaseMarkers.find(
+                  (r: any) => (r.title || "").toLowerCase().includes("leonora")
+                )
+                const earliestMarker = followerReleaseMarkers.reduce(
+                  (min: any, r: any) => (!min || (r.release_date ?? r.date) < (min.release_date ?? min.date) ? r : min),
+                  null as any
+                )
+
+                const startDateStr =
+                  exactLeonora?.release_date ??
+                  containsLeonora?.release_date ??
+                  earliestMarker?.release_date ??
+                  followerGrowth[0]?.date
+
+                // slice series & markers from the start date (YYYY-MM-DD string compare works)
+                const fgFromStart = followerGrowth.filter((d: any) => d.date >= startDateStr)
+                const markersFromStart = followerReleaseMarkers.filter(
+                  (r: any) => (r.release_date ?? r.date) >= startDateStr
+                )
+
+                return (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={fgFromStart} margin={{ top: 20, right: 30, left: 40, bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(value) =>
+                          new Date(value as string).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })
+                        }
+                        angle={-45}
+                        textAnchor="end"
+                      />
+                      <YAxis />
+                      <Tooltip
+                        formatter={(value) => fmtInt(value as number)}
+                        labelFormatter={(value) =>
+                          new Date(value as string).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })
+                        }
+                      />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="total_followers"
+                        stroke="#7c3aed"
+                        strokeWidth={2}
+                        name="Total Followers"
+                        dot={false}
+                      />
+
+              {/* Red release markers snapped to nearest visible point */}
+              {markersFromStart.map((rel: any, i: number) => {
+                const relDate = rel.release_date ?? rel.date
+                const relTitle = rel.title ?? rel.song ?? "Release"
+                const nearest = findNearestFollowerPoint(fgFromStart, relDate)
+                if (!nearest) return null
+                return (
+                  <ReferenceDot
+                    key={`${relDate}-${i}`}
+                    x={nearest.date}
+                    y={nearest.total_followers}
+                    r={5}
+                    fill="#E11D48"
+                    stroke="#ffffff"
+                    strokeWidth={2}
+                    ifOverflow="discard"
+                  >
+                    <Label value={relTitle} position="top" offset={10} fill="#111827" fontSize={11} />
+                        </ReferenceDot>
+                      )
+                    })}
+                  </LineChart>
+                </ResponsiveContainer>
+                )
+              })()
+            ) : (
+              <div className="text-gray-500">No data available</div>
+            )}
+          </div>
+        </section>
+
 
         <section className="flex justify-center gap-4 mb-8">
           <button

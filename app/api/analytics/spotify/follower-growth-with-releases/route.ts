@@ -1,20 +1,22 @@
-// app/api/analytics/spotify/daily-streams-with-releases/route.ts
+// app/api/analytics/spotify/follower-growth-with-releases/route.ts
 import { NextResponse } from "next/server"
 import { executeQuery } from "@/lib/db-utils"
 
 export async function GET() {
   try {
-    // Sum daily streams across all songs; widen to 5 years to include early releases
-    const dailySql = `
+    // 1) Followers (use MAX per day in case multiple rows exist)
+    //    Window widened to 5 YEARS so early releases are inside the range.
+    const followersSql = `
       SELECT
         date::date AS date,
-        COALESCE(SUM(streams), 0) AS streams
+        COALESCE(MAX(followers), 0) AS total_followers
       FROM spotify_stats
       WHERE date >= NOW()::date - INTERVAL '5 years'
       GROUP BY date::date
       ORDER BY date::date ASC;
-    `
+    `;
 
+    // 2) Song releases (also widen to 5 YEARS)
     const releasesSql = `
       SELECT
         song AS title,
@@ -23,27 +25,27 @@ export async function GET() {
       WHERE release_date IS NOT NULL
         AND release_date >= NOW()::date - INTERVAL '5 years'
       ORDER BY release_date::date ASC;
-    `
+    `;
 
-    const dailyRows: any[] = await executeQuery(dailySql)
-    const releaseRows: any[] = await executeQuery(releasesSql)
+    const followerRows: any[] = await executeQuery(followersSql);
+    const releaseRows: any[]  = await executeQuery(releasesSql);
 
-    const daily_streams = dailyRows.map(r => ({
+    const follower_growth = followerRows.map(r => ({
       date: new Date(r.date).toISOString().slice(0, 10),
-      streams: Number(r.streams) || 0,
-    }))
+      total_followers: Number(r.total_followers) || 0,
+    }));
 
     const song_releases = releaseRows.map(r => ({
       title: r.title,
       release_date: new Date(r.release_date).toISOString().slice(0, 10),
-    }))
+    }));
 
-    return NextResponse.json({ daily_streams, song_releases })
+    return NextResponse.json({ follower_growth, song_releases });
   } catch (err) {
-    console.error("daily-streams-with-releases error:", err)
+    console.error("follower-growth-with-releases error:", err);
     return NextResponse.json(
-      { error: "Failed to load daily streams with releases" },
+      { error: "Failed to load follower growth with releases" },
       { status: 500 }
-    )
+    );
   }
 }

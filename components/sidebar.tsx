@@ -171,9 +171,9 @@ export default function Sidebar() {
 
             <li className="mb-4">
               <Link
-                href="/notifications"
+                href="/cross-platform"
                 className={`flex items-center p-2 rounded-lg transition-colors duration-200 nav-item ${
-                  isActiveLink("/notifications")
+                  isActiveLink("/cross-platform")
                     ? "bg-[#123458] text-white font-semibold"
                     : "text-white hover:bg-gray-700"
                 }`}
@@ -184,9 +184,14 @@ export default function Sidebar() {
                     fill="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path>
+                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
+                    <path
+                      fillRule="evenodd"
+                      d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 0a1 1 0 00-1 1v5a1 1 0 102 0V6a1 1 0 00-1-1zm3 0a1 1 0 00-1 1v5a1 1 0 102 0V6a1 1 0 00-1-1zm3 0a1 1 0 00-1 1v5a1 1 0 102 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    ></path>
                   </svg>
-                  {!isCollapsed && <span className="nav-text">Notifications</span>}
+                  {!isCollapsed && <span className="nav-text">Cross-Platform</span>}
                 </div>
               </Link>
             </li>
@@ -211,33 +216,6 @@ export default function Sidebar() {
                     ></path>
                   </svg>
                   {!isCollapsed && <span className="nav-text">FAQ</span>}
-                </div>
-              </Link>
-            </li>
-
-            <li className="mb-4">
-              <Link
-                href="/cross-platform"
-                className={`flex items-center p-2 rounded-lg transition-colors duration-200 nav-item ${
-                  isActiveLink("/cross-platform")
-                    ? "bg-[#123458] text-white font-semibold"
-                    : "text-white hover:bg-gray-700"
-                }`}
-              >
-                <div className="flex items-center">
-                  <svg
-                    className={`w-5 h-5 ${!isCollapsed ? "mr-3" : "mx-auto"}`}
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
-                    <path
-                      fillRule="evenodd"
-                      d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 0a1 1 0 00-1 1v5a1 1 0 102 0V6a1 1 0 00-1-1zm3 0a1 1 0 00-1 1v5a1 1 0 102 0V6a1 1 0 00-1-1zm3 0a1 1 0 00-1 1v5a1 1 0 102 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    ></path>
-                  </svg>
-                  {!isCollapsed && <span className="nav-text">Cross-Platform</span>}
                 </div>
               </Link>
             </li>

@@ -469,10 +469,10 @@ export default function TikTokDashboard() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-[#123458] text-white">
+      <div className="flex min-h-screen bg-[#D3D3D3] text-white">
         <AppSidebar />
         <main className="flex-1 p-8 flex items-center justify-center">
-          <p className="text-xl">Loading dashboard data...</p>
+          <p className="text-xl text-[#123458]">Loading dashboard data...</p>
         </main>
       </div>
     )
@@ -480,11 +480,11 @@ export default function TikTokDashboard() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen bg-[#123458] text-white">
+      <div className="flex min-h-screen bg-[#D3D3D3] text-white">
         <AppSidebar />
         <main className="flex-1 p-8 flex items-center justify-center">
           <div className="bg-red-900 p-6 rounded-lg">
-            <p className="text-lg font-semibold">Error loading dashboard</p>
+            <p className="text-lg font-semibold text-[#123458]">Error loading dashboard</p>
             <p className="text-sm mt-2">{error}</p>
           </div>
         </main>
@@ -493,11 +493,11 @@ export default function TikTokDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#123458] text-white">
+    <div className="flex min-h-screen bg-[#D3D3D3] text-white">
       <AppSidebar />
       <main className="flex-1 p-8">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold">TikTok Analytics Dashboard</h1>
+          <h1 className="text-3xl font-bold text-[#123458]">TikTok Analytics Dashboard</h1>
         </header>
 
         <section className="bg-white p-6 rounded-lg shadow-md mb-8 text-[#123458]">
