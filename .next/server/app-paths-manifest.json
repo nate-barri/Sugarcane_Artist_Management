@@ -1,7 +1,16 @@
 {
+  "/api/analytics/youtube/overview/route": "app/api/analytics/youtube/overview/route.js",
+  "/api/analytics/youtube/top-videos/route": "app/api/analytics/youtube/top-videos/route.js",
+  "/api/analytics/youtube/top-categories/route": "app/api/analytics/youtube/top-categories/route.js",
+  "/api/analytics/youtube/temporal/route": "app/api/analytics/youtube/temporal/route.js",
+  "/api/analytics/youtube/content-type/route": "app/api/analytics/youtube/content-type/route.js",
+  "/api/analytics/youtube/duration/route": "app/api/analytics/youtube/duration/route.js",
+  "/api/analytics/youtube/day-of-week/route": "app/api/analytics/youtube/day-of-week/route.js",
+  "/api/analytics/youtube/content-type-distribution/route": "app/api/analytics/youtube/content-type-distribution/route.js",
+  "/api/analytics/youtube/content-type-engagement/route": "app/api/analytics/youtube/content-type-engagement/route.js",
   "/page": "app/page.js",
   "/tiktok/page": "app/tiktok/page.js",
-  "/youtube/page": "app/youtube/page.js",
+  "/spotify/page": "app/spotify/page.js",
   "/facebook/page": "app/facebook/page.js",
-  "/spotify/page": "app/spotify/page.js"
+  "/youtube/page": "app/youtube/page.js"
 }

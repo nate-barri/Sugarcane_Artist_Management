@@ -31,6 +31,11 @@
       "static/chunks/main-app.js",
       "static/chunks/app/api/analytics/tiktok/top-videos/route.js"
     ],
+    "/api/analytics/tiktok/temporal/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/tiktok/temporal/route.js"
+    ],
     "/api/analytics/tiktok/post-type/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -41,11 +46,6 @@
       "static/chunks/main-app.js",
       "static/chunks/app/api/analytics/tiktok/duration/route.js"
     ],
-    "/api/analytics/tiktok/temporal/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/tiktok/temporal/route.js"
-    ],
     "/api/analytics/tiktok/sound/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -55,96 +55,6 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/analytics/tiktok/engagement-distribution/route.js"
-    ],
-    "/youtube/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/youtube/page.js"
-    ],
-    "/api/analytics/youtube/overview/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/youtube/overview/route.js"
-    ],
-    "/api/analytics/youtube/top-videos/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/youtube/top-videos/route.js"
-    ],
-    "/api/analytics/youtube/top-categories/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/youtube/top-categories/route.js"
-    ],
-    "/api/analytics/youtube/temporal/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/youtube/temporal/route.js"
-    ],
-    "/api/analytics/youtube/content-type/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/youtube/content-type/route.js"
-    ],
-    "/api/analytics/youtube/duration/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/youtube/duration/route.js"
-    ],
-    "/api/analytics/youtube/day-of-week/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/youtube/day-of-week/route.js"
-    ],
-    "/api/analytics/youtube/content-type-distribution/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/youtube/content-type-distribution/route.js"
-    ],
-    "/api/analytics/youtube/content-type-engagement/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/youtube/content-type-engagement/route.js"
-    ],
-    "/facebook/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/facebook/page.js"
-    ],
-    "/api/analytics/facebook/overview/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/facebook/overview/route.js"
-    ],
-    "/api/analytics/facebook/top-videos/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/facebook/top-videos/route.js"
-    ],
-    "/api/analytics/facebook/engagement-metrics/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/facebook/engagement-metrics/route.js"
-    ],
-    "/api/analytics/facebook/post-type-engagement/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/facebook/post-type-engagement/route.js"
-    ],
-    "/api/analytics/facebook/temporal/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/facebook/temporal/route.js"
-    ],
-    "/api/analytics/facebook/post-type-distribution/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/facebook/post-type-distribution/route.js"
-    ],
-    "/api/analytics/facebook/cumulative/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/facebook/cumulative/route.js"
     ],
     "/spotify/page": [
       "static/chunks/webpack.js",
@@ -195,6 +105,96 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/analytics/spotify/followers-growth-perc-with-releases/route.js"
+    ],
+    "/facebook/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/facebook/page.js"
+    ],
+    "/api/analytics/facebook/overview/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/facebook/overview/route.js"
+    ],
+    "/api/analytics/facebook/top-videos/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/facebook/top-videos/route.js"
+    ],
+    "/api/analytics/facebook/engagement-metrics/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/facebook/engagement-metrics/route.js"
+    ],
+    "/api/analytics/facebook/post-type-engagement/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/facebook/post-type-engagement/route.js"
+    ],
+    "/api/analytics/facebook/temporal/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/facebook/temporal/route.js"
+    ],
+    "/api/analytics/facebook/post-type-distribution/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/facebook/post-type-distribution/route.js"
+    ],
+    "/api/analytics/facebook/cumulative/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/facebook/cumulative/route.js"
+    ],
+    "/youtube/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/youtube/page.js"
+    ],
+    "/api/analytics/youtube/overview/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/overview/route.js"
+    ],
+    "/api/analytics/youtube/top-videos/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/top-videos/route.js"
+    ],
+    "/api/analytics/youtube/top-categories/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/top-categories/route.js"
+    ],
+    "/api/analytics/youtube/temporal/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/temporal/route.js"
+    ],
+    "/api/analytics/youtube/content-type/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/content-type/route.js"
+    ],
+    "/api/analytics/youtube/duration/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/duration/route.js"
+    ],
+    "/api/analytics/youtube/day-of-week/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/day-of-week/route.js"
+    ],
+    "/api/analytics/youtube/content-type-distribution/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/content-type-distribution/route.js"
+    ],
+    "/api/analytics/youtube/content-type-engagement/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/content-type-engagement/route.js"
     ]
   }
 }

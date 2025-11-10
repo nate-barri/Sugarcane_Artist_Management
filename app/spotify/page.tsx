@@ -4,7 +4,7 @@ import Sidebar from "@/components/sidebar"
 import { useEffect, useState } from "react"
 import { ReferenceDot, Label } from "recharts"
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts"
-import jsPDF from "jspdf"
+import { generateSpotifyCSV, generateSpotifyPDF } from "@/lib/spotify-report"
 
 type Overview = {
   total_streams: number
@@ -126,16 +126,6 @@ export default function SpotifyDashboard() {
   const fmtCompact = (n: number) =>
     n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : `${n}`
 
-  const aggregateToYearly = (data: any[]) => {
-    const yearlyMap: { [key: string]: number } = {}
-    data.forEach((item) => {
-      const year = item.date ? item.date.substring(0, 4) : "Unknown"
-      yearlyMap[year] = (yearlyMap[year] || 0) + (item.streams || 0)
-    })
-    return Object.entries(yearlyMap).map(([year, streams]) => ({ year, streams }))
-  }
-
-  // Find nearest daily-streams point to a given date
   const findNearestStreamPoint = (series: any[], targetDateStr: string) => {
     if (!series?.length) return null
     const target = new Date(targetDateStr).getTime()
@@ -154,10 +144,8 @@ export default function SpotifyDashboard() {
   const findNearestFollowerPoint = (series: any[], targetDateStr: string) => {
     if (!series?.length) return null
     const target = new Date(targetDateStr).getTime()
-
     let nearest = series[0]
     let best = Math.abs(new Date(series[0].date).getTime() - target)
-
     for (let i = 1; i < series.length; i++) {
       const t = Math.abs(new Date(series[i].date).getTime() - target)
       if (t < best) {
@@ -183,172 +171,29 @@ export default function SpotifyDashboard() {
     return nearest
   }
 
-  const generateCSVReport = () => {
-    const csvContent = [
-      ["Spotify Analytics Dashboard Report"],
-      [`Generated on: ${new Date().toLocaleString()}`],
-      [
-        `Date Range: ${dailyStreams.length > 0 ? dailyStreams[0].date : "N/A"} to ${dailyStreams.length > 0 ? dailyStreams[dailyStreams.length - 1].date : "N/A"}`,
-      ],
-      [],
-      ["OVERVIEW METRICS"],
-      ["Total Streams", fmtInt(overview.total_streams)],
-      ["Total Listeners", fmtCompact(overview.total_listeners)],
-      ["Total Followers", fmtInt(overview.total_followers)],
-      ["Top Tracks Count", fmtInt(overview.top_tracks_count)],
-      ["Top Song", overview.top_track || "—"],
-      ["Top Song Streams", fmtInt(overview.top_track_streams)],
-      [],
-      ["TOP 10 TRACKS BY STREAMS"],
-      ["Rank", "Track Name", "Streams"],
-      ...topTracks.slice(0, 10).map((track, idx) => [idx + 1, track.track, fmtInt(track.streams)]),
-    ]
-
-    const csvString = csvContent.map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n")
-    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" })
-    const link = document.createElement("a")
-    const url = URL.createObjectURL(blob)
-    link.setAttribute("href", url)
-    link.setAttribute("download", `spotify-report-${new Date().toISOString().split("T")[0]}.csv`)
-    link.style.visibility = "hidden"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  const generatePDFReport = () => {
-    const yearlyTrend = aggregateToYearly(monthly)
-    const pdf = new jsPDF()
-    const pageWidth = pdf.internal.pageSize.getWidth()
-    const pageHeight = pdf.internal.pageSize.getHeight()
-    let yPosition = 10
-
-    const addNewPage = () => {
-      pdf.addPage()
-      yPosition = 15
-    }
-
-    const checkPageSpace = (spaceNeeded: number) => {
-      if (yPosition + spaceNeeded > pageHeight - 15) {
-        addNewPage()
-      }
-    }
-
-    const drawTable = (head: string[], body: (string | number)[][], startY: number, maxRows = 20) => {
-      let currentY = startY
-      const cellHeight = 6
-      const colWidths = head.length === 3 ? [15, 105, 40] : [50, 80]
-      const pageWidth = pdf.internal.pageSize.getWidth()
-
-      pdf.setFillColor(12, 77, 143)
-      pdf.setTextColor(255, 255, 255)
-      pdf.setFontSize(10)
-      pdf.setFont(undefined, "bold")
-
-      let xPos = 10
-      head.forEach((h, i) => {
-        pdf.rect(xPos, currentY, colWidths[i], cellHeight, "F")
-        pdf.text(h, xPos + 2, currentY + 4)
-        xPos += colWidths[i]
-      })
-      currentY += cellHeight
-
-      pdf.setTextColor(0, 0, 0)
-      pdf.setFont(undefined, "normal")
-      pdf.setFontSize(9)
-
-      body.slice(0, maxRows).forEach((row, idx) => {
-        if (currentY + cellHeight > pageHeight - 15) {
-          addNewPage()
-          currentY = yPosition
-        }
-
-        if (idx % 2 === 0) {
-          pdf.setFillColor(240, 240, 240)
-          xPos = 10
-          head.forEach((_, i) => {
-            pdf.rect(xPos, currentY, colWidths[i], cellHeight, "F")
-            xPos += colWidths[i]
-          })
-        }
-
-        xPos = 10
-        row.forEach((cell, i) => {
-          pdf.text(String(cell), xPos + 2, currentY + 4)
-          xPos += colWidths[i]
-        })
-
-        currentY += cellHeight
-      })
-
-      return currentY
-    }
-
-    pdf.setFontSize(18)
-    pdf.setTextColor(12, 77, 143)
-    pdf.setFont(undefined, "bold")
-    pdf.text("Spotify Analytics Dashboard Report", 10, yPosition)
-    yPosition += 12
-
-    pdf.setFontSize(10)
-    pdf.setTextColor(0, 0, 0)
-    pdf.setFont(undefined, "normal")
-    pdf.text(`Generated on: ${new Date().toLocaleString()}`, 10, yPosition)
-    yPosition += 5
-    pdf.text(
-      `Date Range: ${dailyStreams.length > 0 ? dailyStreams[0].date : "N/A"} to ${
-        dailyStreams.length > 0 ? dailyStreams[dailyStreams.length - 1].date : "N/A"
-      }`,
-      10,
-      yPosition,
-    )
-    yPosition += 12
-
-    pdf.setFontSize(14)
-    pdf.setFont(undefined, "bold")
-    pdf.setTextColor(12, 77, 143)
-    pdf.text("Overview Metrics", 10, yPosition)
-    yPosition += 8
-    pdf.setFontSize(10)
-    pdf.setFont(undefined, "normal")
-    pdf.setTextColor(0, 0, 0)
-    pdf.text(`Total Streams: ${fmtInt(overview.total_streams)}`, 10, yPosition)
-    yPosition += 5
-    pdf.text(`Total Listeners: ${fmtCompact(overview.total_listeners)}`, 10, yPosition)
-    yPosition += 5
-    pdf.text(`Total Followers: ${fmtInt(overview.total_followers)}`, 10, yPosition)
-    yPosition += 5
-    pdf.text(`Top Tracks Count: ${fmtInt(overview.top_tracks_count)}`, 10, yPosition)
-    yPosition += 5
-    pdf.text(`Top Song: ${overview.top_track || "—"}`, 10, yPosition)
-    yPosition += 5
-    pdf.text(`Top Song Streams: ${fmtInt(overview.top_track_streams)}`, 10, yPosition)
-    yPosition += 12
-
-    checkPageSpace(70)
-    pdf.setFontSize(14)
-    pdf.setFont(undefined, "bold")
-    pdf.setTextColor(12, 77, 143)
-    pdf.text("Top 10 Tracks by Streams", 10, yPosition)
-    yPosition += 8
-    yPosition = drawTable(
-      ["Rank", "Track Name", "Streams"],
-      topTracks.slice(0, 10).map((track, idx) => [idx + 1, track.track, fmtInt(track.streams)]),
-      yPosition,
-      10,
-    )
-    yPosition += 8
-
-    pdf.save(`spotify-report-${new Date().toISOString().split("T")[0]}.pdf`)
-  }
-
   const handleGenerateReport = async (format: "csv" | "pdf") => {
     setGeneratingReport(true)
     try {
       if (format === "csv") {
-        generateCSVReport()
+        generateSpotifyCSV({
+          overview,
+          topTracks,
+          monthly,
+          dailyListeners,
+          followerGrowth,
+          streamsGrowth,
+          followersGrowthPct,
+        })
       } else {
-        generatePDFReport()
+        generateSpotifyPDF({
+          overview,
+          topTracks,
+          monthly,
+          dailyListeners,
+          followerGrowth,
+          streamsGrowth,
+          followersGrowthPct,
+        })
       }
     } catch (err) {
       console.error("Error generating report:", err)
@@ -472,9 +317,7 @@ export default function SpotifyDashboard() {
                   <Legend verticalAlign="top" align="center" height={25} iconType="line" />
                   <Line dataKey="streams" stroke="#1DB954" strokeWidth={2} name="Daily Streams" dot={false} />
 
-                  {/* RED MARKERS FROM 'LEONORA' ONWARD (nearest date) */}
                   {(() => {
-                    // find Leonora start
                     const exactLeonora = songReleases.find(
                       (r: any) => (r.title || "").trim().toLowerCase() === "leonora",
                     )
@@ -563,7 +406,6 @@ export default function SpotifyDashboard() {
                   <Legend verticalAlign="top" align="center" height={25} iconType="line" />
                   <Line dataKey="listeners" stroke="#0c4d8f" strokeWidth={2} name="Daily Listeners" dot={false} />
 
-                  {/* RED MARKERS FOR RELEASES */}
                   {releaseMarkers.map((rel: any, i: number) => {
                     const y = dailyListeners.find((d: any) => d.date === rel.date)?.listeners ?? 0
                     return (
@@ -589,7 +431,7 @@ export default function SpotifyDashboard() {
           </div>
         </section>
 
-        {/* Follower Growth with Song Releases (START AT 'Leonora') */}
+        {/* Follower Growth Section */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-xl font-semibold mb-4 text-[#123458]">Follower Growth</h2>
           <div className="h-96">
@@ -664,7 +506,6 @@ export default function SpotifyDashboard() {
                         dot={false}
                       />
 
-                      {/* Red release markers */}
                       {markersFromStart.map((rel: any, i: number) => {
                         const relDate = rel.release_date ?? rel.date
                         const relTitle = rel.title ?? rel.song ?? "Release"
@@ -695,7 +536,7 @@ export default function SpotifyDashboard() {
           </div>
         </section>
 
-        {/* Streams Growth % with Song Releases (NEW) */}
+        {/* Streams Growth % Section */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-xl font-semibold mb-4 text-[#123458]">Streams Growth Percentage</h2>
           <div className="h-96">
@@ -740,7 +581,6 @@ export default function SpotifyDashboard() {
                   <Legend verticalAlign="top" align="center" height={25} iconType="line" />
                   <Line dataKey="growth_pct" stroke="#f87171" strokeWidth={2} name="Streams Growth (%)" dot={false} />
 
-                  {/* Red markers */}
                   {(() => {
                     const exactLeonora = streamsGrowthReleases.find(
                       (r: any) => (r.title || "").trim().toLowerCase() === "leonora",
@@ -760,7 +600,7 @@ export default function SpotifyDashboard() {
                     return markersFromLeonora.map((rel: any, i: number) => {
                       const relDate = rel.release_date ?? rel.date
                       const relTitle = rel.title ?? rel.song ?? "Release"
-                      const nearest = findNearestGrowthPoint(streamsGrowth, relDate) // uses your helper
+                      const nearest = findNearestGrowthPoint(streamsGrowth, relDate)
                       if (!nearest) return null
                       return (
                         <ReferenceDot
@@ -786,7 +626,7 @@ export default function SpotifyDashboard() {
           </div>
         </section>
 
-        {/* Followers Growth % with Song Releases */}
+        {/* Followers Growth % Section */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-xl font-semibold mb-4 text-[#123458]">Followers Growth Percentage</h2>
           <div className="h-96">
