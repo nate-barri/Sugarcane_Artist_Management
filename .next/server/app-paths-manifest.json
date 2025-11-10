@@ -1,12 +1,7 @@
 {
-  "/favicon.ico/route": "app/favicon.ico/route.js",
-  "/api/analytics/facebook/overview/route": "app/api/analytics/facebook/overview/route.js",
-  "/api/analytics/facebook/top-videos/route": "app/api/analytics/facebook/top-videos/route.js",
-  "/api/analytics/facebook/engagement-metrics/route": "app/api/analytics/facebook/engagement-metrics/route.js",
-  "/api/analytics/facebook/post-type-engagement/route": "app/api/analytics/facebook/post-type-engagement/route.js",
-  "/api/analytics/facebook/temporal/route": "app/api/analytics/facebook/temporal/route.js",
-  "/api/analytics/facebook/post-type-distribution/route": "app/api/analytics/facebook/post-type-distribution/route.js",
-  "/api/analytics/facebook/cumulative/route": "app/api/analytics/facebook/cumulative/route.js",
-  "/import/page": "app/import/page.js",
-  "/facebook/page": "app/facebook/page.js"
+  "/page": "app/page.js",
+  "/tiktok/page": "app/tiktok/page.js",
+  "/youtube/page": "app/youtube/page.js",
+  "/facebook/page": "app/facebook/page.js",
+  "/spotify/page": "app/spotify/page.js"
 }
