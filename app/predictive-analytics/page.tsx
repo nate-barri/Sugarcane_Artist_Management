@@ -6,13 +6,13 @@ import { generateReport } from "@/utils/reportGenerator"
 
 export default function PredictiveAnalyticsDashboard() {
   return (
-    <div className="flex min-h-screen bg-[#123458] text-[#123458]">
+    <div className="flex min-h-screen bg-[#D3D3D3] text-[#123458]">
       <Sidebar />
 
       {/* Main Content Area for Predictive Analytics Dashboard */}
       <main className="flex-1 p-8">
         <header className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-[#FFFFFF]">Predictive Analytics</h1>
+          <h1 className="text-3xl font-bold text-[#123458]">Predictive Analytics</h1>
         </header>
 
         {/* Best Time to Post Section */}
@@ -22,7 +22,7 @@ export default function PredictiveAnalyticsDashboard() {
             <p className="text-xl font-bold text-gray-900">2:00 PM - 4:00 PM</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
-            <h2 className="text-lg font-medium text-[#123458]">Best Time to Post | Facebook</h2>
+            <h2 className="text-lg font-medium text-[#123458]">Best Time to Post | Meta</h2>
             <p className="text-xl font-bold text-gray-900">1:00 PM - 3:00 PM</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">

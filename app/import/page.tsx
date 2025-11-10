@@ -96,13 +96,13 @@ export default function ImportDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#123458] text-[#123458]">
+    <div className="flex min-h-screen bg-[#D3D3D3] text-[#123458]">
       <Sidebar />
 
       {/* Main Content Area for Import Dashboard */}
       <main className="flex-1 p-8">
         <header className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-[#FFFFFF]">Import Data</h1>
+          <h1 className="text-3xl font-bold text-[#123458]">Import Data</h1>
         </header>
 
         {uploadStatus && (
