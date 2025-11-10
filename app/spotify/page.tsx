@@ -19,6 +19,14 @@ import {
 } from "recharts"
 import jsPDF from "jspdf"
 
+type Overview = {
+  total_streams: number
+  total_followers: number
+  total_listeners: number
+  top_track: string
+  top_track_streams: number
+}
+
 export default function SpotifyDashboard() {
   const [overview, setOverview] = useState<any>({})
   const [topTracks, setTopTracks] = useState<any[]>([])
@@ -73,7 +81,8 @@ export default function SpotifyDashboard() {
           total_streams: Number(overviewData.overview.total_streams),
           total_followers: Number(overviewData.overview.total_followers),
           total_listeners: Number(overviewData.overview.total_listeners),
-          top_tracks_count: Number(overviewData.overview.top_tracks_count),
+          top_track: String(overviewData.overview.top_track ?? ""),
+          top_track_streams: Number(overviewData.overview.top_track_streams ?? 0),
         })
 
         if (!topTracksRes.ok) throw new Error("Failed to fetch top tracks")
@@ -195,6 +204,8 @@ export default function SpotifyDashboard() {
       ["Total Listeners", fmtCompact(overview.total_listeners)],
       ["Total Followers", fmtInt(overview.total_followers)],
       ["Top Tracks Count", fmtInt(overview.top_tracks_count)],
+      ["Top Song", overview.top_track || "—"],
+      ["Top Song Streams", fmtInt(overview.top_track_streams)],
       [],
       ["TOP 10 TRACKS BY STREAMS"],
       ["Rank", "Track Name", "Streams"],
@@ -316,6 +327,10 @@ export default function SpotifyDashboard() {
     pdf.text(`Total Followers: ${fmtInt(overview.total_followers)}`, 10, yPosition)
     yPosition += 5
     pdf.text(`Top Tracks Count: ${fmtInt(overview.top_tracks_count)}`, 10, yPosition)
+    yPosition += 5
+    pdf.text(`Top Song: ${overview.top_track || "—"}`, 10, yPosition)
+    yPosition += 5
+    pdf.text(`Top Song Streams: ${fmtInt(overview.top_track_streams)}`, 10, yPosition)
     yPosition += 12
 
     checkPageSpace(70)
@@ -398,8 +413,13 @@ export default function SpotifyDashboard() {
             <p className="text-3xl font-bold text-gray-900 mt-2">{fmtInt(overview.total_followers)}</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-sm font-medium text-gray-600">Top Tracks</h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{fmtInt(overview.top_tracks_count)}</p>
+            <h3 className="text-sm font-medium text-gray-600">Top Track</h3>
+            <p className="text-base font-semibold text-gray-800 mt-2 truncate" title={overview.top_track}>
+              {overview.top_track || "—"}
+            </p>
+            <p className="text-3xl font-bold text-gray-900">
+              {fmtInt(overview.top_track_streams)}
+            </p>
           </div>
         </section>
 
@@ -409,12 +429,22 @@ export default function SpotifyDashboard() {
           <div className="h-96">
             {topTracks.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topTracks} layout="vertical" margin={{ top: 5, right: 30, left: 200, bottom: 5 }}>
+                <BarChart
+                  data={topTracks}
+                  layout="vertical"
+                  margin={{ top: 30, right: 20, left: 50, bottom: 5 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" tickFormatter={fmtCompact} />
-                  <YAxis dataKey="track" type="category" width={190} tick={{ fontSize: 11 }} />
+                  <YAxis
+                    dataKey="track"
+                    type="category"
+                    width={120}               
+                    tick={{ fontSize: 11 }}
+                  />
+                  <Legend verticalAlign="top" align="center" height={25} iconType="line" />
                   <Tooltip formatter={(v) => fmtInt(v as number)} />
-                  <Bar dataKey="streams" fill="#0c4d8f" />
+                  <Bar dataKey="streams" name="Streams" fill="#0c4d8f" />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -425,7 +455,7 @@ export default function SpotifyDashboard() {
 
         {/* Daily Streams with Song Releases Section */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Daily Streams with Song Releases</h2>
+          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Daily Streams</h2>
           <div className="h-96">
             {dailyStreams.length > 0 && songReleases.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -500,7 +530,7 @@ export default function SpotifyDashboard() {
         {/* Daily Listeners with Song Releases Section */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-xl font-semibold mb-4 text-[#123458]">
-            Daily Listeners with Song Releases
+            Daily Listeners 
           </h2>
           <div className="h-96">
             {dailyListeners.length > 0 ? (
@@ -572,7 +602,7 @@ export default function SpotifyDashboard() {
 
         {/* Follower Growth with Song Releases (START AT 'Leonora') */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Follower Growth with Song Releases</h2>
+          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Follower Growth</h2>
           <div className="h-96">
             {followerGrowth.length > 0 ? (
               (() => {
@@ -668,7 +698,7 @@ export default function SpotifyDashboard() {
 
         {/* Streams Growth % with Song Releases (NEW) */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Streams Growth Percentage with Song Releases</h2>
+          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Streams Growth Percentage</h2>
           <div className="h-96">
             {streamsGrowth.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -749,7 +779,7 @@ export default function SpotifyDashboard() {
 
         {/* Followers Growth % with Song Releases */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Followers Growth Percentage with Song Releases</h2>
+          <h2 className="text-xl font-semibold mb-4 text-[#123458]">Followers Growth Percentage</h2>
           <div className="h-96">
             {followersGrowthPct.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -813,8 +843,8 @@ export default function SpotifyDashboard() {
                           <Label value={rel.title ?? "Release"} position="top" offset={10} fill="#111827" fontSize={11} />
                         </ReferenceDot>
                       )
-                    })
-                  })()}
+                    })}
+                  )()}
                 </LineChart>
               </ResponsiveContainer>
             ) : (

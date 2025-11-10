@@ -1,6 +1,6 @@
-// api/analytics/spotify/top-tracks/route.ts
+
 import { NextResponse } from "next/server";
-import { executeQuery } from "@/lib/db-utils"; // Assuming you have a utility function to execute queries
+import { executeQuery } from "@/lib/db-utils"; 
 
 export async function GET() {
   try {

@@ -1,10 +1,8 @@
-// app/api/analytics/spotify/daily-listeners-with-releases/route.ts
+
 import { NextResponse } from "next/server"
 import { executeQuery } from "@/lib/db-utils"
 
-// Returns:
-// { daily: [{ date: '2025-05-01', listeners: 1234 }, ...],
-//   releases: [{ date: '2025-04-28', song: 'Set You Free' }, ...] }
+
 export async function GET() {
   try {
     // Total DAILY listeners across all songs
