@@ -63,7 +63,7 @@ export default function SpotifyDashboard() {
         fetch("/api/analytics/spotify/daily-listeners-with-releases"),
         fetch("/api/analytics/spotify/follower-growth-with-releases"),
         fetch("/api/analytics/spotify/streams-growth-with-releases"), 
-        fetch("/api/analytics/spotify/followers-growth-with-releases"),
+        fetch("/api/analytics/spotify/followers-growth-perc-with-releases"),
       ])
 
         if (!overviewRes.ok) throw new Error("Failed to fetch overview")
@@ -557,11 +557,7 @@ export default function SpotifyDashboard() {
                         fill="#E11D48" stroke="#ffffff" strokeWidth={2} ifOverflow="discard"
                       >
                         <Label
-                          value={rel.song ?? "Release"}
-                          position="top"
-                          offset={10}
-                          fill="#111827"
-                          fontSize={11}
+                          value={rel.song ?? "Release"} position="top" offset={10} fill="#111827" fontSize={11}
                         />
                       </ReferenceDot>
                     )
@@ -580,7 +576,6 @@ export default function SpotifyDashboard() {
           <div className="h-96">
             {followerGrowth.length > 0 ? (
               (() => {
-                // --- choose start date (prefer exact 'Leonora', else any title containing 'Leonora', else earliest marker) ---
                 const exactLeonora = followerReleaseMarkers.find(
                   (r: any) => (r.title || "").trim().toLowerCase() === "leonora"
                 )
@@ -598,7 +593,6 @@ export default function SpotifyDashboard() {
                   earliestMarker?.release_date ??
                   followerGrowth[0]?.date
 
-                // slice series & markers from the start date (YYYY-MM-DD string compare works)
                 const fgFromStart = followerGrowth.filter((d: any) => d.date >= startDateStr)
                 const markersFromStart = followerReleaseMarkers.filter(
                   (r: any) => (r.release_date ?? r.date) >= startDateStr
@@ -638,14 +632,10 @@ export default function SpotifyDashboard() {
                       />
                       <Legend verticalAlign="top" align="center" height={25} iconType="line" />
                       <Line
-                        dataKey="total_followers"
-                        stroke="#7c3aed"
-                        strokeWidth={2}
-                        name="Total Followers"
-                        dot={false}
+                        dataKey="total_followers" stroke="#7c3aed" strokeWidth={2} name="Total Followers" dot={false}
                       />
 
-              {/* Red release markers snapped to nearest visible point */}
+              {/* Red release markers */}
               {markersFromStart.map((rel: any, i: number) => {
                 const relDate = rel.release_date ?? rel.date
                 const relTitle = rel.title ?? rel.song ?? "Release"
@@ -706,17 +696,11 @@ export default function SpotifyDashboard() {
                   />
                   <Legend verticalAlign="top" align="center" height={25} iconType="line" />
                   <Line
-                    type="monotone"
-                    dataKey="growth_pct"
-                    stroke="#f87171"      // soft red line as in your sample
-                    strokeWidth={2}
-                    name="Streams Growth (%)"
-                    dot={false}
+                    dataKey="growth_pct" stroke="#f87171" strokeWidth={2} name="Streams Growth (%)" dot={false}
                   />
 
-                  {/* Red markers snapped to nearest visible point */}
+                  {/* Red markers */}
                   {(() => {
-                    // find Leonora start (prefer exact match, else any title containing it, else earliest release)
                     const exactLeonora = streamsGrowthReleases.find(
                       (r: any) => (r.title || "").trim().toLowerCase() === "leonora"
                     )
@@ -730,7 +714,6 @@ export default function SpotifyDashboard() {
                       containsLeonora?.release_date ??
                       earliest?.release_date
 
-                    // keep the full line; only filter the markers
                     const markersFromLeonora = streamsGrowthReleases.filter(
                       (r: any) => (r.release_date ?? r.date) >= startDateStr
                     )
@@ -764,7 +747,7 @@ export default function SpotifyDashboard() {
           </div>
         </section>
 
-        {/* Followers Growth % with Song Releases (NEW) */}
+        {/* Followers Growth % with Song Releases */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-xl font-semibold mb-4 text-[#123458]">Followers Growth Percentage with Song Releases</h2>
           <div className="h-96">
@@ -794,12 +777,7 @@ export default function SpotifyDashboard() {
                   />
                   <Legend verticalAlign="top" align="center" height={25} iconType="line" />
                   <Line
-                    type="monotone"
-                    dataKey="growth_pct"
-                    stroke="#f59e0b"   // orange line (distinct from streams)
-                    strokeWidth={2}
-                    name="Followers Growth (%)"
-                    dot={false}
+                    dataKey="growth_pct" stroke="#f59e0b" strokeWidth={2} name="Followers Growth (%)" dot={false}
                   />
 
                   {(() => {
@@ -844,7 +822,6 @@ export default function SpotifyDashboard() {
             )}
           </div>
         </section>
-
 
         <section className="flex justify-center gap-4 mb-8">
           <button
