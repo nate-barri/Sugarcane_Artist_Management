@@ -1,4 +1,6 @@
 "use client"
+
+import Sidebar from "@/components/sidebar"
 import { useEffect, useState } from "react"
 import {
   ResponsiveContainer,
@@ -15,8 +17,6 @@ import {
   Pie,
   Cell,
 } from "recharts"
-import { jsPDF } from "jspdf"
-import AppSidebar from "@/components/sidebar"
 
 export default function TikTokDashboard() {
   const [tempStartDate, setTempStartDate] = useState<string>("2021-01-01")
@@ -34,7 +34,6 @@ export default function TikTokDashboard() {
   const [engagementRates, setEngagementRates] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [generatingReport, setGeneratingReport] = useState(false)
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -137,342 +136,12 @@ export default function TikTokDashboard() {
     setEndDate("2025-12-31")
   }
 
-  const handleGenerateReport = async (format: "csv" | "pdf") => {
-    try {
-      setGeneratingReport(true)
-
-      if (format === "csv") {
-        generateCSVReport()
-      } else if (format === "pdf") {
-        generatePDFReport()
-      }
-    } catch (error) {
-      console.error("Error generating report:", error)
-      alert("Failed to generate report")
-    } finally {
-      setGeneratingReport(false)
-    }
-  }
-
-  const generateCSVReport = () => {
-    const timestamp = new Date().toLocaleString()
-    let csvContent = "TikTok Analytics Dashboard Report\n"
-    csvContent += `Generated on: ${timestamp}\n`
-    csvContent += `Date Range: ${startDate} to ${endDate}\n\n`
-
-    // Overview section
-    csvContent += "OVERVIEW METRICS\n"
-    csvContent += `Total Videos,${overview.total_videos || 0}\n`
-    csvContent += `Total Views,${overview.total_views || 0}\n`
-    csvContent += `Total Likes,${overview.total_likes || 0}\n`
-    csvContent += `Total Shares,${overview.total_shares || 0}\n`
-    csvContent += `Engagement Rate (%),${overview.engagement_rate || 0}\n\n`
-
-    // Top videos section
-    csvContent += "TOP 10 VIDEOS BY VIEWS\n"
-    csvContent += "Title,Views\n"
-    topVideos.slice(0, 10).forEach((video) => {
-      csvContent += `"${video.title}",${video.views}\n`
-    })
-    csvContent += "\n"
-
-    // Monthly trends
-    csvContent += "MONTHLY TRENDS\n"
-    csvContent += "Month,Total Views\n"
-    monthly.forEach((m) => {
-      const month = `${m.publish_year}-${String(m.publish_month).padStart(2, "0")}`
-      csvContent += `${month},${m.total_views}\n`
-    })
-    csvContent += "\n"
-
-    csvContent += "PERFORMANCE BY POST TYPE\n"
-    csvContent += "Post Type,Avg Views,Avg Likes\n"
-    postType.forEach((pt) => {
-      csvContent += `${pt.post_type},${pt.avg_views},${pt.avg_likes}\n`
-    })
-    csvContent += "\n"
-
-    csvContent += "PERFORMANCE BY DURATION\n"
-    csvContent += "Duration Bucket,Video Count,Avg Views,Avg Likes,Avg Engagement\n"
-    duration.forEach((d) => {
-      csvContent += `${d.duration_bucket},${d.video_count},${d.avg_views},${d.avg_likes},${d.avg_engagement}\n`
-    })
-    csvContent += "\n"
-
-    // Sound analysis
-    csvContent += "TOP 20 SOUNDS BY VIEWS\n"
-    csvContent += "Sound Category,Total Views\n"
-    sound.slice(0, 20).forEach((s) => {
-      csvContent += `"${s.sound_category}",${s.total_views}\n`
-    })
-    csvContent += "\n"
-
-    csvContent += "ENGAGEMENT DISTRIBUTION\n"
-    csvContent += `Total Views,${engagementDist?.total_views || 0}\n`
-    csvContent += `Total Likes,${engagementDist?.total_likes || 0}\n`
-    csvContent += `Total Shares,${engagementDist?.total_shares || 0}\n`
-    csvContent += `Total Comments,${engagementDist?.total_comments || 0}\n`
-    csvContent += `Total Saves,${engagementDist?.total_saves || 0}\n\n`
-
-    // Engagement rates
-    csvContent += "ENGAGEMENT RATE DISTRIBUTION (%)\n"
-    csvContent += `Like Rate,${engagementRates?.like_rate || 0}\n`
-    csvContent += `Share Rate,${engagementRates?.share_rate || 0}\n`
-    csvContent += `Comment Rate,${engagementRates?.comment_rate || 0}\n`
-    csvContent += `Engagement Rate,${engagementRates?.engagement_rate || 0}\n`
-
-    // Download CSV
-    const element = document.createElement("a")
-    element.setAttribute("href", "data:text/csv;charset=utf-8," + encodeURIComponent(csvContent))
-    element.setAttribute("download", `tiktok-report-${new Date().toISOString().split("T")[0]}.csv`)
-    element.style.display = "none"
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
-  }
-
-  const generatePDFReport = () => {
-    const doc = new jsPDF()
-    const pageHeight = doc.internal.pageSize.getHeight()
-    const timestamp = new Date().toLocaleString()
-    let yPosition = 10
-
-    const addNewPage = () => {
-      doc.addPage()
-      yPosition = 15
-    }
-
-    const checkPageSpace = (spaceNeeded: number) => {
-      if (yPosition + spaceNeeded > pageHeight - 15) {
-        addNewPage()
-      }
-    }
-
-    const drawTable = (head: string[], body: (string | number)[][], startY: number, maxRows = 20) => {
-      let currentY = startY
-      const cellHeight = 6
-      const colWidths = head.length === 3 ? [15, 105, 40] : head.length === 4 ? [20, 80, 50, 40] : [50, 80]
-
-      // Draw header
-      doc.setFillColor(12, 77, 143)
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(10)
-      doc.setFont(undefined, "bold")
-
-      let xPos = 10
-      head.forEach((h, i) => {
-        doc.rect(xPos, currentY, colWidths[i], cellHeight, "F")
-        doc.text(h, xPos + 2, currentY + 4)
-        xPos += colWidths[i]
-      })
-      currentY += cellHeight
-
-      // Draw body rows
-      doc.setTextColor(0, 0, 0)
-      doc.setFont(undefined, "normal")
-      doc.setFontSize(9)
-
-      body.slice(0, maxRows).forEach((row, idx) => {
-        if (currentY + cellHeight > pageHeight - 15) {
-          addNewPage()
-          currentY = yPosition
-        }
-
-        if (idx % 2 === 0) {
-          doc.setFillColor(240, 240, 240)
-          xPos = 10
-          head.forEach((_, i) => {
-            doc.rect(xPos, currentY, colWidths[i], cellHeight, "F")
-            xPos += colWidths[i]
-          })
-        }
-
-        xPos = 10
-        row.forEach((cell, i) => {
-          doc.text(String(cell), xPos + 2, currentY + 4)
-          xPos += colWidths[i]
-        })
-
-        currentY += cellHeight
-      })
-
-      return currentY
-    }
-
-    // Title
-    doc.setFontSize(18)
-    doc.setTextColor(12, 77, 143)
-    doc.setFont(undefined, "bold")
-    doc.text("TikTok Analytics Dashboard Report", 10, yPosition)
-    yPosition += 12
-
-    // Header info
-    doc.setFontSize(10)
-    doc.setTextColor(0, 0, 0)
-    doc.setFont(undefined, "normal")
-    doc.text(`Generated on: ${timestamp}`, 10, yPosition)
-    yPosition += 5
-    doc.text(`Date Range: ${startDate} to ${endDate}`, 10, yPosition)
-    yPosition += 12
-
-    // Overview Metrics
-    doc.setFontSize(14)
-    doc.setFont(undefined, "bold")
-    doc.setTextColor(12, 77, 143)
-    doc.text("Overview Metrics", 10, yPosition)
-    yPosition += 8
-    doc.setFontSize(10)
-    doc.setFont(undefined, "normal")
-    doc.setTextColor(0, 0, 0)
-    doc.text(`Total Videos: ${fmtInt(overview.total_videos)}`, 10, yPosition)
-    yPosition += 5
-    doc.text(`Total Views: ${fmtCompact(overview.total_views)}`, 10, yPosition)
-    yPosition += 5
-    doc.text(`Total Likes: ${fmtCompact(overview.total_likes)}`, 10, yPosition)
-    yPosition += 5
-    doc.text(`Total Shares: ${fmtCompact(overview.total_shares)}`, 10, yPosition)
-    yPosition += 5
-    doc.text(`Engagement Rate: ${fmtPct(overview.engagement_rate)}`, 10, yPosition)
-    yPosition += 12
-
-    // Top Videos Table
-    checkPageSpace(70)
-    doc.setFontSize(14)
-    doc.setFont(undefined, "bold")
-    doc.setTextColor(12, 77, 143)
-    doc.text("Top 10 Videos by Views", 10, yPosition)
-    yPosition += 8
-    yPosition = drawTable(
-      ["Rank", "Video Title", "Views"],
-      topVideos.slice(0, 10).map((video, idx) => [idx + 1, video.title.substring(0, 40), fmtInt(video.views)]),
-      yPosition,
-      10,
-    )
-    yPosition += 8
-
-    // Yearly Trends
-    const yearlyTrends = monthly.reduce((acc: any, m: any) => {
-      const year = m.publish_year
-      const existing = acc.find((item: any) => item.year === year)
-      if (existing) {
-        existing.total_views += m.total_views
-      } else {
-        acc.push({ year, total_views: m.total_views })
-      }
-      return acc
-    }, [])
-
-    checkPageSpace(70)
-    doc.setFontSize(14)
-    doc.setFont(undefined, "bold")
-    doc.setTextColor(12, 77, 143)
-    doc.text("Yearly Views Trend", 10, yPosition)
-    yPosition += 8
-    yPosition = drawTable(
-      ["Year", "Total Views"],
-      yearlyTrends.map((item: any) => [item.year, fmtCompact(item.total_views)]),
-      yPosition,
-    )
-    yPosition += 8
-
-    // Performance by Post Type Table
-    if (postType.length > 0) {
-      checkPageSpace(70)
-      doc.setFontSize(14)
-      doc.setFont(undefined, "bold")
-      doc.setTextColor(12, 77, 143)
-      doc.text("Performance by Post Type", 10, yPosition)
-      yPosition += 8
-      yPosition = drawTable(
-        ["Post Type", "Avg Views", "Avg Likes"],
-        postType.map((pt: any) => [pt.post_type, fmtInt(pt.avg_views), fmtInt(pt.avg_likes)]),
-        yPosition,
-      )
-      yPosition += 8
-    }
-
-    // Performance by Duration Table
-    if (duration.length > 0) {
-      checkPageSpace(70)
-      doc.setFontSize(14)
-      doc.setFont(undefined, "bold")
-      doc.setTextColor(12, 77, 143)
-      doc.text("Performance by Duration", 10, yPosition)
-      yPosition += 8
-      yPosition = drawTable(
-        ["Duration", "Videos", "Avg Views", "Avg Likes"],
-        duration.map((d: any) => [d.duration_bucket, d.video_count, fmtInt(d.avg_views), fmtInt(d.avg_likes)]),
-        yPosition,
-      )
-      yPosition += 8
-    }
-
-    // Top 20 Sounds Table
-    if (sound.length > 0) {
-      checkPageSpace(70)
-      doc.setFontSize(14)
-      doc.setFont(undefined, "bold")
-      doc.setTextColor(12, 77, 143)
-      doc.text("Top 20 Sounds by Views", 10, yPosition)
-      yPosition += 8
-      yPosition = drawTable(
-        ["Rank", "Sound", "Views"],
-        sound
-          .slice(0, 20)
-          .map((s: any, idx: number) => [idx + 1, s.sound_category.substring(0, 40), fmtInt(s.total_views)]),
-        yPosition,
-        20,
-      )
-      yPosition += 8
-    }
-
-    // Engagement Distribution Table
-    checkPageSpace(70)
-    doc.setFontSize(14)
-    doc.setFont(undefined, "bold")
-    doc.setTextColor(12, 77, 143)
-    doc.text("Engagement Distribution", 10, yPosition)
-    yPosition += 8
-    yPosition = drawTable(
-      ["Metric", "Value"],
-      [
-        ["Total Views", fmtCompact(engagementDist?.total_views || 0)],
-        ["Total Likes", fmtCompact(engagementDist?.total_likes || 0)],
-        ["Total Shares", fmtCompact(engagementDist?.total_shares || 0)],
-        ["Total Comments", fmtCompact(engagementDist?.total_comments || 0)],
-        ["Total Saves", fmtCompact(engagementDist?.total_saves || 0)],
-      ],
-      yPosition,
-    )
-    yPosition += 8
-
-    // Engagement Rates Table
-    checkPageSpace(50)
-    doc.setFontSize(14)
-    doc.setFont(undefined, "bold")
-    doc.setTextColor(12, 77, 143)
-    doc.text("Engagement Rates", 10, yPosition)
-    yPosition += 8
-    yPosition = drawTable(
-      ["Rate Type", "Percentage"],
-      [
-        ["Like Rate", fmtPct(engagementRates?.like_rate)],
-        ["Share Rate", fmtPct(engagementRates?.share_rate)],
-        ["Comment Rate", fmtPct(engagementRates?.comment_rate)],
-        ["Engagement Rate", fmtPct(engagementRates?.engagement_rate)],
-      ],
-      yPosition,
-    )
-
-    doc.save(`tiktok-report-${new Date().toISOString().split("T")[0]}.pdf`)
-  }
-
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-[#D3D3D3] text-white">
-        <AppSidebar />
+      <div className="flex min-h-screen bg-[#123458] text-white">
+        <Sidebar />
         <main className="flex-1 p-8 flex items-center justify-center">
-          <p className="text-xl text-[#123458]">Loading dashboard data...</p>
+          <p className="text-xl">Loading dashboard data...</p>
         </main>
       </div>
     )
@@ -480,11 +149,11 @@ export default function TikTokDashboard() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen bg-[#D3D3D3] text-white">
-        <AppSidebar />
+      <div className="flex min-h-screen bg-[#123458] text-white">
+        <Sidebar />
         <main className="flex-1 p-8 flex items-center justify-center">
           <div className="bg-red-900 p-6 rounded-lg">
-            <p className="text-lg font-semibold text-[#123458]">Error loading dashboard</p>
+            <p className="text-lg font-semibold">Error loading dashboard</p>
             <p className="text-sm mt-2">{error}</p>
           </div>
         </main>
@@ -493,11 +162,11 @@ export default function TikTokDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#D3D3D3] text-white">
-      <AppSidebar />
+    <div className="flex min-h-screen bg-[#123458] text-white">
+      <Sidebar />
       <main className="flex-1 p-8">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-[#123458]">TikTok Analytics Dashboard</h1>
+          <h1 className="text-3xl font-bold">TikTok Analytics Dashboard</h1>
         </header>
 
         <section className="bg-white p-6 rounded-lg shadow-md mb-8 text-[#123458]">
@@ -671,7 +340,7 @@ export default function TikTokDashboard() {
             {sound.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={sound.slice(0, 20)}
+                  data={sound.slice(0, 10)}
                   layout="vertical"
                   margin={{ top: 5, right: 30, left: 150, bottom: 5 }}
                 >
@@ -749,24 +418,6 @@ export default function TikTokDashboard() {
               )}
             </div>
           </div>
-        </section>
-
-        {/* Report generation buttons */}
-        <section className="flex justify-center gap-4 mb-8">
-          <button
-            onClick={() => handleGenerateReport("csv")}
-            disabled={generatingReport}
-            className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition disabled:opacity-50"
-          >
-            {generatingReport ? "Generating..." : "Download CSV Report"}
-          </button>
-          <button
-            onClick={() => handleGenerateReport("pdf")}
-            disabled={generatingReport}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition disabled:opacity-50"
-          >
-            {generatingReport ? "Generating..." : "Download PDF Report"}
-          </button>
         </section>
       </main>
     </div>
