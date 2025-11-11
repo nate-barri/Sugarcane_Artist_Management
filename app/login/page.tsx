@@ -21,7 +21,7 @@ export default function LoginPage() {
       setUser(currentUser)
       setIsCheckingAuth(false)
       if (currentUser) {
-        router.push("/import")
+        router.push("/")
       }
     })
 
