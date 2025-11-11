@@ -1,72 +1,54 @@
-import { NextResponse } from "next/server"
+// app/api/analytics/cross-platform/post-totals/route.ts
+import { NextRequest, NextResponse } from "next/server"
 import { executeQuery } from "@/lib/db-utils"
 
-export const runtime = "nodejs"
-export const revalidate = 0
-export const dynamic = "force-dynamic"
-
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+  const t0 = Date.now()
   try {
     const { searchParams } = new URL(req.url)
-    const startDate = searchParams.get("startDate")
-    const endDate   = searchParams.get("endDate")
+    const startDate = searchParams.get("startDate") || "1900-01-01"
+    const endDate   = searchParams.get("endDate")   || "2100-12-31"
 
-    // Count DISTINCT posts per platform.
-    // Includes rows with NULL post_date (to match your Python "all-time" behavior).
     const sql = `
       WITH base AS (
         SELECT
           CASE
-            WHEN LOWER(TRIM(platform)) IN ('tiktok','tik tok','tt') THEN 'TikTok'
-            WHEN LOWER(TRIM(platform)) IN ('facebook','meta','fb') THEN 'Facebook'
-            WHEN LOWER(REPLACE(TRIM(platform),' ','')) IN ('youtube','yt') THEN 'YouTube'
+            WHEN LOWER(platform) IN ('facebook','meta') THEN 'Facebook'
+            WHEN LOWER(platform) IN ('tiktok','tik tok') THEN 'TikTok'
+            WHEN LOWER(platform) IN ('youtube','yt') THEN 'YouTube'
             ELSE 'Other'
           END AS platform_norm,
-          NULLIF(TRIM(post_id), '') AS post_id,
-          (post_date)::date AS d
+          post_id
         FROM unified_social_analytics
-      ),
-      filtered AS (
-        SELECT *
-        FROM base
-        WHERE
-          ($1::date IS NULL AND $2::date IS NULL)  -- no range: include all
-          OR d IS NULL                              -- include NULL dates even when range is provided
-          OR (d >= $1::date AND d <= $2::date)
-      ),
-      dedup AS (  -- avoid counting the same post multiple times
-        SELECT DISTINCT platform_norm, post_id
-        FROM filtered
-        WHERE post_id IS NOT NULL
+        WHERE post_date::date BETWEEN $1::date AND $2::date
       )
-      SELECT platform_norm AS platform, COUNT(*)::bigint AS posts
-      FROM dedup
-      GROUP BY platform_norm
+      SELECT platform_norm AS platform, COUNT(DISTINCT post_id)::bigint AS total
+      FROM base
+      GROUP BY 1
+      ORDER BY
+        CASE platform_norm
+          WHEN 'Facebook' THEN 1
+          WHEN 'TikTok'   THEN 2
+          WHEN 'YouTube'  THEN 3
+          ELSE 99
+        END;
     `
 
-    const rows: { platform: string; posts: string | number }[] =
-      await executeQuery(sql, [startDate ?? null, endDate ?? null])
-
-    const totals: Record<"Facebook"|"TikTok"|"YouTube", number> = {
-      Facebook: 0, TikTok: 0, YouTube: 0
-    }
-    for (const r of rows) {
-      const p = (r.platform || "").trim()
-      const v = Number(r.posts) || 0
-      if (p in totals) totals[p as keyof typeof totals] = v
-    }
+    const rows = await executeQuery(sql, [startDate, endDate])
+    const byPlat = Object.fromEntries((rows as any[]).map(r => [r.platform, Number(r.total) || 0]))
 
     const data = [
-      { platform: "Facebook", posts: totals.Facebook },
-      { platform: "TikTok",   posts: totals.TikTok },
-      { platform: "YouTube",  posts: totals.YouTube },
+      { platform: "Facebook", total: byPlat["Facebook"] || 0 },
+      { platform: "TikTok",   total: byPlat["TikTok"]   || 0 },
+      { platform: "YouTube",  total: byPlat["YouTube"]  || 0 },
     ]
 
-    return NextResponse.json({ data, totals }, { status: 200 })
-  } catch (e: any) {
-    console.error("posts-totals error:", e)
+    console.log("[post-totals]", { startDate, endDate, rows, ms: Date.now() - t0 })
+    return NextResponse.json({ data }, { status: 200 })
+  } catch (err: any) {
+    console.error("[post-totals][ERROR]", err)
     return NextResponse.json(
-      { error: "Failed to fetch posts totals", detail: e?.message || "Unknown error" },
+      { error: err?.message || "Failed to fetch post totals" },
       { status: 500 }
     )
   }
