@@ -16,55 +16,20 @@
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
     ],
-    "/login/page": [
+    "/predictive-analytics/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/login/page.js"
+      "static/chunks/app/predictive-analytics/page.js"
     ],
-    "/import/page": [
+    "/api/analytics/predictive/engagement-scatter/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/import/page.js"
+      "static/chunks/app/api/analytics/predictive/engagement-scatter/route.js"
     ],
-    "/facebook/page": [
+    "/_not-found/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/facebook/page.js"
-    ],
-    "/api/analytics/facebook/overview/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/facebook/overview/route.js"
-    ],
-    "/api/analytics/facebook/engagement-metrics/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/facebook/engagement-metrics/route.js"
-    ],
-    "/api/analytics/facebook/post-type-engagement/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/facebook/post-type-engagement/route.js"
-    ],
-    "/api/analytics/facebook/top-videos/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/facebook/top-videos/route.js"
-    ],
-    "/api/analytics/facebook/temporal/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/facebook/temporal/route.js"
-    ],
-    "/api/analytics/facebook/post-type-distribution/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/facebook/post-type-distribution/route.js"
-    ],
-    "/api/analytics/facebook/cumulative/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/facebook/cumulative/route.js"
+      "static/chunks/app/_not-found/page.js"
     ]
   }
 }
