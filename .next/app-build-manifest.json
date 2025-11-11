@@ -16,20 +16,65 @@
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
     ],
-    "/predictive-analytics/page": [
+    "/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/predictive-analytics/page.js"
+      "static/chunks/app/login/page.js"
     ],
-    "/api/analytics/predictive/engagement-scatter/route": [
+    "/import/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/predictive/engagement-scatter/route.js"
+      "static/chunks/app/import/page.js"
     ],
-    "/_not-found/page": [
+    "/api/analytics/youtube/overview/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/_not-found/page.js"
+      "static/chunks/app/api/analytics/youtube/overview/route.js"
+    ],
+    "/api/analytics/youtube/top-videos/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/top-videos/route.js"
+    ],
+    "/api/analytics/youtube/top-categories/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/top-categories/route.js"
+    ],
+    "/api/analytics/youtube/temporal/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/temporal/route.js"
+    ],
+    "/api/analytics/youtube/content-type/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/content-type/route.js"
+    ],
+    "/api/analytics/youtube/duration/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/duration/route.js"
+    ],
+    "/api/analytics/youtube/day-of-week/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/day-of-week/route.js"
+    ],
+    "/api/analytics/youtube/content-type-distribution/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/content-type-distribution/route.js"
+    ],
+    "/api/analytics/youtube/content-type-engagement/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/youtube/content-type-engagement/route.js"
+    ],
+    "/youtube/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/youtube/page.js"
     ]
   }
 }

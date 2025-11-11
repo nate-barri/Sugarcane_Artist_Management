@@ -20,9 +20,9 @@ import {
 import { generateYouTubeCSV, generateYouTubePDF } from "@/lib/youtube-report"
 
 export default function YouTubeDashboard() {
-  const [tempStartDate, setTempStartDate] = useState<string>("2021-01-01")
+  const [tempStartDate, setTempStartDate] = useState<string>("2018-01-01")
   const [tempEndDate, setTempEndDate] = useState<string>("2025-12-31")
-  const [startDate, setStartDate] = useState<string>("2021-01-01")
+  const [startDate, setStartDate] = useState<string>("2018-01-01")
   const [endDate, setEndDate] = useState<string>("2025-12-31")
 
   const [overview, setOverview] = useState<any>({})
@@ -125,9 +125,9 @@ export default function YouTubeDashboard() {
   }
 
   const handleResetFilters = () => {
-    setTempStartDate("2021-01-01")
+    setTempStartDate("2018-01-01")
     setTempEndDate("2025-12-31")
-    setStartDate("2021-01-01")
+    setStartDate("2018-01-01")
     setEndDate("2025-12-31")
   }
 
@@ -249,7 +249,7 @@ export default function YouTubeDashboard() {
                 type="date"
                 value={tempStartDate}
                 onChange={(e) => setTempStartDate(e.target.value)}
-                min="2021-01-01"
+                min="2018-01-01"
                 max="2025-12-31"
                 className="px-4 py-2 border border-gray-300 rounded-lg"
               />
@@ -260,7 +260,7 @@ export default function YouTubeDashboard() {
                 type="date"
                 value={tempEndDate}
                 onChange={(e) => setTempEndDate(e.target.value)}
-                min="2021-01-01"
+                min="2018-01-01"
                 max="2025-12-31"
                 className="px-4 py-2 border border-gray-300 rounded-lg"
               />
