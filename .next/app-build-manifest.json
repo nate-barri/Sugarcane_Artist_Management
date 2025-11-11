@@ -36,11 +36,6 @@
       "static/chunks/main-app.js",
       "static/chunks/app/api/analytics/facebook/overview/route.js"
     ],
-    "/api/analytics/facebook/top-videos/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/analytics/facebook/top-videos/route.js"
-    ],
     "/api/analytics/facebook/engagement-metrics/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -50,6 +45,11 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/analytics/facebook/post-type-engagement/route.js"
+    ],
+    "/api/analytics/facebook/top-videos/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/analytics/facebook/top-videos/route.js"
     ],
     "/api/analytics/facebook/temporal/route": [
       "static/chunks/webpack.js",
@@ -65,11 +65,6 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/analytics/facebook/cumulative/route.js"
-    ],
-    "/api/upload/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/upload/route.js"
     ]
   }
 }

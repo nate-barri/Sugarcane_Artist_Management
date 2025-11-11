@@ -5,16 +5,15 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("[v0] Facebook engagement-metrics - Fetching all data")
+    console.log("[v0] Facebook engagement-metrics - Processing all data")
 
     const result = await sql`
       SELECT 
-        SUM(COALESCE(reactions, 0)) as total_reactions,
-        SUM(COALESCE(comments, 0)) as total_comments,
-        SUM(COALESCE(shares, 0)) as total_shares,
-        SUM(COALESCE(reach, 0)) as total_reach
+        SUM(CASE WHEN reactions::text = 'NaN' THEN 0 ELSE COALESCE(reactions::numeric, 0) END)::bigint as total_reactions,
+        SUM(CASE WHEN comments::text = 'NaN' THEN 0 ELSE COALESCE(comments::numeric, 0) END)::bigint as total_comments,
+        SUM(CASE WHEN shares::text = 'NaN' THEN 0 ELSE COALESCE(shares::numeric, 0) END)::bigint as total_shares,
+        SUM(CASE WHEN reach::text = 'NaN' THEN 0 ELSE COALESCE(reach::numeric, 0) END)::bigint as total_reach
       FROM facebook_data_set
-      WHERE publish_time IS NOT NULL
     `
 
     console.log("[v0] Facebook engagement-metrics result:", result[0])

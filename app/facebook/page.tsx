@@ -22,6 +22,11 @@ import {
 import jsPDF from "jspdf"
 
 export default function FacebookDashboard() {
+  const [tempStartDate, setTempStartDate] = useState<string>("2021-01-01")
+  const [tempEndDate, setTempEndDate] = useState<string>("2025-12-31")
+  const [startDate, setStartDate] = useState<string>("2021-01-01")
+  const [endDate, setEndDate] = useState<string>("2025-12-31")
+
   const [overview, setOverview] = useState<any>({})
   const [topVideos, setTopVideos] = useState<any[]>([])
   const [engagementMetrics, setEngagementMetrics] = useState<any>(null)
@@ -39,17 +44,19 @@ export default function FacebookDashboard() {
         setLoading(true)
         setError(null)
 
-        console.log("[v0] Fetching Facebook data without date filters")
+        const dateParams = `startDate=${startDate}&endDate=${endDate}`
+
+        console.log("[v0] Fetching Facebook data with params:", dateParams)
 
         const [overviewRes, videosRes, metricsRes, postTypeEngRes, temporalRes, distributionRes, cumulativeRes] =
           await Promise.all([
-            fetch(`/api/analytics/facebook/overview`),
-            fetch(`/api/analytics/facebook/top-videos?limit=10`),
-            fetch(`/api/analytics/facebook/engagement-metrics`),
-            fetch(`/api/analytics/facebook/post-type-engagement`),
-            fetch(`/api/analytics/facebook/temporal`),
-            fetch(`/api/analytics/facebook/post-type-distribution`),
-            fetch(`/api/analytics/facebook/cumulative`),
+            fetch(`/api/analytics/facebook/overview?${dateParams}`),
+            fetch(`/api/analytics/facebook/top-videos?limit=10&${dateParams}`),
+            fetch(`/api/analytics/facebook/engagement-metrics?${dateParams}`),
+            fetch(`/api/analytics/facebook/post-type-engagement?${dateParams}`),
+            fetch(`/api/analytics/facebook/temporal?${dateParams}`),
+            fetch(`/api/analytics/facebook/post-type-distribution?${dateParams}`),
+            fetch(`/api/analytics/facebook/cumulative?${dateParams}`),
           ])
 
         if (!overviewRes.ok) throw new Error("Failed to fetch overview")
@@ -95,7 +102,7 @@ export default function FacebookDashboard() {
     }
 
     fetchAllData()
-  }, [])
+  }, [startDate, endDate])
 
   const fmtInt = (n?: number) => (typeof n === "number" && Number.isFinite(n) ? n.toLocaleString() : "—")
   const fmtPct = (n?: number) => {
@@ -104,6 +111,18 @@ export default function FacebookDashboard() {
   }
   const fmtCompact = (n: number) =>
     n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : `${n}`
+
+  const handleApplyFilter = () => {
+    setStartDate(tempStartDate)
+    setEndDate(tempEndDate)
+  }
+
+  const handleResetFilters = () => {
+    setTempStartDate("2021-01-01")
+    setTempEndDate("2025-12-31")
+    setStartDate("2021-01-01")
+    setEndDate("2025-12-31")
+  }
 
   const PIE_COLORS = ["#9b6dd6", "#ff8c42", "#4ade80", "#60a5fa", "#f43f5e"]
 
@@ -161,6 +180,7 @@ export default function FacebookDashboard() {
     const csvContent = [
       ["Meta (Facebook) Analytics Report"],
       [`Generated on: ${new Date().toLocaleString()}`],
+      [`Date Range: ${startDate} to ${endDate}`],
       [],
       ["OVERVIEW METRICS"],
       ["Total Posts", fmtInt(overview.total_posts)],
@@ -180,14 +200,8 @@ export default function FacebookDashboard() {
       ["Overall Engagement", fmtPct(engagementMetrics?.rates?.overall_engagement)],
       [],
       ["TOP 10 POSTS BY ENGAGEMENT"],
-      ["Rank", "Title", "Engagement", "Reach", "Completion %"],
-      ...topVideos.map((video, idx) => [
-        idx + 1,
-        video.title,
-        fmtInt(video.total_engagement),
-        fmtInt(video.reach),
-        video.completion_rate ? fmtPct(video.completion_rate) : "N/A",
-      ]),
+      ["Rank", "Title", "Engagement", "Reach"],
+      ...topVideos.map((video, idx) => [idx + 1, video.title, fmtInt(video.total_engagement), fmtInt(video.reach)]),
     ]
 
     const csvString = csvContent.map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n")
@@ -216,6 +230,8 @@ export default function FacebookDashboard() {
     pdf.setTextColor(0, 0, 0)
     pdf.setFont(undefined, "normal")
     pdf.text(`Generated on: ${new Date().toLocaleString()}`, 10, yPosition)
+    yPosition += 5
+    pdf.text(`Date Range: ${startDate} to ${endDate}`, 10, yPosition)
     yPosition += 12
 
     pdf.setFontSize(14)
@@ -243,13 +259,12 @@ export default function FacebookDashboard() {
     yPosition += 8
 
     yPosition = drawTable(
-      ["Rank", "Title", "Engagement", "Reach", "Complete%"],
+      ["Rank", "Title", "Engagement", "Reach"],
       topVideos.map((video, idx) => [
         idx + 1,
         video.title.substring(0, 40),
         fmtInt(video.total_engagement),
         fmtInt(video.reach),
-        video.completion_rate ? fmtPct(video.completion_rate) : "N/A",
       ]),
       yPosition,
       pdf,
@@ -305,6 +320,47 @@ export default function FacebookDashboard() {
         <header className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-[#123458]">Meta (Facebook)</h1>
         </header>
+
+        {/* Date Range Filter */}
+        <section className="bg-white p-6 rounded-lg shadow-md mb-8 text-[#123458]">
+          <h3 className="text-lg font-semibold mb-4">Date Range Filter</h3>
+          <div className="flex gap-4 items-end">
+            <div className="flex flex-col">
+              <label className="text-sm font-medium mb-2">Start Date</label>
+              <input
+                type="date"
+                value={tempStartDate}
+                onChange={(e) => setTempStartDate(e.target.value)}
+                min="2021-01-01"
+                max="2025-12-31"
+                className="px-4 py-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium mb-2">End Date</label>
+              <input
+                type="date"
+                value={tempEndDate}
+                onChange={(e) => setTempEndDate(e.target.value)}
+                min="2021-01-01"
+                max="2025-12-31"
+                className="px-4 py-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+            <button
+              onClick={handleApplyFilter}
+              className="px-4 py-2 bg-[#1e7a96] text-white rounded-lg hover:bg-[#155a73] font-medium"
+            >
+              Apply Filter
+            </button>
+            <button
+              onClick={handleResetFilters}
+              className="px-4 py-2 bg-[#3396D3] text-white rounded-lg hover:bg-[#2A75A4]"
+            >
+              Reset Filters
+            </button>
+          </div>
+        </section>
 
         {/* Key Metrics Section */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -418,22 +474,16 @@ export default function FacebookDashboard() {
                 <thead>
                   <tr className="border-b-2 border-gray-300">
                     <th className="pb-3 text-gray-700 font-semibold">Title</th>
-                    <th className="pb-3 text-gray-700 font-semibold text-right">Duration</th>
                     <th className="pb-3 text-gray-700 font-semibold text-right">Total Engagement</th>
                     <th className="pb-3 text-gray-700 font-semibold text-right">Reach</th>
-                    <th className="pb-3 text-gray-700 font-semibold text-right">Completion %</th>
                   </tr>
                 </thead>
                 <tbody>
                   {topVideos.map((video, index) => (
                     <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 text-gray-900">{video.title}</td>
-                      <td className="py-3 text-gray-600 text-right">{video.duration}s</td>
                       <td className="py-3 text-gray-600 text-right">{fmtInt(video.total_engagement)}</td>
                       <td className="py-3 text-gray-600 text-right">{fmtInt(video.reach)}</td>
-                      <td className="py-3 text-gray-600 text-right">
-                        {video.completion_rate ? fmtPct(video.completion_rate) : "N/A"}
-                      </td>
                     </tr>
                   ))}
                 </tbody>

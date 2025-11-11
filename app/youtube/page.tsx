@@ -4,7 +4,6 @@ import Sidebar from "@/components/sidebar"
 import { useEffect, useState } from "react"
 import {
   ResponsiveContainer,
-  Line,
   BarChart,
   Bar,
   XAxis,
@@ -16,7 +15,9 @@ import {
   Pie,
   Cell,
   ComposedChart,
+  Line,
 } from "recharts"
+import { generateYouTubeCSV, generateYouTubePDF } from "@/lib/youtube-report"
 
 export default function YouTubeDashboard() {
   const [tempStartDate, setTempStartDate] = useState<string>("2021-01-01")
@@ -36,85 +37,6 @@ export default function YouTubeDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const dateParams = `startDate=${startDate}&endDate=${endDate}`
-
-        console.log("[v0] Fetching YouTube data with date range:", { startDate, endDate })
-
-        const [
-          overviewRes,
-          videosRes,
-          categoriesRes,
-          temporalRes,
-          contentTypeRes,
-          durationRes,
-          dayRes,
-          distRes,
-          engRes,
-        ] = await Promise.all([
-          fetch(`/api/analytics/youtube/overview?${dateParams}`),
-          fetch(`/api/analytics/youtube/top-videos?limit=15&${dateParams}`),
-          fetch(`/api/analytics/youtube/top-categories?limit=10&${dateParams}`),
-          fetch(`/api/analytics/youtube/temporal?${dateParams}`),
-          fetch(`/api/analytics/youtube/content-type?${dateParams}`),
-          fetch(`/api/analytics/youtube/duration?${dateParams}`),
-          fetch(`/api/analytics/youtube/day-of-week?${dateParams}`),
-          fetch(`/api/analytics/youtube/content-type-distribution?${dateParams}`),
-          fetch(`/api/analytics/youtube/content-type-engagement?${dateParams}`),
-        ])
-
-        if (!overviewRes.ok) throw new Error("Failed to fetch overview")
-        const overviewData = await overviewRes.json()
-        setOverview(overviewData)
-
-        if (!videosRes.ok) throw new Error("Failed to fetch videos")
-        const videosData = await videosRes.json()
-        setTopVideos(videosData.videos || [])
-
-        if (!categoriesRes.ok) throw new Error("Failed to fetch categories")
-        const categoriesData = await categoriesRes.json()
-        setTopCategories(categoriesData.categories || [])
-
-        if (!temporalRes.ok) throw new Error("Failed to fetch temporal data")
-        const temporalData = await temporalRes.json()
-        setMonthly(temporalData.monthly || [])
-
-        if (!contentTypeRes.ok) throw new Error("Failed to fetch content type data")
-        const contentTypeData = await contentTypeRes.json()
-        setContentType(contentTypeData.content_type || [])
-
-        if (!durationRes.ok) throw new Error("Failed to fetch duration data")
-        const durationData = await durationRes.json()
-        console.log("[v0] Duration data received:", durationData)
-        setDuration(durationData.duration || [])
-
-        if (!dayRes.ok) throw new Error("Failed to fetch day of week data")
-        const dayData = await dayRes.json()
-        setDayOfWeek(dayData.day_performance || [])
-
-        if (!distRes.ok) throw new Error("Failed to fetch content distribution")
-        const distData = await distRes.json()
-        console.log("[v0] Content distribution data received:", distData)
-        setContentDistribution(distData.distribution || [])
-
-        if (!engRes.ok) throw new Error("Failed to fetch content engagement")
-        const engData = await engRes.json()
-        setContentEngagement(engData.engagement || [])
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load data")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchAllData()
-  }, [startDate, endDate])
-
   const fmtInt = (n?: number) => (typeof n === "number" && Number.isFinite(n) ? n.toLocaleString() : "—")
   const fmtPct = (n?: number) => {
     if (typeof n !== "number" || !Number.isFinite(n)) return "—"
@@ -122,6 +44,48 @@ export default function YouTubeDashboard() {
   }
   const fmtCompact = (n: number) =>
     n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : `${n}`
+
+  const handleExportCSV = () => {
+    const csv = generateYouTubeCSV(
+      startDate,
+      endDate,
+      overview,
+      topVideos,
+      topCategories,
+      monthly,
+      duration,
+      dayOfWeek,
+      contentType,
+      contentDistribution,
+      contentEngagement,
+    )
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `youtube-report-${new Date().toISOString().split("T")[0]}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  }
+
+  const handleExportPDF = () => {
+    const doc = generateYouTubePDF(
+      startDate,
+      endDate,
+      overview,
+      topVideos,
+      topCategories,
+      monthly,
+      duration,
+      dayOfWeek,
+      contentType,
+      contentDistribution,
+      contentEngagement,
+    )
+    doc.save(`youtube-report-${new Date().toISOString().split("T")[0]}.pdf`)
+  }
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -167,6 +131,81 @@ export default function YouTubeDashboard() {
     setEndDate("2025-12-31")
   }
 
+  useEffect(() => {
+    const fetchAllData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        const dateParams = `startDate=${startDate}&endDate=${endDate}`
+
+        const [
+          overviewRes,
+          videosRes,
+          categoriesRes,
+          temporalRes,
+          contentTypeRes,
+          durationRes,
+          dayRes,
+          distRes,
+          engRes,
+        ] = await Promise.all([
+          fetch(`/api/analytics/youtube/overview?${dateParams}`),
+          fetch(`/api/analytics/youtube/top-videos?limit=15&${dateParams}`),
+          fetch(`/api/analytics/youtube/top-categories?limit=10&${dateParams}`),
+          fetch(`/api/analytics/youtube/temporal?${dateParams}`),
+          fetch(`/api/analytics/youtube/content-type?${dateParams}`),
+          fetch(`/api/analytics/youtube/duration?${dateParams}`),
+          fetch(`/api/analytics/youtube/day-of-week?${dateParams}`),
+          fetch(`/api/analytics/youtube/content-type-distribution?${dateParams}`),
+          fetch(`/api/analytics/youtube/content-type-engagement?${dateParams}`),
+        ])
+
+        if (!overviewRes.ok) throw new Error("Failed to fetch overview")
+        const overviewData = await overviewRes.json()
+        setOverview(overviewData)
+
+        if (!videosRes.ok) throw new Error("Failed to fetch videos")
+        const videosData = await videosRes.json()
+        setTopVideos(videosData.videos || [])
+
+        if (!categoriesRes.ok) throw new Error("Failed to fetch categories")
+        const categoriesData = await categoriesRes.json()
+        setTopCategories(categoriesData.categories || [])
+
+        if (!temporalRes.ok) throw new Error("Failed to fetch temporal data")
+        const temporalData = await temporalRes.json()
+        setMonthly(temporalData.monthly || [])
+
+        if (!contentTypeRes.ok) throw new Error("Failed to fetch content type data")
+        const contentTypeData = await contentTypeRes.json()
+        setContentType(contentTypeData.content_type || [])
+
+        if (!durationRes.ok) throw new Error("Failed to fetch duration data")
+        const durationData = await durationRes.json()
+        setDuration(durationData.duration || [])
+
+        if (!dayRes.ok) throw new Error("Failed to fetch day of week data")
+        const dayData = await dayRes.json()
+        setDayOfWeek(dayData.day_performance || [])
+
+        if (!distRes.ok) throw new Error("Failed to fetch content distribution")
+        const distData = await distRes.json()
+        setContentDistribution(distData.distribution || [])
+
+        if (!engRes.ok) throw new Error("Failed to fetch content engagement")
+        const engData = await engRes.json()
+        setContentEngagement(engData.engagement || [])
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load data")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAllData()
+  }, [startDate, endDate])
+
   if (loading) {
     return (
       <div className="flex min-h-screen bg-[#123458] text-white">
@@ -196,7 +235,7 @@ export default function YouTubeDashboard() {
     <div className="flex min-h-screen bg-[#123458] text-white">
       <Sidebar />
       <main className="flex-1 p-8">
-        <header className="mb-8">
+        <header className="mb-8 flex items-center justify-between">
           <h1 className="text-3xl font-bold">YouTube Analytics Dashboard</h1>
         </header>
 
@@ -265,6 +304,7 @@ export default function YouTubeDashboard() {
           </div>
         </section>
 
+        {/* Top 10 Songs */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-xl font-semibold mb-4 text-[#123458]">Top 10 Songs</h2>
           <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -291,6 +331,7 @@ export default function YouTubeDashboard() {
           </div>
         </section>
 
+        {/* Top 15 Videos by Views */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-xl font-semibold mb-4 text-[#123458]">Top 15 Videos by Views</h2>
           <div className="space-y-2 max-h-[600px] overflow-y-auto">
@@ -325,6 +366,7 @@ export default function YouTubeDashboard() {
           </div>
         </section>
 
+        {/* Monthly Upload Volume vs Total Views */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-xl font-semibold mb-4 text-[#123458]">Monthly Upload Volume vs Total Views</h2>
           <div className="h-96">
@@ -374,6 +416,7 @@ export default function YouTubeDashboard() {
           </div>
         </section>
 
+        {/* Average Engagement Rate by Duration */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-xl font-semibold mb-4 text-[#123458]">Average Engagement Rate by Duration</h2>
           <div className="h-96">
@@ -393,6 +436,7 @@ export default function YouTubeDashboard() {
           </div>
         </section>
 
+        {/* POSTING DAY PERFORMANCE (Cumulative Performance, NOT Audience Activity) */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-xl font-semibold mb-4 text-[#123458]">
             POSTING DAY PERFORMANCE (Cumulative Performance, NOT Audience Activity)
@@ -416,6 +460,7 @@ export default function YouTubeDashboard() {
           </div>
         </section>
 
+        {/* Average Views by Content Type */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold mb-4 text-[#123458]">Average Views by Content Type</h2>
@@ -471,6 +516,7 @@ export default function YouTubeDashboard() {
           </div>
         </section>
 
+        {/* Average Engagement Rate by Content Type */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-xl font-semibold mb-4 text-[#123458]">Average Engagement Rate by Content Type</h2>
           <div className="h-96">
@@ -488,6 +534,21 @@ export default function YouTubeDashboard() {
               <div className="text-gray-500">No data available</div>
             )}
           </div>
+        </section>
+{/* Export Buttons */}
+        <section className="flex gap-4 mt-12 mb-8 justify-center">
+          <button
+            onClick={handleExportCSV}
+            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
+          >
+            Export CSV
+          </button>
+          <button
+            onClick={handleExportPDF}
+            className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
+          >
+            Export PDF
+          </button>
         </section>
       </main>
     </div>

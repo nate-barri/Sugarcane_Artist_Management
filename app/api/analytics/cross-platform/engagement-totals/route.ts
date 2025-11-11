@@ -1,3 +1,4 @@
+// app/api/analytics/cross-platform/engagement-totals/route.ts
 import { NextResponse } from "next/server"
 import { executeQuery } from "@/lib/db-utils"
 
@@ -13,48 +14,43 @@ export async function GET(req: Request) {
       WITH base AS (
         SELECT
           CASE
-            WHEN LOWER(TRIM(platform)) IN ('tiktok','tik tok','tt') THEN 'TikTok'
             WHEN LOWER(TRIM(platform)) IN ('facebook','meta','fb') THEN 'Facebook'
+            WHEN LOWER(TRIM(platform)) IN ('tiktok','tik tok','tt') THEN 'TikTok'
             WHEN LOWER(REPLACE(TRIM(platform),' ','')) IN ('youtube','yt') THEN 'YouTube'
             ELSE 'Other'
           END AS platform_norm,
           COALESCE(total_engagement, 0)::bigint AS engagement,
-          (post_date)::date AS d
+          post_date::date AS d
         FROM unified_social_analytics
       ),
       filtered AS (
         SELECT *
         FROM base
-        /* include rows with NULL dates (Python includes them) */
+        /* include rows with NULL dates (to mirror your Python behavior) */
         WHERE
           ($1::date IS NULL AND $2::date IS NULL)
           OR d IS NULL
           OR (d >= $1::date AND d <= $2::date)
       )
-      SELECT platform_norm AS platform, SUM(engagement)::bigint AS total
+      SELECT platform_norm AS platform,
+             SUM(engagement)::bigint AS total
       FROM filtered
-      GROUP BY platform_norm
+      WHERE platform_norm IN ('Facebook','TikTok','YouTube')
+      GROUP BY platform_norm;
     `
 
-    const rows: { platform: string; total: string | number }[] =
-      await executeQuery(sql, [startDate ?? null, endDate ?? null])
+    const rows = await executeQuery(sql, [startDate ?? null, endDate ?? null]) as Array<{platform:string,total:string|number}>
 
-    const totals: Record<string, number> = { TikTok: 0, Facebook: 0, YouTube: 0 }
-    for (const r of rows) {
-      const p = (r.platform || "").trim()
-      const v = Number(r.total) || 0
-      if (p in totals) totals[p as keyof typeof totals] = v
-    }
-
+    // Normalize to always return all three platforms for your BarChart
+    const map = new Map(rows.map(r => [r.platform, Number(r.total) || 0]))
     const data = [
-      { platform: "Facebook", total: totals.Facebook },
-      { platform: "TikTok",   total: totals.TikTok },
-      { platform: "YouTube",  total: totals.YouTube },
+      { platform: "Facebook", total: map.get("Facebook") ?? 0 },
+      { platform: "TikTok",   total: map.get("TikTok")   ?? 0 },
+      { platform: "YouTube",  total: map.get("YouTube")  ?? 0 },
     ]
 
-    return NextResponse.json({ data, totals }, { status: 200 })
+    return NextResponse.json({ data }, { status: 200 })
   } catch (e: any) {
-    console.error("engagement-totals error:", e)
     return NextResponse.json(
       { error: "Failed to fetch engagement totals", detail: e?.message || "Unknown error" },
       { status: 500 }

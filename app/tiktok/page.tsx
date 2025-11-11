@@ -1,6 +1,4 @@
 "use client"
-
-import Sidebar from "@/components/sidebar"
 import { useEffect, useState } from "react"
 import {
   ResponsiveContainer,
@@ -17,13 +15,14 @@ import {
   Pie,
   Cell,
 } from "recharts"
+import AppSidebar from "@/components/sidebar"
+import { generateTikTokCSV, generateTikTokPDF } from "@/lib/tiktok-report"
 
 export default function TikTokDashboard() {
   const [tempStartDate, setTempStartDate] = useState<string>("2021-01-01")
   const [tempEndDate, setTempEndDate] = useState<string>("2025-12-31")
   const [startDate, setStartDate] = useState<string>("2021-01-01")
   const [endDate, setEndDate] = useState<string>("2025-12-31")
-
   const [overview, setOverview] = useState<any>({})
   const [topVideos, setTopVideos] = useState<any[]>([])
   const [monthly, setMonthly] = useState<any[]>([])
@@ -34,15 +33,14 @@ export default function TikTokDashboard() {
   const [engagementRates, setEngagementRates] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [generatingReport, setGeneratingReport] = useState(false)
 
   useEffect(() => {
     const fetchAllData = async () => {
       try {
         setLoading(true)
         setError(null)
-
         const dateParams = `startDate=${startDate}&endDate=${endDate}`
-
         const [overviewRes, videosRes, temporalRes, postTypeRes, durationRes, soundRes, engagementRes] =
           await Promise.all([
             fetch(`/api/analytics/tiktok/overview?${dateParams}`),
@@ -136,12 +134,50 @@ export default function TikTokDashboard() {
     setEndDate("2025-12-31")
   }
 
+  const handleGenerateReport = async (format: "csv" | "pdf") => {
+    try {
+      setGeneratingReport(true)
+      if (format === "csv") {
+        generateTikTokCSV({
+          startDate,
+          endDate,
+          overview,
+          topVideos,
+          monthly,
+          postType,
+          duration,
+          sound,
+          engagementDist,
+          engagementRates,
+        })
+      } else if (format === "pdf") {
+        generateTikTokPDF({
+          startDate,
+          endDate,
+          overview,
+          topVideos,
+          monthly,
+          postType,
+          duration,
+          sound,
+          engagementDist,
+          engagementRates,
+        })
+      }
+    } catch (error) {
+      console.error("Error generating report:", error)
+      alert("Failed to generate report")
+    } finally {
+      setGeneratingReport(false)
+    }
+  }
+
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-[#123458] text-white">
-        <Sidebar />
+      <div className="flex min-h-screen bg-[#D3D3D3] text-white">
+        <AppSidebar />
         <main className="flex-1 p-8 flex items-center justify-center">
-          <p className="text-xl">Loading dashboard data...</p>
+          <p className="text-xl text-[#123458]">Loading dashboard data...</p>
         </main>
       </div>
     )
@@ -149,11 +185,11 @@ export default function TikTokDashboard() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen bg-[#123458] text-white">
-        <Sidebar />
+      <div className="flex min-h-screen bg-[#D3D3D3] text-white">
+        <AppSidebar />
         <main className="flex-1 p-8 flex items-center justify-center">
           <div className="bg-red-900 p-6 rounded-lg">
-            <p className="text-lg font-semibold">Error loading dashboard</p>
+            <p className="text-lg font-semibold text-[#123458]">Error loading dashboard</p>
             <p className="text-sm mt-2">{error}</p>
           </div>
         </main>
@@ -163,10 +199,10 @@ export default function TikTokDashboard() {
 
   return (
     <div className="flex min-h-screen bg-[#123458] text-white">
-      <Sidebar />
+      <AppSidebar />
       <main className="flex-1 p-8">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold">TikTok Analytics Dashboard</h1>
+          <h1 className="text-3xl font-bold text-[#ffffff]">TikTok Analytics Dashboard</h1>
         </header>
 
         <section className="bg-white p-6 rounded-lg shadow-md mb-8 text-[#123458]">
@@ -276,7 +312,7 @@ export default function TikTokDashboard() {
                   <XAxis dataKey="month" angle={-45} textAnchor="end" height={60} />
                   <YAxis />
                   <Tooltip formatter={(v) => fmtInt(v as number)} />
-                  <Line type="monotone" dataKey="views" stroke="#2c0379" strokeWidth={2} dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="views" stroke="#800080" strokeWidth={2} dot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -340,7 +376,7 @@ export default function TikTokDashboard() {
             {sound.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={sound.slice(0, 10)}
+                  data={sound.slice(0, 20)}
                   layout="vertical"
                   margin={{ top: 5, right: 30, left: 150, bottom: 5 }}
                 >
@@ -418,6 +454,24 @@ export default function TikTokDashboard() {
               )}
             </div>
           </div>
+        </section>
+
+        {/* Report generation buttons */}
+        <section className="flex justify-center gap-4 mb-8">
+          <button
+            onClick={() => handleGenerateReport("csv")}
+            disabled={generatingReport}
+            className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition disabled:opacity-50"
+          >
+            {generatingReport ? "Generating..." : "Download CSV Report"}
+          </button>
+          <button
+            onClick={() => handleGenerateReport("pdf")}
+            disabled={generatingReport}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition disabled:opacity-50"
+          >
+            {generatingReport ? "Generating..." : "Download PDF Report"}
+          </button>
         </section>
       </main>
     </div>

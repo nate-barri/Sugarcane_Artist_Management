@@ -11,7 +11,7 @@ import psycopg2
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from datetime import datetime
+from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -146,22 +146,43 @@ def forecast_total_6mo(df, model, scaler, features, apply_age_decay=True):
 def plot_historical_and_forecast(df, total_pred, metrics):
     df = df.copy()
     df['publish_time'] = pd.to_datetime(df['publish_time'])
-    # Historical: cumulative total views over time
-    hist = df.groupby(df['publish_time'].dt.to_period('M'))['views'].sum().to_timestamp()
-    hist_cum = hist.cumsum()
-    # Extend 6 months into future
-    last_date = hist_cum.index[-1]
-    future_dates = pd.date_range(last_date + pd.offsets.MonthEnd(1), periods=6, freq='M')
-    forecast_vals = np.linspace(hist_cum.iloc[-1], hist_cum.iloc[-1] + total_pred, num=6)
+    
+    # Use weekly aggregation like the comprehensive script
+    weekly = df.set_index('publish_time').resample('W-SUN').agg({
+        'views': 'sum'
+    })
+    
+    # Get last 26 weeks (6 months) of historical data
+    weekly_recent = weekly.tail(26)
+    historical_vals = weekly_recent['views'].values
+    historical_cum = np.cumsum(historical_vals)
+    historical_dates = weekly_recent.index
+    
+    # Create 26 weeks of future dates
+    last_date = historical_dates[-1]
+    future_dates = [last_date + timedelta(weeks=i) for i in range(1, 27)]
+    
+    # Calculate forecast cumulative values
+    # Distribute total_pred evenly across 26 weeks
+    weekly_forecast = total_pred / 26
+    forecast_vals = np.full(26, weekly_forecast)
+    forecast_cum = historical_cum[-1] + np.cumsum(forecast_vals)
+    
+    # Calculate confidence bands using MAPE
+    mape_val = metrics.get('mape', 15.0)
+    if np.isnan(mape_val) or np.isinf(mape_val) or mape_val > 100:
+        mape_val = 15.0
+    
+    lower = forecast_cum * (1 - mape_val / 100.0)
+    upper = forecast_cum * (1 + mape_val / 100.0)
+    
     # Plot
     plt.figure(figsize=(12,6))
-    plt.plot(hist_cum.index, hist_cum.values, label='Historical Total Views', color='blue', linewidth=2)
-    plt.plot(future_dates, forecast_vals, '--', color='orange', linewidth=2, label='Predicted (6 mo)')
-    plt.fill_between(future_dates,
-                     forecast_vals*(1 - metrics['mape']/100),
-                     forecast_vals*(1 + metrics['mape']/100),
-                     color='orange', alpha=0.2, label='±MAPE confidence range')
-    plt.title("Total Channel Views: Historical + 6-Month Forecast", fontsize=14, fontweight='bold')
+    plt.plot(historical_dates, historical_cum, color='blue', linewidth=2, label='Historical Total Views (Last 6 Months)')
+    plt.plot(future_dates, forecast_cum, color='orange', linestyle='--', linewidth=2, label='Predicted (Next 6 Months)')
+    plt.fill_between(future_dates, lower, upper, color='orange', alpha=0.2, label=f'±MAPE ({mape_val:.1f}%) confidence range')
+    
+    plt.title("Total Channel Views: Last 6 Months + 6-Month Forecast", fontsize=14, fontweight='bold')
     plt.ylabel("Cumulative Views")
     plt.xlabel("Date")
     plt.legend()

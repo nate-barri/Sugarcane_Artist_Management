@@ -5,7 +5,8 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("[v0] Facebook temporal - Fetching all temporal data")
+    const startDate = request.nextUrl.searchParams.get("startDate") || "2021-01-01"
+    const endDate = request.nextUrl.searchParams.get("endDate") || "2025-12-31"
 
     // Posts per month
     const monthlyPosts = await sql`
@@ -14,14 +15,16 @@ export async function GET(request: NextRequest) {
         month,
         COUNT(*) as post_count
       FROM facebook_data_set
-      WHERE publish_time IS NOT NULL
+      WHERE publish_time >= ${startDate}::date
+        AND publish_time <= ${endDate}::date
       GROUP BY year, month
       ORDER BY year, month
     `
 
+    // Engagement by day of week
     const dayOfWeek = await sql`
       SELECT 
-        EXTRACT(DOW FROM publish_time) as day_num,
+        EXTRACT(DOW FROM publish_time)::int as day_num,
         CASE EXTRACT(DOW FROM publish_time)
           WHEN 0 THEN 'Sunday'
           WHEN 1 THEN 'Monday'
@@ -31,28 +34,36 @@ export async function GET(request: NextRequest) {
           WHEN 5 THEN 'Friday'
           WHEN 6 THEN 'Saturday'
         END as day_name,
-        AVG(COALESCE(reactions, 0) + COALESCE(comments, 0) + COALESCE(shares, 0)) as avg_engagement
+        AVG((CASE WHEN reactions::text = 'NaN' THEN 0 ELSE COALESCE(reactions::numeric, 0) END) + 
+            (CASE WHEN comments::text = 'NaN' THEN 0 ELSE COALESCE(comments::numeric, 0) END) + 
+            (CASE WHEN shares::text = 'NaN' THEN 0 ELSE COALESCE(shares::numeric, 0) END))::numeric as avg_engagement
       FROM facebook_data_set
       WHERE publish_time IS NOT NULL
+        AND publish_time >= ${startDate}::date
+        AND publish_time <= ${endDate}::date
       GROUP BY day_num, day_name
       ORDER BY day_num
     `
 
     const hourlyReachData = await sql`
       SELECT 
-        EXTRACT(HOUR FROM publish_time) as hour,
-        AVG(COALESCE(reach, 0)) as avg_reach
+        EXTRACT(HOUR FROM publish_time)::int as hour,
+        AVG(CASE WHEN reach::text = 'NaN' THEN 0 ELSE COALESCE(reach::numeric, 0) END)::numeric as avg_reach
       FROM facebook_data_set
       WHERE publish_time IS NOT NULL
+        AND publish_time >= ${startDate}::date
+        AND publish_time <= ${endDate}::date
       GROUP BY hour
       ORDER BY hour
     `
 
+    // Create a map of existing hourly data
     const hourlyMap = new Map<number, number>()
     hourlyReachData.forEach((row: any) => {
       hourlyMap.set(Number(row.hour), Number(row.avg_reach) || 0)
     })
 
+    // Fill in all 24 hours (0-23)
     const hourlyReach = []
     for (let hour = 0; hour < 24; hour++) {
       hourlyReach.push({
@@ -61,19 +72,18 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Monthly reach trend
     const monthlyReach = await sql`
       SELECT 
         year,
         month,
-        SUM(COALESCE(reach, 0)) as total_reach
+        SUM(CASE WHEN reach::text = 'NaN' THEN 0 ELSE COALESCE(reach::numeric, 0) END)::bigint as total_reach
       FROM facebook_data_set
-      WHERE publish_time IS NOT NULL
+      WHERE publish_time >= ${startDate}::date
+        AND publish_time <= ${endDate}::date
       GROUP BY year, month
       ORDER BY year, month
     `
-
-    console.log("[v0] Facebook temporal - day_of_week:", dayOfWeek.length, "rows")
-    console.log("[v0] Facebook temporal - hourly_reach:", hourlyReach.length, "hours")
 
     return NextResponse.json({
       monthly_posts: monthlyPosts.map((row: any) => ({
