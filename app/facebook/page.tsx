@@ -318,7 +318,7 @@ export default function FacebookDashboard() {
       <Sidebar />
       <main className="flex-1 p-8">
         <header className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-[#123458]">Meta (Facebook)</h1>
+          <h1 className="text-3xl font-bold text-[#123458]">Meta Analytics Dashboard</h1>
         </header>
 
         {/* Date Range Filter */}

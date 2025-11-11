@@ -198,11 +198,11 @@ export default function TikTokDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#123458] text-white">
+    <div className="flex min-h-screen bg-[#D3D3D3] text-white">
       <AppSidebar />
       <main className="flex-1 p-8">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold text-[#ffffff]">TikTok Analytics Dashboard</h1>
+          <h1 className="text-3xl font-bold text-[#123458]">TikTok Analytics Dashboard</h1>
         </header>
 
         <section className="bg-white p-6 rounded-lg shadow-md mb-8 text-[#123458]">
