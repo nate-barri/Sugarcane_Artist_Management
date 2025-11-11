@@ -5,7 +5,8 @@ const sql = neon(process.env.DATABASE_URL!)
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("[v0] Facebook post-type-distribution - Fetching all data")
+    const startDate = request.nextUrl.searchParams.get("startDate") || "2021-01-01"
+    const endDate = request.nextUrl.searchParams.get("endDate") || "2025-12-31"
 
     const result = await sql`
       SELECT 
@@ -13,6 +14,8 @@ export async function GET(request: NextRequest) {
         COUNT(*) as post_count
       FROM facebook_data_set
       WHERE post_type IS NOT NULL
+        AND publish_time >= ${startDate}::date
+        AND publish_time <= ${endDate}::date
       GROUP BY post_type
       ORDER BY post_count DESC
     `

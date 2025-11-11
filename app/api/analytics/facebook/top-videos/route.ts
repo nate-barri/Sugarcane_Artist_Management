@@ -7,24 +7,26 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const limit = Number.parseInt(searchParams.get("limit") || "10")
+    const startDate = searchParams.get("startDate") || "2021-01-01"
+    const endDate = searchParams.get("endDate") || "2025-12-31"
 
-    console.log("[v0] Facebook top-videos - Fetching top", limit, "videos")
+    console.log("[v0] Facebook top-videos - Date range:", startDate, "to", endDate)
 
     const result = await sql`
       SELECT 
         post_id,
         title,
-        COALESCE(duration_sec, 0) as duration_sec,
-        (COALESCE(reactions, 0) + COALESCE(comments, 0) + COALESCE(shares, 0)) as total_engagement,
-        COALESCE(reach, 0) as reach,
-        CASE 
-          WHEN COALESCE(duration_sec, 0) > 0 AND average_seconds_viewed IS NOT NULL 
-          THEN (average_seconds_viewed / duration_sec * 100)
-          ELSE NULL
-        END as completion_rate
+        CASE WHEN duration_sec::text = 'NaN' THEN 0 ELSE COALESCE(duration_sec::numeric, 0) END as duration_sec,
+        (CASE WHEN reactions::text = 'NaN' THEN 0 ELSE COALESCE(reactions::numeric, 0) END) +
+        (CASE WHEN comments::text = 'NaN' THEN 0 ELSE COALESCE(comments::numeric, 0) END) +
+        (CASE WHEN shares::text = 'NaN' THEN 0 ELSE COALESCE(shares::numeric, 0) END) as total_engagement,
+        CASE WHEN reach::text = 'NaN' THEN 0 ELSE COALESCE(reach::numeric, 0) END as reach
       FROM facebook_data_set
-      WHERE publish_time IS NOT NULL
-      ORDER BY (COALESCE(reactions, 0) + COALESCE(comments, 0) + COALESCE(shares, 0)) DESC
+      WHERE publish_time >= ${startDate}::date 
+        AND publish_time <= ${endDate}::date
+        AND publish_time IS NOT NULL
+        AND title IS NOT NULL
+      ORDER BY total_engagement DESC
       LIMIT ${limit}
     `
 
@@ -32,12 +34,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       videos: result.map((row: any) => ({
-        post_id: String(row.post_id),
+        post_id: row.post_id,
         title: row.title || "Untitled",
-        duration: Number(row.duration_sec) || 0,
         total_engagement: Number(row.total_engagement) || 0,
         reach: Number(row.reach) || 0,
-        completion_rate: row.completion_rate ? Number(row.completion_rate) : null,
       })),
     })
   } catch (error) {
