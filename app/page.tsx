@@ -67,74 +67,17 @@ export default function Dashboard() {
             <p className="text-3xl font-bold text-gray-900">0 HRS</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
-            <h2 className="text-lg font-medium text-[#123458]">Total Spotify Streams</h2>
-            <p className="text-3xl font-bold text-gray-900">000,000.00</p>
+            <h2 className="text-lg font-medium text-[#123458]">Top Performing Platform</h2>
+            <p className="text-3xl font-bold text-gray-900">*platform*</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
+            <h2 className="text-lg font-medium text-[#123458]">Top Engaging Platform</h2>
+            <p className="text-3xl font-bold text-gray-900">*platform*</p>
+          </div>
+        <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
             <h2 className="text-lg font-medium text-[#123458]">Audience Growth</h2>
             <p className="text-3xl font-bold text-gray-900">0%</p>
           </div>
-        </section>
-
-
-        {/* Charts Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">Overall Engagement</h2>
-            <div className="flex justify-center items-center h-48 bg-[#FFFFFF]">
-              <img
-                src="https://placehold.co/150x150/123458/ffffff?text=Donut+Chart"
-                alt="Engagement Chart Placeholder"
-                className="rounded"
-              />
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">Spotify Streams Overtime</h2>
-            <div className="flex justify-center items-center h-48 bg-[#FFFFFF]">
-              <img
-                src="https://placehold.co/250x150/123458/ffffff?text=Line+Chart"
-                alt="Spotify Streams Overtime Chart Placeholder"
-                className="rounded"
-              />
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">Impressions & Reach</h2>
-            <div className="flex justify-center items-center h-48 bg-[#FFFFFF]">
-              <img
-                src="https://placehold.co/250x150/123458/ffffff?text=Line+Chart"
-                alt="Impressions & Reach Chart Placeholder"
-                className="rounded"
-              />
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">Audience Retention Overtime</h2>
-            <div className="flex justify-center items-center h-48 bg-[#FFFFFF]">
-              <img
-                src="https://placehold.co/250x150/123458/ffffff?text=Line+Chart"
-                alt="Audience Retention Overtime Chart Placeholder"
-                className="rounded"
-              />
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4">Views Overtime</h2>
-            <div className="flex justify-center items-center h-48 bg-[#FFFFFF]">
-              <img
-                src="https://placehold.co/250x150/123458/ffffff?text=Line+Chart"
-                alt="Views Overtime Chart Placeholder"
-                className="rounded"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Top Performing Platform Section */}
-        <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <h2 className="text-xl font-semibold mb-4">Top Performing Platform</h2>
-          <p className="text-2xl font-bold text-gray-900">Spotify</p>
         </section>
 
         {/* Generate Report Button */}

@@ -208,10 +208,10 @@ export default function YouTubeDashboard() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-[#123458] text-white">
+      <div className="flex min-h-screen bg-[#D3D3D3] text-white">
         <Sidebar />
         <main className="flex-1 p-8 flex items-center justify-center">
-          <p className="text-xl">Loading dashboard data...</p>
+          <p className="text-xl text-[#123458]">Loading dashboard data...</p>
         </main>
       </div>
     )
@@ -232,11 +232,11 @@ export default function YouTubeDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#123458] text-white">
+    <div className="flex min-h-screen bg-[#D3D3D3] text-white">
       <Sidebar />
       <main className="flex-1 p-8">
         <header className="mb-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold">YouTube Analytics Dashboard</h1>
+          <h1 className="text-3xl font-bold text-[#123458]">YouTube Analytics Dashboard</h1>
         </header>
 
         {/* Date Range Filter */}
