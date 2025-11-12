@@ -18,6 +18,7 @@ import {
   ReferenceLine,
   Cell,
 } from "recharts"
+import { MetricsCard } from "@/app/predictive-analytics/metrics-card"
 
 function MetricsBox({ metrics, variant = "yellow" }: { metrics: any; variant?: string }) {
   if (!metrics) return null
@@ -118,9 +119,9 @@ export default function TikTokPredictive() {
           </p>
         </header>
 
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* TikTok Model 1: Channel Views */}
-          <div className="bg-white p-6 rounded-lg shadow-md relative">
+          <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-sm font-bold mb-1">{data?.tiktok.channelViews.title}</h2>
             <p className="text-xs text-gray-600 mb-4">{data?.tiktok.channelViews.description}</p>
             <ResponsiveContainer width="100%" height={300}>
@@ -160,11 +161,10 @@ export default function TikTokPredictive() {
                 />
               </AreaChart>
             </ResponsiveContainer>
-            <MetricsBox metrics={data?.tiktok.channelViews.metrics} variant="yellow" />
           </div>
 
           {/* TikTok Model 2: Prediction Accuracy (Scatter) */}
-          <div className="bg-white p-6 rounded-lg shadow-md relative">
+          <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-sm font-bold mb-1">{data?.tiktok.predictionAccuracy.title}</h2>
             <p className="text-xs text-gray-600 mb-4">{data?.tiktok.predictionAccuracy.description}</p>
             <ResponsiveContainer width="100%" height={300}>
@@ -231,11 +231,10 @@ export default function TikTokPredictive() {
                 </Scatter>
               </ScatterChart>
             </ResponsiveContainer>
-            <MetricsBox metrics={data?.tiktok.predictionAccuracy.metrics} variant="orange" />
           </div>
 
           {/* TikTok Model 3: Cumulative Forecast */}
-          <div className="bg-white p-6 rounded-lg shadow-md relative">
+          <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-sm font-bold mb-1">{data?.tiktok.cumulativeForecast.title}</h2>
             <p className="text-xs text-gray-600 mb-4">{data?.tiktok.cumulativeForecast.description}</p>
             <ResponsiveContainer width="100%" height={300}>
@@ -278,9 +277,26 @@ export default function TikTokPredictive() {
                 />
               </AreaChart>
             </ResponsiveContainer>
-            <MetricsBox metrics={data?.tiktok.cumulativeForecast.metrics} variant="yellow" />
           </div>
         </section>
+
+        <div className="space-y-4">
+          <div className="h-1 bg-black/20 rounded-full"></div>
+
+          <div className="flex flex-wrap gap-4 justify-center">
+            <MetricsCard title="Channel Views" metrics={data?.tiktok.channelViews.metrics} variant="yellow" />
+            <MetricsCard
+              title="Prediction Accuracy"
+              metrics={data?.tiktok.predictionAccuracy.metrics}
+              variant="orange"
+            />
+            <MetricsCard
+              title="Cumulative Forecast"
+              metrics={data?.tiktok.cumulativeForecast.metrics}
+              variant="yellow"
+            />
+          </div>
+        </div>
       </main>
     </div>
   )

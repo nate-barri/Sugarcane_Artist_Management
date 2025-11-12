@@ -10,55 +10,6 @@ export async function GET() {
     const data = {
       meta: {
         // Meta.png - Backtest Forecast: Actual vs Predicted Reach (3-Month Rolling)
-        backtest: {
-          title: "Backtest Forecast: Actual vs Predicted Reach (3-Month Rolling)",
-          description: "Model validation on test set",
-          data: [
-            { date: "0.0", actual: 300000, predicted: null },
-            { date: "0.5", actual: 600000, predicted: 400000 },
-            { date: "1.0", actual: 900000, predicted: 1500000 },
-            { date: "1.5", actual: 1100000, predicted: 1000000 },
-            { date: "2.0", actual: 1300000, predicted: 1050000 },
-            { date: "2.5", actual: 900000, predicted: 700000 },
-            { date: "3.0", actual: 500000, predicted: 300000 },
-            { date: "3.5", actual: 300000, predicted: 150000 },
-            { date: "4.0", actual: 150000, predicted: null },
-          ],
-          type: "line",
-          metrics: {
-            r2: 0.943,
-            mape: 20.74,
-            mae: 15499,
-            mase: 0.146,
-          },
-        },
-        // Meta2.png - Facebook Reach: Last 6 Months (Actual) + Next 6 Months (Forecast)
-        reach6m: {
-          title: "Facebook Reach: Last 6 Months (Actual) + Next 6 Months (Forecast)",
-          description: "Monthly reach projections",
-          data: [
-            { date: "Mar 2025", historical: 215000, forecast: null, upper: null },
-            { date: "Apr 2025", historical: 195000, forecast: null, upper: null },
-            { date: "May 2025", historical: 135000, forecast: null, upper: null },
-            { date: "Jun 2025", historical: 180000, forecast: null, upper: null },
-            { date: "Jul 2025", historical: 375000, forecast: null, upper: null },
-            { date: "Aug 2025", historical: 305000, forecast: null, upper: null },
-            { date: "Sep 2025", historical: null, forecast: 130000, upper: 160000 },
-            { date: "Oct 2025", historical: null, forecast: 140000, upper: 165000 },
-            { date: "Nov 2025", historical: null, forecast: 135000, upper: 158000 },
-            { date: "Dec 2025", historical: null, forecast: 128000, upper: 150000 },
-            { date: "Jan 2026", historical: null, forecast: 125000, upper: 145000 },
-            { date: "Feb 2026", historical: null, forecast: 122000, upper: 142000 },
-          ],
-          type: "composite",
-          metrics: {
-            r2: 0.943,
-            mape: 20.74,
-            mae: 145113,
-            mase: 0.146,
-          },
-        },
-        // Meta3.png - Existing Posts Reach Forecast (Next 6 Months)
         existingPostsForecast: {
           title: "Existing Posts Reach Forecast (Next 6 Months)",
           description: "Historical reach (6 mo) + Forecasted reach with confidence interval",
@@ -77,6 +28,55 @@ export async function GET() {
             { date: "2026-02", historical: null, forecast: 40000, lower: 25000, upper: 100000 },
           ],
           type: "composite",
+          metrics: {
+            r2: 0.943,
+            mape: 20.74,
+            mae: 15499,
+            mase: 0.146,
+          },
+        },
+        // Meta2.png - Facebook Reach: Last 6 Months (Actual) + Next 6 Months (Forecast)
+        reach6m: {
+          title: "Facebook Engagement Rate Forecast (Last 6 Months + Next 6 Months)",
+          description: "Monthly engagement rate projections",
+          data: [
+            { date: "Mar 2025", historical: 215000, forecast: null, upper: null },
+            { date: "Apr 2025", historical: 195000, forecast: null, upper: null },
+            { date: "May 2025", historical: 135000, forecast: null, upper: null },
+            { date: "Jun 2025", historical: 180000, forecast: null, upper: null },
+            { date: "Jul 2025", historical: 375000, forecast: null, upper: null },
+            { date: "Aug 2025", historical: 305000, forecast: null, upper: null },
+            { date: "Sep 2025", historical: null, forecast: 130000, upper: 160000 },
+            { date: "Oct 2025", historical: null, forecast: 140000, upper: 165000 },
+            { date: "Nov 2025", historical: null, forecast: 135000, upper: 158000 },
+            { date: "Dec 2025", historical: null, forecast: 128000, upper: 150000 },
+            { date: "Jan 2026", historical: null, forecast: 125000, upper: 145000 },
+            { date: "Feb 2026", historical: null, forecast: 122000, upper: 142000 },
+          ],
+          type: "composite",
+          metrics: {
+            r2: 0.52,
+            mape: 46.2,
+            mae: 734374,
+            mase: 0.321,
+          },
+        },
+        // Meta3.png - Existing Posts Reach Forecast (Next 6 Months)
+        backtest: {
+          title: "Backtest Forecast: Actual vs Predicted Reach (3-Month Rolling)",
+          description: "Model validation on test set",
+          data: [
+            { date: "0.0", actual: 300000, predicted: null },
+            { date: "0.5", actual: 600000, predicted: 400000 },
+            { date: "1.0", actual: 900000, predicted: 1500000 },
+            { date: "1.5", actual: 1100000, predicted: 1000000 },
+            { date: "2.0", actual: 1300000, predicted: 1050000 },
+            { date: "2.5", actual: 900000, predicted: 700000 },
+            { date: "3.0", actual: 500000, predicted: 300000 },
+            { date: "3.5", actual: 300000, predicted: 150000 },
+            { date: "4.0", actual: 150000, predicted: null },
+          ],
+          type: "line",
           metrics: {
             r2: 0.943,
             mape: 20.74,

@@ -15,6 +15,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts"
+import { MetricsCard } from "@/app/predictive-analytics/metrics-card"
 
 function MetricsBox({ metrics, variant = "blue" }: { metrics: any; variant?: string }) {
   if (!metrics) return null
@@ -116,9 +117,9 @@ export default function YouTubePredictive() {
           </p>
         </header>
 
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* YouTube Model 1: Historical Cumulative */}
-          <div className="bg-white p-6 rounded-lg shadow-md relative">
+          <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-sm font-bold mb-1">{data?.youtube.cumulativeModel.title}</h2>
             <p className="text-xs text-gray-600 mb-4">Full historical timeline with model validation</p>
             <ResponsiveContainer width="100%" height={300}>
@@ -152,11 +153,10 @@ export default function YouTubePredictive() {
                 />
               </LineChart>
             </ResponsiveContainer>
-            <MetricsBox metrics={data?.youtube.cumulativeModel.part1?.metrics} variant="blue" />
           </div>
 
           {/* YouTube Model 2: 6-Month Cumulative Forecast */}
-          <div className="bg-white p-6 rounded-lg shadow-md relative">
+          <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-sm font-bold mb-1">
               {data?.youtube.cumulativeModel.part2?.label || "6-Month Cumulative View Forecast"}
             </h2>
@@ -201,10 +201,9 @@ export default function YouTubePredictive() {
                 />
               </AreaChart>
             </ResponsiveContainer>
-            <MetricsBox metrics={data?.youtube.cumulativeModel.part2?.metrics} variant="green" />
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-md relative lg:col-span-2">
+          <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-2">
             <h2 className="text-sm font-bold mb-1">{data?.youtube.catalogViews.title}</h2>
             <p className="text-xs text-gray-600 mb-4">{data?.youtube.catalogViews.description}</p>
             <ResponsiveContainer width="100%" height={300}>
@@ -244,9 +243,26 @@ export default function YouTubePredictive() {
                 />
               </AreaChart>
             </ResponsiveContainer>
-            <MetricsBox metrics={data?.youtube.catalogViews.metrics} variant="orange" />
           </div>
         </section>
+
+        <div className="space-y-4">
+          <div className="h-1 bg-black/20 rounded-full"></div>
+
+          <div className="flex flex-wrap gap-4 justify-center">
+            <MetricsCard
+              title="Historical Cumulative"
+              metrics={data?.youtube.cumulativeModel.part1?.metrics}
+              variant="blue"
+            />
+            <MetricsCard
+              title="6-Month Forecast"
+              metrics={data?.youtube.cumulativeModel.part2?.metrics}
+              variant="green"
+            />
+            <MetricsCard title="Catalog Views" metrics={data?.youtube.catalogViews.metrics} variant="orange" />
+          </div>
+        </div>
       </main>
     </div>
   )

@@ -15,6 +15,34 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts"
+import { MetricsCard } from "@/app/predictive-analytics/metrics-card"
+
+// Helper function to generate connector lines
+function generateChartData(rawData: any[]) {
+  if (!rawData) return []
+  const data = [...rawData]
+
+  let historicalEndIndex = -1
+  let forecastStartIndex = -1
+
+  // Find where historical ends and forecast starts
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i]
+    if (item.historical !== null && data[i + 1]?.forecast !== null) {
+      historicalEndIndex = i
+      forecastStartIndex = i + 1
+      break
+    }
+  }
+
+  // Populate connector data points
+  if (historicalEndIndex >= 0 && forecastStartIndex >= 0) {
+    data[historicalEndIndex].connector = data[historicalEndIndex].historical
+    data[forecastStartIndex].connector = data[forecastStartIndex].forecast
+  }
+
+  return data
+}
 
 function MetricsBox({ metrics, variant = "blue" }: { metrics: any; variant?: string }) {
   if (!metrics) return null
@@ -52,6 +80,9 @@ export default function MetaPredictive() {
           throw new Error(`Failed to fetch data: ${response.status}`)
         }
         const json = await response.json()
+        // preprocess data to add connector points
+        json.meta.existingPostsForecast.data = generateChartData(json.meta.existingPostsForecast.data)
+        json.meta.reach6m.data = generateChartData(json.meta.reach6m.data)
         setData(json)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Failed to load Meta models"
@@ -110,99 +141,14 @@ export default function MetaPredictive() {
       <main className="flex-1 p-8">
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-[#123458]">Meta Predictive Models</h1>
-          <p className="text-gray-600 mt-2">3 Meta Models: Backtest + 6-Month Reach + Existing Posts Forecast</p>
+          <p className="text-gray-600 mt-2">3 Meta Models: Existing Posts + Engagement Rate + Backtest</p>
         </header>
 
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Meta Model 1: Backtest */}
-          <div className="bg-white p-6 rounded-lg shadow-md relative">
-            <div className="absolute top-3 right-3 bg-red-100 text-red-700 text-xs px-2 py-1 rounded">
-              {data?.meta.backtest.label || "Backtesting"}
-            </div>
-            <h2 className="text-sm font-bold mb-1">{data?.meta.backtest.title}</h2>
-            <p className="text-xs text-gray-600 mb-4">{data?.meta.backtest.description}</p>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={data?.meta.backtest.data} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
-                <YAxis tick={{ fontSize: 9 }} width={50} />
-                <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Line
-                  type="monotone"
-                  dataKey="actual"
-                  stroke="#2563eb"
-                  strokeWidth={2.5}
-                  name="Actual Reach"
-                  connectNulls={false}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="predicted"
-                  stroke="#f97316"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  name="Predicted Reach"
-                  connectNulls={true}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-            <MetricsBox metrics={data?.meta.backtest.metrics} variant="red" />
-          </div>
-
-          {/* Meta Model 2: 6-Month Reach Forecast */}
-          <div className="bg-white p-6 rounded-lg shadow-md relative">
-            <div className="absolute top-3 right-3 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded">
-              {data?.meta.reach6m.videoType || "New Videos"}
-            </div>
-            <h2 className="text-sm font-bold mb-1">{data?.meta.reach6m.title}</h2>
-            <p className="text-xs text-gray-600 mb-4">{data?.meta.reach6m.description}</p>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={data?.meta.reach6m.data} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
-                <YAxis tick={{ fontSize: 9 }} width={50} />
-                <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Area
-                  type="monotone"
-                  dataKey="lower"
-                  fill="#93c5fd"
-                  fillOpacity={0.1}
-                  stroke="none"
-                  name="Confidence Range"
-                />
-                <Area type="monotone" dataKey="upper" fill="#93c5fd" fillOpacity={0.2} stroke="none" />
-                <Line
-                  type="monotone"
-                  dataKey="historical"
-                  stroke="#2563eb"
-                  strokeWidth={2.5}
-                  name="Historical"
-                  connectNulls={false}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="forecast"
-                  stroke="#22c55e"
-                  strokeWidth={2}
-                  strokeDasharray="4 4"
-                  name="Forecasted"
-                  connectNulls={true}
-                  dot={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-            <MetricsBox metrics={data?.meta.reach6m.metrics} variant="blue" />
-          </div>
-
-          {/* Meta Model 3: Existing Posts Forecast */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Meta Model 1: Existing Posts (PRIMARY) */}
           <div className="bg-white p-6 rounded-lg shadow-md relative">
             <div className="absolute top-3 right-3 bg-green-100 text-green-700 text-xs px-2 py-1 rounded">
-              {data?.meta.existingPostsForecast.videoType || "Existing Videos"}
+              Existing Videos
             </div>
             <h2 className="text-sm font-bold mb-1">{data?.meta.existingPostsForecast.title}</h2>
             <p className="text-xs text-gray-600 mb-4">{data?.meta.existingPostsForecast.description}</p>
@@ -244,11 +190,125 @@ export default function MetaPredictive() {
                   connectNulls={true}
                   dot={false}
                 />
+                {/* Connector line */}
+                <Line
+                  type="monotone"
+                  dataKey="connector"
+                  stroke="#000000"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  connectNulls={true}
+                  dot={false}
+                  name="Transition"
+                />
               </AreaChart>
             </ResponsiveContainer>
-            <MetricsBox metrics={data?.meta.existingPostsForecast.metrics} variant="green" />
+          </div>
+
+          {/* Meta Model 2: Engagement Rate (MIDDLE) */}
+          <div className="bg-white p-6 rounded-lg shadow-md relative">
+            <div className="absolute top-3 right-3 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded">
+              Engagement Rate
+            </div>
+            <h2 className="text-sm font-bold mb-1">{data?.meta.reach6m.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.meta.reach6m.description}</p>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={data?.meta.reach6m.data} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 9 }} width={50} />
+                <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Area
+                  type="monotone"
+                  dataKey="lower"
+                  fill="#93c5fd"
+                  fillOpacity={0.1}
+                  stroke="none"
+                  name="Confidence Range"
+                />
+                <Area type="monotone" dataKey="upper" fill="#93c5fd" fillOpacity={0.2} stroke="none" />
+                <Line
+                  type="monotone"
+                  dataKey="historical"
+                  stroke="#2563eb"
+                  strokeWidth={2.5}
+                  name="Historical"
+                  connectNulls={false}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="forecast"
+                  stroke="#22c55e"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  name="Forecasted"
+                  connectNulls={true}
+                  dot={false}
+                />
+                {/* Connector line */}
+                <Line
+                  type="monotone"
+                  dataKey="connector"
+                  stroke="#000000"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  connectNulls={true}
+                  dot={false}
+                  name="Transition"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Meta Model 3: Backtest (THIRD) */}
+          <div className="bg-white p-6 rounded-lg shadow-md relative">
+            <div className="absolute top-3 right-3 bg-red-100 text-red-700 text-xs px-2 py-1 rounded">Backtesting</div>
+            <h2 className="text-sm font-bold mb-1">{data?.meta.backtest.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.meta.backtest.description}</p>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={data?.meta.backtest.data} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 9 }} width={50} />
+                <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Line
+                  type="monotone"
+                  dataKey="actual"
+                  stroke="#2563eb"
+                  strokeWidth={2.5}
+                  name="Actual Reach"
+                  connectNulls={false}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="predicted"
+                  stroke="#f97316"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  name="Predicted Reach"
+                  connectNulls={true}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </section>
+
+        <div className="space-y-4">
+          {/* Connector line between Existing Posts and Engagement Rate */}
+          <div className="h-1 bg-black/20 rounded-full"></div>
+
+          {/* Metrics display row */}
+          <div className="flex flex-wrap gap-4 justify-center">
+            <MetricsCard title="Existing Posts" metrics={data?.meta.existingPostsForecast.metrics} variant="green" />
+            <MetricsCard title="Engagement Rate" metrics={data?.meta.reach6m.metrics} variant="blue" />
+            <MetricsCard title="Backtest" metrics={data?.meta.backtest.metrics} variant="red" />
+          </div>
+        </div>
       </main>
     </div>
   )
