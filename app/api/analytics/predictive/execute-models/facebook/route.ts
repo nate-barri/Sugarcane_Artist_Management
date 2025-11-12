@@ -1,0 +1,19 @@
+import { execSync } from "child_process"
+import { NextResponse } from "next/server"
+
+export async function GET() {
+  try {
+    // Execute the Facebook predictive JSON script
+    const output = execSync("python3 scripts/predictive_facebook_json.py", {
+      cwd: process.cwd(),
+      encoding: "utf-8",
+      maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+    })
+
+    const data = JSON.parse(output)
+    return NextResponse.json(data)
+  } catch (error: any) {
+    console.error("Facebook model execution error:", error.message)
+    return NextResponse.json({ error: "Failed to execute Facebook model", details: error.message }, { status: 500 })
+  }
+}
