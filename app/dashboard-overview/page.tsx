@@ -9,6 +9,27 @@ export default function Dashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const [spotifyFollowers, setSpotifyFollowers] = useState<number | null>(null)
+  const [facebookReach, setFacebookReach] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function fetchSpotifyFollowers() {
+      try {
+        const res = await fetch("/api/analytics/dashboard-overview/spotify-dash"); // or /spotfity-dash to match your folder
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Failed to fetch Spotify followers (status ${res.status}): ${text}`);
+        }
+
+        const data = await res.json();
+        setSpotifyFollowers(data.total_followers);
+      } catch (error) {
+        console.error("Error fetching Spotify followers:", error);
+      }
+    }
+
+    fetchSpotifyFollowers();
+  }, []);
 
   useEffect(() => {
     console.log("[v0] Authentication check starting...");
@@ -53,13 +74,11 @@ export default function Dashboard() {
 
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
-            <h2 className="text-lg font-medium text-[#123458]">Total Subscribers</h2>
-            <p className="text-3xl font-bold text-gray-900">000,000.00</p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
-            <h2 className="text-lg font-medium text-[#123458]">Total Followers</h2>
-            <p className="text-3xl font-bold text-gray-900">000,000.00</p>
-          </div>
+          <h2 className="text-lg font-medium text-[#123458]">Total Followers | Spotify</h2>
+          <p className="text-3xl font-bold text-gray-900">
+            {spotifyFollowers !== null ? spotifyFollowers.toLocaleString() : "Loading..."}
+          </p>
+        </div>
           <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-start">
             <h2 className="text-lg font-medium text-[#123458]">Total Reach</h2>
             <p className="text-3xl font-bold text-gray-900">000,000.00</p>
