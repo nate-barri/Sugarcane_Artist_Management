@@ -10,6 +10,7 @@ import { useState, useEffect } from "react"
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isDashboardOpen, setIsDashboardOpen] = useState(true)
+  const [isPredictiveOpen, setIsPredictiveOpen] = useState(true)
   const pathname = usePathname()
   const { signOut, user } = useAuth()
 
@@ -18,6 +19,7 @@ export default function Sidebar() {
     if (storedState === "true") {
       setIsCollapsed(true)
       setIsDashboardOpen(false)
+      setIsPredictiveOpen(false)
     }
   }, [])
 
@@ -25,6 +27,7 @@ export default function Sidebar() {
     localStorage.setItem("sidebarCollapsedState", isCollapsed.toString())
     if (isCollapsed) {
       setIsDashboardOpen(false)
+      setIsPredictiveOpen(false)
     }
   }, [isCollapsed])
 
@@ -37,6 +40,15 @@ export default function Sidebar() {
       e.preventDefault()
       if (!isCollapsed) {
         setIsDashboardOpen(!isDashboardOpen)
+      }
+    }
+  }
+
+  const togglePredictive = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("#predictive-arrow")) {
+      e.preventDefault()
+      if (!isCollapsed) {
+        setIsPredictiveOpen(!isPredictiveOpen)
       }
     }
   }
@@ -54,7 +66,16 @@ export default function Sidebar() {
     { href: "/tiktok", label: "TikTok" },
   ]
 
+  const predictivePages = [
+  { href: "/predictive-analytics/YouTube", label: "YouTube" },
+  { href: "/predictive-analytics/Meta",    label: "Meta" },
+  { href: "/predictive-analytics/TikTok",  label: "TikTok" },
+  ]
+
   const isDashboardActive = pathname === "/" || dashboardPages.some((page) => pathname.includes(page.href))
+  const isPredictiveActive =
+    pathname.startsWith("/predictive-analytics") ||
+    predictivePages.some((page) => pathname.includes(page.href))
 
   const handleLogout = async () => {
     await signOut()
@@ -146,14 +167,13 @@ export default function Sidebar() {
               )}
             </li>
 
-            {/* Other Items */}
+            {/* Predictive Analytics (now with dropdown) */}
             <li className="mb-4">
               <Link
                 href="/predictive-analytics"
-                className={`flex items-center p-2 rounded-lg transition-colors duration-200 nav-item ${
-                  isActiveLink("/predictive-analytics")
-                    ? "bg-[#123458] text-white font-semibold"
-                    : "text-white hover:bg-gray-700"
+                onClick={togglePredictive}
+                className={`flex items-center justify-between p-2 rounded-lg transition-colors duration-200 nav-item ${
+                  isPredictiveActive ? "bg-[#123458] text-white font-semibold" : "text-white hover:bg-gray-700"
                 }`}
               >
                 <div className="flex items-center">
@@ -166,9 +186,45 @@ export default function Sidebar() {
                   </svg>
                   {!isCollapsed && <span className="nav-text">Predictive Analytics</span>}
                 </div>
+
+                {/* Dropdown Arrow */}
+                {!isCollapsed && (
+                  <svg
+                    id="predictive-arrow"
+                    className={`w-4 h-4 ml-2 transition-transform duration-200 ${isPredictiveOpen ? "rotate-90" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                )}
               </Link>
+
+              {!isCollapsed && (
+                <ul
+                  className={`submenu pl-8 pt-2 transition-all duration-200 ${isPredictiveOpen ? "active" : "hidden"}`}
+                >
+                  {predictivePages.map((page) => (
+                    <li key={page.href} className="mb-2">
+                      <Link
+                        href={page.href}
+                        className={`flex items-center p-2 rounded-lg transition-colors duration-200 nav-item ${
+                          isActiveLink(page.href)
+                            ? "bg-gray-600 text-white font-semibold"
+                            : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                        }`}
+                      >
+                        <span className="nav-text">{page.label}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
 
+            {/* Cross-Platform */}
             <li className="mb-4">
               <Link
                 href="/cross-platform"
@@ -196,6 +252,7 @@ export default function Sidebar() {
               </Link>
             </li>
 
+            {/* FAQ */}
             <li className="mb-4">
               <Link
                 href="/faq"
@@ -220,6 +277,7 @@ export default function Sidebar() {
               </Link>
             </li>
 
+            {/* Import */}
             <li className="mb-4">
               <Link
                 href="/import"
