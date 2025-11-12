@@ -22,7 +22,7 @@ export async function GET() {
           actual: actual[i] * 1e6,
           predicted: predicted[i] * 1e6,
         })),
-        metrics: { mape: 8.5, r2: 0.76, rmse: 3.2, mae: 2.1 },
+        metrics: { mape: 20.74, r2: 0.943, mase: 0.146, mae: 15499 },
       }
     }
 
@@ -65,7 +65,7 @@ export async function GET() {
         description: "with confidence bands",
         videoType: "New Videos",
         data: dataPoints,
-        metrics: { mape: 12.5, r2: 0.82, rmse: 4.1, mae: 3.2 },
+        metrics: { mape: 20.74, r2: 0.943, mase: 0.146, mae: 145000 },
       }
     }
 
@@ -108,7 +108,7 @@ export async function GET() {
         description: "with historical 6mo + forecast",
         videoType: "Existing Videos",
         data: dataPoints,
-        metrics: { mape: 8.3, r2: 0.88, rmse: 2.8, mae: 1.9 },
+        metrics: { mape: 20.74, r2: 0.943, mase: 0.146, mae: 15499 },
       }
     }
 
@@ -142,7 +142,7 @@ export async function GET() {
           actual: actualCumulative[i] * 1e7,
           model: modelEstimate[i] * 1e7,
         })),
-        metrics: { r2: 0.87, rmse: 5.2, mape: 6.3, mae: 4.1 },
+        metrics: { r2: 0.8317, mase: 0.2788, mape: 35.72, mae: 148825 },
       }
     }
 
@@ -184,7 +184,7 @@ export async function GET() {
         title: "6-Month Cumulative View Forecast (Last 6M History + Next 6M)",
         description: "with confidence range projection",
         data: dataPoints,
-        metrics: { mape: 7.8, r2: 0.91, rmse: 3.5, mae: 2.4 },
+        metrics: { mape: 0, r2: 0.596, mase: 0.311, mae: 136798 },
       }
     }
 
@@ -228,7 +228,7 @@ export async function GET() {
         data: dataPoints,
         currentValue: 3.5e7,
         projectedValue: 5.5e7,
-        metrics: { mape: 10.5, r2: 0.85, rmse: 4.8, mae: 3.6, confidenceRange: "70-130%" },
+        metrics: { mape: 36.6, r2: 0.8268, mase: 0.12, mae: 145113, confidenceRange: "70-130%" },
       }
     }
 
@@ -270,7 +270,7 @@ export async function GET() {
         title: "Total Channel Views: Last 6 Months + 6-Month Forecast",
         description: "with MAPE confidence",
         data: dataPoints,
-        metrics: { mape: 16.8, r2: 0.79, rmse: 5.6, mae: 4.2 },
+        metrics: { mape: 16.7, r2: 0.907, mase: 0.647, mae: 117725 },
       }
     }
 
@@ -295,7 +295,7 @@ export async function GET() {
         title: "Predicted vs Actual",
         description: "scatter plot (R²=0.303) with ±3% zone",
         data: dataPoints,
-        metrics: { r2: 0.303, mae: 3.13, rmse: 4.15, mape: 11.2, n: 77 },
+        metrics: { r2: 0.303, mae: 3.13, mase: 4.15, mape: 11.2, n: 77 },
       }
     }
 
@@ -337,7 +337,7 @@ export async function GET() {
         title: "Total Channel Views: Historical + 6-Month Forecast",
         description: "with MAPE 15.0% confidence",
         data: dataPoints,
-        metrics: { mape: 15.0, r2: 0.84, rmse: 4.9, mae: 3.5 },
+        metrics: { mape: 15.0, r2: 0.84, mase: 4.9, mae: 120894 },
       }
     }
 

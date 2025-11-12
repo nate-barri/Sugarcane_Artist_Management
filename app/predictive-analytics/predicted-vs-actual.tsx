@@ -43,7 +43,7 @@ export function PredictedVsActual() {
       <CardHeader>
         <CardTitle>Predicted vs Actual (R²={metrics.r2.toFixed(3)})</CardTitle>
         <CardDescription>
-          ±3% Zone | MAE: {metrics.mae.toFixed(2)}% | RMSE: {metrics.rmse.toFixed(2)}% | n={metrics.n}
+          ±3% Zone | MAE: {metrics.mae.toFixed(2)}% | MASE: {metrics.mase.toFixed(2)}% | n={metrics.n}
         </CardDescription>
       </CardHeader>
       <CardContent>

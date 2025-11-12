@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Sidebar from "@/components/sidebar"
 import type { ModelData } from "@/types/modelData"
 import {
@@ -36,7 +36,7 @@ function MetricsBox({ metrics, variant = "blue" }: { metrics: any; variant?: str
         <div className="font-semibold text-gray-700">MAPE: {metrics.mape.toFixed(1)}%</div>
       )}
       {metrics.r2 !== undefined && <div className="text-gray-700">R²: {metrics.r2.toFixed(3)}</div>}
-      {metrics.rmse !== undefined && <div className="text-gray-700">RMSE: {metrics.rmse.toFixed(2)}</div>}
+      {metrics.mase !== undefined && <div className="text-gray-700">MASE: {metrics.mase.toFixed(2)}</div>}
       {metrics.mae !== undefined && <div className="text-gray-700">MAE: {metrics.mae.toFixed(2)}</div>}
       {metrics.n !== undefined && <div className="text-gray-700">n = {metrics.n}</div>}
     </div>
@@ -48,7 +48,28 @@ export default function PredictiveAnalyticsDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // ... existing useEffect ...
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await fetch("/api/analytics/predictive/models-data")
+        if (!response.ok) {
+          throw new Error(`Failed to fetch data: ${response.status}`)
+        }
+        const json = await response.json()
+        setData(json)
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to load predictive models"
+        setError(errorMessage)
+        console.error("[v0] Predictive analytics error:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   if (loading) {
     return (
@@ -222,7 +243,7 @@ export default function PredictiveAnalyticsDashboard() {
                 <Line
                   type="monotone"
                   dataKey="forecast"
-                  stroke="#22c55e"
+                  stroke="#f97316"
                   strokeWidth={2}
                   strokeDasharray="5 5"
                   name="Existing (Forecast)"
@@ -239,9 +260,12 @@ export default function PredictiveAnalyticsDashboard() {
           {/* YouTube Model 1: Historical Cumulative - REPLACED with ADD_back style */}
           <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-1 relative">
             <h2 className="text-sm font-bold mb-1">{data?.youtube.cumulativeModel.title}</h2>
-            <p className="text-xs text-gray-600 mb-4">{data?.youtube.cumulativeModel.description}</p>
+            <p className="text-xs text-gray-600 mb-4">Full historical timeline with model validation</p>
             <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={data?.youtube.cumulativeModel.data} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
+              <LineChart
+                data={data?.youtube.cumulativeModel.part1?.data}
+                margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                 <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
                 <YAxis tick={{ fontSize: 9 }} width={50} />
@@ -268,16 +292,18 @@ export default function PredictiveAnalyticsDashboard() {
                 />
               </LineChart>
             </ResponsiveContainer>
-            <MetricsBox metrics={data?.youtube.cumulativeModel.metrics} variant="blue" />
+            <MetricsBox metrics={data?.youtube.cumulativeModel.part1?.metrics} variant="blue" />
           </div>
 
           {/* YouTube Model 2: NEW - 6-Month Cumulative Forecast (9th graph) */}
           <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-1 relative">
-            <h2 className="text-sm font-bold mb-1">{data?.youtube.cumulativeForecast?.title}</h2>
-            <p className="text-xs text-gray-600 mb-4">{data?.youtube.cumulativeForecast?.description}</p>
+            <h2 className="text-sm font-bold mb-1">
+              {data?.youtube.cumulativeModel.part2?.label || "6-Month Cumulative View Forecast"}
+            </h2>
+            <p className="text-xs text-gray-600 mb-4">Last 6 months historical + Next 6 months forecast</p>
             <ResponsiveContainer width="100%" height={250}>
               <AreaChart
-                data={data?.youtube.cumulativeForecast?.data}
+                data={data?.youtube.cumulativeModel.part2?.data}
                 margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
@@ -315,7 +341,7 @@ export default function PredictiveAnalyticsDashboard() {
                 />
               </AreaChart>
             </ResponsiveContainer>
-            <MetricsBox metrics={data?.youtube.cumulativeForecast?.metrics} variant="green" />
+            <MetricsBox metrics={data?.youtube.cumulativeModel.metrics} variant="green" />
           </div>
 
           {/* YouTube Model 3: Catalog Views */}

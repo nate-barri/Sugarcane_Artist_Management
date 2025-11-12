@@ -25,6 +25,12 @@ export async function GET() {
             { date: "4.0", actual: 150000, predicted: null },
           ],
           type: "line",
+          metrics: {
+            r2: 0.943,
+            mape: 20.74,
+            mae: 15499,
+            mase: 0.146,
+          },
         },
         // Meta2.png - Facebook Reach: Last 6 Months (Actual) + Next 6 Months (Forecast)
         reach6m: {
@@ -45,6 +51,12 @@ export async function GET() {
             { date: "Feb 2026", historical: null, forecast: 122000, upper: 142000 },
           ],
           type: "composite",
+          metrics: {
+            r2: 0.943,
+            mape: 20.74,
+            mae: 145113,
+            mase: 0.146,
+          },
         },
         // Meta3.png - Existing Posts Reach Forecast (Next 6 Months)
         existingPostsForecast: {
@@ -65,23 +77,36 @@ export async function GET() {
             { date: "2026-02", historical: null, forecast: 40000, lower: 25000, upper: 100000 },
           ],
           type: "composite",
+          metrics: {
+            r2: 0.943,
+            mape: 20.74,
+            mae: 15499,
+            mase: 0.146,
+          },
         },
       },
       youtube: {
         // Youtube.png - Historical Cumulative Views: Actual vs Model Estimate
         cumulativeModel: {
           title: "Historical Cumulative Views: Actual vs Model Estimate",
-          description: "Full historical timeline with model validation (2020-2025) + 6-Month Cumulative View Forecast",
+          description: "Full historical timeline with model validation",
           part1: {
             label: "Full Historical Timeline",
             data: [
-              { date: "2020-01", actual: 100000, model: 50000 },
-              { date: "2021-01", actual: 5000000, model: 4000000 },
-              { date: "2022-01", actual: 10000000, model: 9000000 },
-              { date: "2023-01", actual: 25000000, model: 20000000 },
-              { date: "2024-01", actual: 55000000, model: 48000000 },
-              { date: "2025-01", actual: 80000000, model: 52000000 },
+              { date: "Nov 24", actual: 65000000, model: 62000000 },
+              { date: "Dec 24", actual: 70000000, model: 68000000 },
+              { date: "Jan 25", actual: 75000000, model: 73000000 },
+              { date: "Feb 25", actual: 78000000, model: 76000000 },
+              { date: "Mar 25", actual: 82000000, model: 80000000 },
+              { date: "Apr 25", actual: 85000000, model: 82000000 },
+              { date: "May 25", actual: 88000000, model: 85000000 },
             ],
+            metrics: {
+              r2: 0.8268,
+              mape: 36.6,
+              mae: 145113,
+              mase: 0.12,
+            },
           },
           part2: {
             label: "6-Month Cumulative View Forecast (Last 6 Months + Next 6 Months)",
@@ -93,8 +118,20 @@ export async function GET() {
               { date: "2025-07", historical: null, forecast: 90000000, lower: 84000000, upper: 96000000 },
               { date: "2025-08", historical: null, forecast: 95000000, lower: 88000000, upper: 102000000 },
             ],
+            metrics: {
+              r2: 0.8317,
+              mape: 35.72,
+              mae: 148825,
+              mase: 0.2788,
+            },
           },
           type: "dual-line",
+          metrics: {
+            r2: 0.8317,
+            mape: 35.72,
+            mae: 148825,
+            mase: 0.2788,
+          },
         },
         // Youtube1.png - Total Catalog Views: Historical (backcast) + Forecast (baseline 6mo)
         catalogViews: {
@@ -115,6 +152,12 @@ export async function GET() {
             { date: "+5m", historical: null, forecast: 93071402, lower: 65150000, upper: 121000000 },
           ],
           type: "composite",
+          metrics: {
+            r2: 0.596,
+            mape: 0,
+            mae: 136798,
+            mase: 0.311,
+          },
         },
       },
       tiktok: {
@@ -137,15 +180,22 @@ export async function GET() {
             { date: "2026-04", historical: null, forecast: 3000000, upper: 3500000 },
           ],
           type: "composite",
+          metrics: {
+            r2: 0.907,
+            mape: 16.7,
+            mae: 117725,
+            mase: 0.647,
+          },
         },
         // Tiktok2.png - Predicted vs Actual (R²=0.303)
         predictionAccuracy: {
           title: "Predicted vs Actual (R²=0.303)",
-          description: "±3% Zone | MAE: 3.13% | RMSE: 4.15%",
+          description: "±3% Zone | MAE: 3.13% | MASE: 4.15%",
           metrics: {
             r2: 0.303,
             mae: 3.13,
-            rmse: 4.15,
+            mase: 4.15,
+            mape: 11.2,
             n: 77,
           },
           data: [
@@ -234,6 +284,12 @@ export async function GET() {
             { date: "2026-04", cumulative: null, forecast: 16250000, upper: 18687500 },
           ],
           type: "composite",
+          metrics: {
+            r2: 0.84,
+            mape: 15.0,
+            mae: 120894,
+            mase: 0.311,
+          },
         },
       },
     }
