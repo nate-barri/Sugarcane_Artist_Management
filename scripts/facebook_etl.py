@@ -6,12 +6,10 @@ import os
 from datetime import datetime
 from psycopg2.extras import execute_values
 
-if sys.stdout.encoding != 'utf-8':
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-if sys.stderr.encoding != 'utf-8':
-    import io
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if not DATABASE_URL:
+    print("[ERROR] DATABASE_URL environment variable is not set!")
+    sys.exit(1)
 
 db_params = {
     'dbname': os.environ.get('PGDATABASE', 'neondb'),
@@ -97,7 +95,7 @@ def insert_data(df, table_name):
     
     conn = None
     try:
-        conn = psycopg2.connect(**db_params)
+        conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
         
         # Get table column names
@@ -135,7 +133,7 @@ def insert_data(df, table_name):
 def create_table():
     conn = None
     try:
-        conn = psycopg2.connect(**db_params)
+        conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
         
         create_table_sql = """
@@ -181,7 +179,7 @@ def ensure_platform_exists():
     """Ensure 'facebook' platform exists in dw.dim_platform table, create if missing"""
     conn = None
     try:
-        conn = psycopg2.connect(**db_params)
+        conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
         
         cur.execute("SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'dw'")

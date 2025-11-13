@@ -8,20 +8,10 @@ import sys
 import os
 
 # Get database connection from environment variables
-db_params = {
-    'dbname': os.environ.get('PGDATABASE', 'neondb'),
-    'user': os.environ.get('PGUSER', 'neondb_owner'),
-    'password': os.environ.get('PGPASSWORD'),
-    'host': os.environ.get('PGHOST'),
-    'port': os.environ.get('PGPORT', '5432')
-}
-
-if sys.stdout.encoding != 'utf-8':
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-if sys.stderr.encoding != 'utf-8':
-    import io
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if not DATABASE_URL:
+    print("[ERROR] DATABASE_URL environment variable is not set!")
+    sys.exit(1)
 
 # ---------- Helpers ----------
 def remove_emoji(text):
@@ -148,7 +138,7 @@ def process_youtube_data(file_path):
 def create_table():
     conn = None
     try:
-        conn = psycopg2.connect(**db_params)
+        conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
         
         cur.execute(""" 
@@ -187,7 +177,7 @@ def create_table():
 def insert_data(df):
     conn = None
     try:
-        conn = psycopg2.connect(**db_params)
+        conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
         
         insert_sql = """
@@ -268,7 +258,7 @@ def ensure_platform_exists():
     """Ensure 'youtube' platform exists in dw.dim_platform table, create if missing"""
     conn = None
     try:
-        conn = psycopg2.connect(**db_params)
+        conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
         
         # Check if dw schema exists, create if missing

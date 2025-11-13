@@ -6,22 +6,11 @@ import emoji
 import sys
 import os
 
-if sys.stdout.encoding != 'utf-8':
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-if sys.stderr.encoding != 'utf-8':
-    import io
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
-
 # ================= DB CONNECTION =================
-db_params = {
-    'dbname': os.environ.get('PGDATABASE', 'neondb'),
-    'user': os.environ.get('PGUSER', 'neondb_owner'),
-    'password': os.environ.get('PGPASSWORD'),
-    'host': os.environ.get('PGHOST'),
-    'port': os.environ.get('PGPORT', '5432'),
-    'sslmode': 'require'
-}
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if not DATABASE_URL:
+    print("[ERROR] DATABASE_URL environment variable is not set!")
+    sys.exit(1)
 
 # ================= HELPER FUNCTIONS =================
 def remove_emojis(text):
@@ -53,7 +42,7 @@ def clean_dataframe(df):
 def ensure_platform_exists():
     """Ensure 'spotify' platform exists in dw.dim_platform table, create if missing"""
     try:
-        conn = psycopg2.connect(**db_params)
+        conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
         
         # Check if dim_platform table exists, create if missing
@@ -112,31 +101,31 @@ if len(sys.argv) < 2:
 
 csv_file = sys.argv[1]
 
-print("Reading Spotify CSV file...")
+print("→ Reading Spotify CSV file...")
 try:
     df = pd.read_csv(csv_file)
-    print(f"Loaded {len(df)} records from Spotify data")
+    print(f"✓ Loaded {len(df)} records from Spotify data")
 except Exception as e:
     print(f"[ERROR] Failed to read CSV: {e}", file=sys.stderr)
     sys.exit(1)
 
 # ================= TRANSFORM =================
-print("Cleaning and normalizing data...")
+print("→ Cleaning and normalizing data...")
 df = clean_dataframe(df)
-print("Data cleaned successfully")
+print("✓ Data cleaned successfully")
 
 is_song_data = 'song' in df.columns and 'release_date' in df.columns
 is_stats_data = 'date' in df.columns and 'listeners' in df.columns and 'followers' in df.columns
 
 # ================= LOAD =================
-print("Connecting to Neon PostgreSQL...")
+print("→ Connecting to Neon PostgreSQL...")
 
 if not ensure_platform_exists():
     print("[ERROR] Cannot proceed with data insertion. Please fix the platform configuration first.")
     sys.exit(1)
 
 try:
-    conn = psycopg2.connect(**db_params)
+    conn = psycopg2.connect(DATABASE_URL)
     cur = conn.cursor()
     
     # ---- ENABLE UUID EXTENSION ----
@@ -151,7 +140,7 @@ try:
     """)
     
     if not cur.fetchone()[0]:
-        print("Creating spotify_songs table...")
+        print("→ Creating spotify_songs table...")
         cur.execute("""
         CREATE TABLE IF NOT EXISTS spotify_songs (
             song_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -172,7 +161,7 @@ try:
     """)
     
     if not cur.fetchone()[0]:
-        print("Creating spotify_stats table...")
+        print("→ Creating spotify_stats table...")
         cur.execute("""
         CREATE TABLE IF NOT EXISTS spotify_stats (
             stat_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -190,7 +179,7 @@ try:
     # ---- LOAD SONG DATA ----
     songs_data = []
     if is_song_data:
-        print("Processing song-level data...")
+        print("→ Processing song-level data...")
         songs_data = [
             (
                 row.get('song'),
@@ -214,7 +203,7 @@ try:
                     release_date = EXCLUDED.release_date;
             """, songs_data, page_size=100)
             conn.commit()
-            print(f"Songs loaded/updated ({len(songs_data)} rows)")
+            print(f"✓ Songs loaded/updated ({len(songs_data)} rows)")
     
     # ---- ENSURE PLACEHOLDER SONG EXISTS ----
     cur.execute("""
@@ -227,7 +216,7 @@ try:
     # ---- LOAD STATS DATA ----
     stats_data = []
     if is_stats_data:
-        print("Processing time-series stats data...")
+        print("→ Processing time-series stats data...")
         stats_data = [
             (
                 'All Songs',
@@ -250,18 +239,18 @@ try:
                     followers = EXCLUDED.followers;
             """, stats_data, page_size=100)
             conn.commit()
-            print(f"Time-series stats loaded/updated ({len(stats_data)} rows)")
+            print(f"✓ Time-series stats loaded/updated ({len(stats_data)} rows)")
     
     cur.close()
     conn.close()
     
     total_records = len(songs_data) + len(stats_data)
-    print("\nSpotify ETL completed successfully!")
+    print("\n✅ Spotify ETL completed successfully!")
     if songs_data:
-        print(f"{len(songs_data)} songs processed")
+        print(f"✓ {len(songs_data)} songs processed")
     if stats_data:
-        print(f"{len(stats_data)} time-series records processed")
-    print("Future CSV uploads will auto-update existing records.")
+        print(f"✓ {len(stats_data)} time-series records processed")
+    print("✓ Future CSV uploads will auto-update existing records.")
     print(f"RECORDS: {total_records}")
     
 except Exception as e:
