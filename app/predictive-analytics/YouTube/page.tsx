@@ -112,9 +112,7 @@ export default function YouTubePredictive() {
       <main className="flex-1 p-8">
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-[#123458]">YouTube Predictive Models</h1>
-          <p className="text-gray-600 mt-2">
-            3 YouTube Models: Historical Cumulative + 6-Month Forecast + Catalog Views
-          </p>
+          <p className="text-gray-600 mt-2">6 YouTube Models: Engagement + Catalog + Growth Breakdown</p>
         </header>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -243,6 +241,113 @@ export default function YouTubePredictive() {
                 />
               </AreaChart>
             </ResponsiveContainer>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* YouTube Model 5: Existing Catalog */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="absolute top-3 right-3 bg-violet-100 text-violet-700 text-xs px-2 py-1 rounded">
+              Catalog
+            </div>
+            <h2 className="text-sm font-bold mb-1">{data?.youtube.existingCatalog.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.youtube.existingCatalog.description}</p>
+            <div className="space-y-3">
+              <div className="p-3 bg-gray-50 rounded">
+                <div className="text-xs text-gray-600">Current</div>
+                <div className="font-semibold text-gray-900">
+                  {data?.youtube.existingCatalog.metrics.current?.toLocaleString()}
+                </div>
+              </div>
+              <div className="p-3 bg-green-50 rounded">
+                <div className="text-xs text-gray-600">Projected</div>
+                <div className="font-semibold text-green-900">
+                  {data?.youtube.existingCatalog.metrics.projected?.toLocaleString()}
+                </div>
+              </div>
+              <div className="p-3 bg-blue-50 rounded">
+                <div className="text-xs text-gray-600">Growth</div>
+                <div className="font-semibold text-blue-900">
+                  +{data?.youtube.existingCatalog.metrics.growth?.toLocaleString()} (
+                  {data?.youtube.existingCatalog.metrics.growth_percent}%)
+                </div>
+                <div className="text-xs text-blue-700 mt-1">
+                  +{data?.youtube.existingCatalog.metrics.monthly}% monthly
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* YouTube Model 6: Growth Breakdown */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="absolute top-3 right-3 bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded">
+              Breakdown
+            </div>
+            <h2 className="text-sm font-bold mb-1">{data?.youtube.growthBreakdown.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.youtube.growthBreakdown.description}</p>
+            <div className="space-y-3">
+              {data?.youtube.growthBreakdown.data?.map((item, idx) => (
+                <div
+                  key={idx}
+                  className={`p-3 rounded ${idx === 0 ? "bg-emerald-50" : idx === 1 ? "bg-amber-50" : "bg-slate-50"}`}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">{item.category} Content</span>
+                    <span
+                      className={`font-semibold ${idx === 0 ? "text-emerald-900" : idx === 1 ? "text-amber-900" : "text-slate-900"}`}
+                    >
+                      +{item.percent}%
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">+{item.growth?.toLocaleString()} views</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="absolute top-3 right-3 bg-cyan-100 text-cyan-700 text-xs px-2 py-1 rounded">
+              New Content
+            </div>
+            <h2 className="text-sm font-bold mb-1">{data?.youtube.growthFromNewContent.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.youtube.growthFromNewContent.description}</p>
+            <div className="p-4 bg-cyan-50 rounded-lg">
+              <div className="text-xs text-gray-600 mb-2">Growth from New Content</div>
+              <div className="font-bold text-2xl text-cyan-900">
+                +{data?.youtube.growthFromNewContent.metrics.growth?.toLocaleString()}
+              </div>
+              <div className="text-xs text-cyan-700 mt-2">views from new content</div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="absolute top-3 right-3 bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded">
+              Projection
+            </div>
+            <h2 className="text-sm font-bold mb-1">{data?.youtube.sixMonthProjection.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.youtube.sixMonthProjection.description}</p>
+            <div className="space-y-2">
+              <div className="p-3 bg-purple-50 rounded">
+                <div className="text-xs text-gray-600">Baseline (6mo)</div>
+                <div className="font-semibold text-purple-900">
+                  {data?.youtube.sixMonthProjection.metrics.projectedTotal?.toLocaleString()}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2 bg-red-50 rounded">
+                  <div className="text-xs text-gray-600">Conservative</div>
+                  <div className="font-semibold text-red-700 text-sm">
+                    {data?.youtube.sixMonthProjection.metrics.conservative?.toLocaleString()}
+                  </div>
+                </div>
+                <div className="p-2 bg-green-50 rounded">
+                  <div className="text-xs text-gray-600">Optimistic</div>
+                  <div className="font-semibold text-green-700 text-sm">
+                    {data?.youtube.sixMonthProjection.metrics.optimistic?.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 

@@ -13,33 +13,10 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  LineChart,
   ScatterChart,
   Scatter,
-  ReferenceLine,
-  Cell,
 } from "recharts"
-import { MetricsCard } from "@/app/predictive-analytics/metrics-card"
-
-function MetricsBox({ metrics, variant = "yellow" }: { metrics: any; variant?: string }) {
-  if (!metrics) return null
-
-  const bgColor = {
-    yellow: "bg-yellow-50 border-yellow-200",
-    orange: "bg-orange-50 border-orange-200",
-  }[variant]
-
-  return (
-    <div className={`absolute bottom-2 right-2 ${bgColor} border rounded p-2 text-xs space-y-1`}>
-      {metrics.mape !== undefined && (
-        <div className="font-semibold text-gray-700">MAPE: {metrics.mape.toFixed(1)}%</div>
-      )}
-      {metrics.r2 !== undefined && <div className="text-gray-700">R²: {metrics.r2.toFixed(3)}</div>}
-      {metrics.mase !== undefined && <div className="text-gray-700">MASE: {metrics.mase.toFixed(2)}</div>}
-      {metrics.mae !== undefined && <div className="text-gray-700">MAE: {metrics.mae.toFixed(2)}</div>}
-      {metrics.n !== undefined && <div className="text-gray-700">n = {metrics.n}</div>}
-    </div>
-  )
-}
 
 export default function TikTokPredictive() {
   const [data, setData] = useState<ModelData | null>(null)
@@ -114,9 +91,7 @@ export default function TikTokPredictive() {
       <main className="flex-1 p-8">
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-[#123458]">TikTok Predictive Models</h1>
-          <p className="text-gray-600 mt-2">
-            3 TikTok Models: Channel Views + Prediction Accuracy + Cumulative Forecast
-          </p>
+          <p className="text-gray-600 mt-2">6 TikTok Models: New & Existing Videos + Channel Views + Forecasts</p>
         </header>
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -163,74 +138,22 @@ export default function TikTokPredictive() {
             </ResponsiveContainer>
           </div>
 
-          {/* TikTok Model 2: Prediction Accuracy (Scatter) */}
+          {/* TikTok Model 2: Engagement Rate (moved from YouTube) */}
           <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-sm font-bold mb-1">{data?.tiktok.predictionAccuracy.title}</h2>
-            <p className="text-xs text-gray-600 mb-4">{data?.tiktok.predictionAccuracy.description}</p>
-            <ResponsiveContainer width="100%" height={300}>
-              <ScatterChart margin={{ top: 20, right: 60, left: 40, bottom: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis
-                  type="number"
-                  dataKey="actual"
-                  name="Actual Engagement Rate (%)"
-                  tick={{ fontSize: 9 }}
-                  domain={[0, 25]}
-                />
-                <YAxis
-                  type="number"
-                  dataKey="predicted"
-                  name="Predicted Engagement Rate (%)"
-                  tick={{ fontSize: 9 }}
-                  domain={[0, 25]}
-                />
-                <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={{ fontSize: 10 }} />
-                <Legend wrapperStyle={{ fontSize: 10, paddingTop: 10 }} />
-
-                <ReferenceLine
-                  stroke="#dc2626"
-                  strokeDasharray="5 5"
-                  strokeWidth={2}
-                  segment={[
-                    { x: 0, y: 0 },
-                    { x: 25, y: 25 },
-                  ]}
-                  name="Perfect Prediction"
-                  label={{ value: "Perfect Prediction", fontSize: 9, fill: "#dc2626" }}
-                />
-
-                <ReferenceLine
-                  stroke="#22c55e"
-                  strokeDasharray="3 3"
-                  strokeWidth={1}
-                  segment={[
-                    { x: 0, y: 3 },
-                    { x: 22, y: 25 },
-                  ]}
-                  name="±3% Zone"
-                />
-                <ReferenceLine
-                  stroke="#22c55e"
-                  strokeDasharray="3 3"
-                  strokeWidth={1}
-                  segment={[
-                    { x: 3, y: 0 },
-                    { x: 25, y: 22 },
-                  ]}
-                />
-
-                <Scatter name="Predictions" data={data?.tiktok.predictionAccuracy.data || []} fill="#8884d8">
-                  {data?.tiktok.predictionAccuracy.data.map((entry, index) => {
-                    let fillColor = "#22c55e" // default green
-                    if (entry.color === "red") fillColor = "#ef4444"
-                    else if (entry.color === "orange") fillColor = "#f97316"
-                    else if (entry.color === "yellow") fillColor = "#eab308"
-
-                    return <Cell key={`cell-${index}`} fill={fillColor} />
-                  })}
-                </Scatter>
-              </ScatterChart>
-            </ResponsiveContainer>
+            <div className="absolute top-3 right-3 bg-sky-100 text-sky-700 text-xs px-2 py-1 rounded">Engagement</div>
+            <h2 className="text-sm font-bold mb-1">{data?.youtube.engagementRate.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.youtube.engagementRate.description}</p>
+            <div className="space-y-4">
+              <div className="p-3 bg-blue-50 rounded">
+                <div className="text-xs text-gray-600">Current Rate</div>
+                <div className="text-2xl font-bold text-blue-600">{data?.youtube.engagementRate.metrics.current}%</div>
+              </div>
+              <div className="p-3 bg-cyan-50 rounded">
+                <div className="text-xs text-gray-600">Trend Rate</div>
+                <div className="text-2xl font-bold text-cyan-600">{data?.youtube.engagementRate.metrics.trend}%</div>
+              </div>
+            
+            </div>
           </div>
 
           {/* TikTok Model 3: Cumulative Forecast */}
@@ -280,21 +203,307 @@ export default function TikTokPredictive() {
           </div>
         </section>
 
-        <div className="space-y-4">
-          <div className="h-1 bg-black/20 rounded-full"></div>
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* TikTok Model 4: New Videos Backtest */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="absolute top-3 right-3 bg-pink-100 text-pink-700 text-xs px-2 py-1 rounded">New Videos</div>
+            <h2 className="text-sm font-bold mb-1">{data?.tiktok.newVideosBacktest.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.tiktok.newVideosBacktest.description}</p>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">Pseudo-R²</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.tiktok.newVideosBacktest.metrics.r2_pseudo.toFixed(3)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">MASE</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.tiktok.newVideosBacktest.metrics.mase.toFixed(3)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">MAE</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.tiktok.newVideosBacktest.metrics.mae.toLocaleString()}
+                </span>
+              </div>
+              <div className="p-3 bg-pink-50 rounded text-center">
+                <div className="text-xs text-gray-600">New Video Performance Model</div>
+              </div>
+            </div>
+          </div>
 
-          <div className="flex flex-wrap gap-4 justify-center">
-            <MetricsCard title="Channel Views" metrics={data?.tiktok.channelViews.metrics} variant="yellow" />
-            <MetricsCard
-              title="Prediction Accuracy"
-              metrics={data?.tiktok.predictionAccuracy.metrics}
-              variant="orange"
-            />
-            <MetricsCard
-              title="Cumulative Forecast"
-              metrics={data?.tiktok.cumulativeForecast.metrics}
-              variant="yellow"
-            />
+          {/* TikTok Model 5: New Videos Forecast */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="absolute top-3 right-3 bg-rose-100 text-rose-700 text-xs px-2 py-1 rounded">Forecast</div>
+            <h2 className="text-sm font-bold mb-1">{data?.tiktok.newVideosForecast.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.tiktok.newVideosForecast.description}</p>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={data?.tiktok.newVideosForecast.data} margin={{ top: 5, right: 10, left: 0, bottom: 30 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="week" angle={-45} textAnchor="end" height={40} tick={{ fontSize: 8 }} />
+                <YAxis tick={{ fontSize: 9 }} width={40} />
+                <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
+                <Line
+                  type="monotone"
+                  dataKey="views"
+                  stroke="#ec4899"
+                  strokeWidth={2}
+                  name="Weekly Views"
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+            <div className="mt-3 p-2 bg-pink-50 rounded text-xs">
+              <div className="font-semibold text-gray-900">
+                Total: {data?.tiktok.newVideosForecast.metrics.total_views?.toLocaleString()} views
+              </div>
+              <div className="text-gray-600">
+                Growth: {data?.tiktok.newVideosForecast.metrics.growth_start?.toLocaleString()} →{" "}
+                {data?.tiktok.newVideosForecast.metrics.growth_end?.toLocaleString()}
+              </div>
+            </div>
+          </div>
+
+          {/* TikTok Model 6: Existing Videos Forecast */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="absolute top-3 right-3 bg-teal-100 text-teal-700 text-xs px-2 py-1 rounded">
+              Existing Videos
+            </div>
+            <h2 className="text-sm font-bold mb-1">{data?.tiktok.existingVideosForecast.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.tiktok.existingVideosForecast.description}</p>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">R²</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.tiktok.existingVideosBacktest.metrics.r2.toFixed(3)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">MASE</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.tiktok.existingVideosBacktest.metrics.mase.toFixed(3)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">MAPE</span>
+                <span className="font-semibold text-gray-900">{data?.tiktok.existingVideosBacktest.metrics.mape}%</span>
+              </div>
+              <div className="p-3 bg-teal-50 rounded">
+                <div className="font-semibold text-teal-900 text-sm">Total Views Forecast</div>
+                <div className="text-teal-700">
+                  {data?.tiktok.existingVideosForecast.metrics.total_views?.toLocaleString()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="absolute top-3 right-3 bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded">
+              Model Performance
+            </div>
+            <h2 className="text-sm font-bold mb-1">{data?.tiktok.engagementRateModel.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.tiktok.engagementRateModel.description}</p>
+
+            <ResponsiveContainer width="100%" height={350}>
+              <ScatterChart margin={{ top: 20, right: 20, bottom: 60, left: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis
+                  type="number"
+                  dataKey="x"
+                  name="Actual Engagement Rate (%)"
+                  label={{ value: "Actual (%)", position: "insideBottomRight", offset: -10 }}
+                  domain={[0, 25]}
+                  tick={{ fontSize: 9 }}
+                />
+                <YAxis
+                  type="number"
+                  dataKey="y"
+                  name="Predicted Engagement Rate (%)"
+                  label={{ value: "Predicted (%)", angle: -90, position: "insideLeft" }}
+                  domain={[0, 25]}
+                  tick={{ fontSize: 9 }}
+                />
+                <Tooltip
+                  cursor={{ strokeDasharray: "3 3" }}
+                  contentStyle={{ fontSize: 12 }}
+                  formatter={(value) => (typeof value === "number" ? value.toFixed(2) : value)}
+                />
+
+                {/* Perfect Prediction Line */}
+                <Line
+                  type="monotone"
+                  dataKey="y"
+                  stroke="#ef4444"
+                  strokeDasharray="5 5"
+                  strokeWidth={2}
+                  dot={false}
+                  name="Perfect Prediction"
+                  isAnimationActive={false}
+                  data={[
+                    { x: 0, y: 0 },
+                    { x: 25, y: 25 },
+                  ]}
+                />
+
+                {/* ±3% Confidence Zone - Upper Bound */}
+                <Line
+                  type="monotone"
+                  data={Array.from({ length: 26 }, (_, i) => ({
+                    x: i,
+                    y: i + 3,
+                  }))}
+                  dataKey="y"
+                  stroke="#86efac"
+                  strokeWidth={12}
+                  dot={false}
+                  isAnimationActive={false}
+                  name="±3% Zone"
+                  strokeOpacity={0.3}
+                />
+
+                {/* ±3% Confidence Zone - Lower Bound */}
+                <Line
+                  type="monotone"
+                  data={Array.from({ length: 26 }, (_, i) => ({
+                    x: i,
+                    y: Math.max(0, i - 3),
+                  }))}
+                  dataKey="y"
+                  stroke="#86efac"
+                  strokeWidth={12}
+                  dot={false}
+                  isAnimationActive={false}
+                  strokeOpacity={0.3}
+                />
+
+                {/* Data Points - Color Coded by Error */}
+                {data?.tiktok.predictionAccuracy.data && (
+                  <>
+                    <Scatter
+                      name="Dark Green (≤1% error)"
+                      data={data.tiktok.predictionAccuracy.data
+                        .filter((p: any) => p.color === "dark green")
+                        .map((p: any) => ({ x: p.actual, y: p.predicted }))}
+                      fill="#15803d"
+                      fillOpacity={0.8}
+                    />
+                    <Scatter
+                      name="Light Green (≤3% error)"
+                      data={data.tiktok.predictionAccuracy.data
+                        .filter((p: any) => p.color === "light green")
+                        .map((p: any) => ({ x: p.actual, y: p.predicted }))}
+                      fill="#84cc16"
+                      fillOpacity={0.7}
+                    />
+                    <Scatter
+                      name="Yellow (≤5% error)"
+                      data={data.tiktok.predictionAccuracy.data
+                        .filter((p: any) => p.color === "yellow")
+                        .map((p: any) => ({ x: p.actual, y: p.predicted }))}
+                      fill="#facc15"
+                      fillOpacity={0.7}
+                    />
+                    <Scatter
+                      name="Orange (≤7% error)"
+                      data={data.tiktok.predictionAccuracy.data
+                        .filter((p: any) => p.color === "orange")
+                        .map((p: any) => ({ x: p.actual, y: p.predicted }))}
+                      fill="#f97316"
+                      fillOpacity={0.7}
+                    />
+                    <Scatter
+                      name="Red (>7% error)"
+                      data={data.tiktok.predictionAccuracy.data
+                        .filter((p: any) => p.color === "red")
+                        .map((p: any) => ({ x: p.actual, y: p.predicted }))}
+                      fill="#ef4444"
+                      fillOpacity={0.7}
+                    />
+                  </>
+                )}
+
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+              </ScatterChart>
+            </ResponsiveContainer>
+
+            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg mt-6">
+              <div className="font-bold text-gray-800 mb-3">Engagement Rate</div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center py-2 border-b border-yellow-100">
+                  <span className="text-sm text-gray-700">R²</span>
+                  <span className="font-semibold text-gray-900">{data?.tiktok.engagementRateModel.metrics.r2}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-yellow-100">
+                  <span className="text-sm text-gray-700">MASE</span>
+                  <span className="font-semibold text-gray-900">{data?.tiktok.engagementRateModel.metrics.mase}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-yellow-100">
+                  <span className="text-sm text-gray-700">MAE</span>
+                  <span className="font-semibold text-gray-900">{data?.tiktok.engagementRateModel.metrics.mae}%</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm text-gray-700">Zone</span>
+                  <span className="font-semibold text-gray-900">{data?.tiktok.engagementRateModel.metrics.zone}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Bottom Metrics Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Channel Views Metrics */}
+          <div className="bg-yellow-50 border border-yellow-200 p-6 rounded-lg">
+            <div className="font-bold text-gray-800 mb-3">Channel Views</div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center py-2 border-b border-yellow-100">
+                <span className="text-sm text-gray-700">MAPE</span>
+                <span className="font-semibold text-gray-900">{data?.tiktok.channelViews.metrics.mape}%</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-yellow-100">
+                <span className="text-sm text-gray-700">R²</span>
+                <span className="font-semibold text-gray-900">{data?.tiktok.channelViews.metrics.r2}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-yellow-100">
+                <span className="text-sm text-gray-700">MASE</span>
+                <span className="font-semibold text-gray-900">{data?.tiktok.channelViews.metrics.mase}</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm text-gray-700">MAE</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.tiktok.channelViews.metrics.mae.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Cumulative Forecast Metrics */}
+          <div className="bg-yellow-50 border border-yellow-200 p-6 rounded-lg">
+            <div className="font-bold text-gray-800 mb-3">Cumulative Forecast</div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center py-2 border-b border-yellow-100">
+                <span className="text-sm text-gray-700">MAPE</span>
+                <span className="font-semibold text-gray-900">{data?.tiktok.cumulativeForecast.metrics.mape}%</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-yellow-100">
+                <span className="text-sm text-gray-700">R²</span>
+                <span className="font-semibold text-gray-900">{data?.tiktok.cumulativeForecast.metrics.r2}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-yellow-100">
+                <span className="text-sm text-gray-700">MASE</span>
+                <span className="font-semibold text-gray-900">{data?.tiktok.cumulativeForecast.metrics.mase}</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm text-gray-700">MAE</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.tiktok.cumulativeForecast.metrics.mae.toLocaleString()}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </main>
