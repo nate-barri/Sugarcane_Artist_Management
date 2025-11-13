@@ -436,10 +436,10 @@ export default function YouTubeDashboard() {
           </div>
         </section>
 
-        {/* POSTING DAY PERFORMANCE (Cumulative Performance, NOT Audience Activity) */}
+        {/* POSTING DAY PERFORMANCE */}
         <section className="bg-white p-6 rounded-lg shadow-md mb-8">
           <h2 className="text-xl font-semibold mb-4 text-[#123458]">
-            POSTING DAY PERFORMANCE (Cumulative Performance, NOT Audience Activity)
+            POSTING DAY PERFORMANCE 
           </h2>
           <div className="h-96">
             {dayOfWeek.length > 0 ? (

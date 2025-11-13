@@ -3,7 +3,7 @@
 import type React from "react"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, type User } from "firebase/auth"
+import { signInWithEmailAndPassword, type User } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 
 export default function LoginPage() {
@@ -13,7 +13,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const [isSignUp, setIsSignUp] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
   useEffect(() => {
@@ -50,38 +49,33 @@ export default function LoginPage() {
     }
 
     try {
-      if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password)
-      } else {
-        try {
-          const result = await signInWithEmailAndPassword(auth, email, password)
+      try {
+        const result = await signInWithEmailAndPassword(auth, email, password)
 
-          const validateResponse = await fetch("/api/auth/validate-user", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email }),
-          })
+        const validateResponse = await fetch("/api/auth/validate-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        })
 
-          if (!validateResponse.ok || !(await validateResponse.json()).exists) {
-            // User not found in Neon database, sign them out
-            await result.user.getIdToken(true)
-            setError("User not registered in the system. Please contact your administrator.")
-            setLoading(false)
-            return
-          }
-
-          localStorage.setItem("authToken", email)
-          router.push("/import")
-        } catch (signInError: any) {
-          const errorMessage = signInError?.message || ""
-          if (errorMessage.includes("user-not-found") || errorMessage.includes("invalid-credential")) {
-            setError("Invalid email or password. Please contact your administrator if you need assistance.")
-          } else {
-            setError(errorMessage || "Sign in failed. Please try again.")
-          }
+        if (!validateResponse.ok || !(await validateResponse.json()).exists) {
+          await result.user.getIdToken(true)
+          setError("User not registered in the system. Please contact your administrator.")
           setLoading(false)
           return
         }
+
+        localStorage.setItem("authToken", email)
+        router.push("/import")
+      } catch (signInError: any) {
+        const errorMessage = signInError?.message || ""
+        if (errorMessage.includes("user-not-found") || errorMessage.includes("invalid-credential")) {
+          setError("Invalid email or password. Please contact your administrator if you need assistance.")
+        } else {
+          setError(errorMessage || "Sign in failed. Please try again.")
+        }
+        setLoading(false)
+        return
       }
     } catch (err: any) {
       const errorMessage = err?.message || "Authentication failed. Please try again."
@@ -90,8 +84,6 @@ export default function LoginPage() {
         setError("This account is not registered. Please contact your administrator.")
       } else if (errorMessage.includes("invalid-credential") || errorMessage.includes("wrong-password")) {
         setError("Invalid email or password.")
-      } else if (errorMessage.includes("email-already-in-use")) {
-        setError("This email is already registered.")
       } else {
         setError(errorMessage)
       }
@@ -104,9 +96,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-            {isSignUp ? "Create an account" : "Sign in"}
-          </h2>
+          <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">Sign in</h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
@@ -134,7 +124,7 @@ export default function LoginPage() {
                 id="password"
                 name="password"
                 type="password"
-                autoComplete={isSignUp ? "new-password" : "current-password"}
+                autoComplete="current-password"
                 required
                 className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-[#123458] focus:border-[#123458] focus:z-10 sm:text-sm"
                 placeholder="Password"
@@ -156,20 +146,7 @@ export default function LoginPage() {
               disabled={loading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#123458] hover:bg-[#0e2742] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#123458] disabled:opacity-50"
             >
-              {loading ? (isSignUp ? "Creating account..." : "Signing in...") : isSignUp ? "Sign up" : "Sign in"}
-            </button>
-          </div>
-
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp)
-                setError("")
-              }}
-              className="text-sm text-[#123458] hover:text-[#0e2742] font-medium"
-            >
-              {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
+              {loading ? "Signing in..." : "Sign in"}
             </button>
           </div>
         </form>
