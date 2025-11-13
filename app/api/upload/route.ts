@@ -24,11 +24,22 @@ async function detectDataType(filePath: string): Promise<"META" | "YOUTUBE" | "T
     return "YOUTUBE"
   }
 
+  // Check for Spotify daily metrics: date, listeners, streams, followers
   if (
     firstLine.includes("date") &&
     firstLine.includes("listeners") &&
     firstLine.includes("streams") &&
     firstLine.includes("followers")
+  ) {
+    return "SPOTIFY"
+  }
+
+  // Check for Spotify song-level data: song, listeners, streams, saves, release_date
+  if (
+    firstLine.includes("song") &&
+    firstLine.includes("listeners") &&
+    firstLine.includes("streams") &&
+    (firstLine.includes("saves") || firstLine.includes("release_date"))
   ) {
     return "SPOTIFY"
   }
