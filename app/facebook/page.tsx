@@ -24,7 +24,7 @@ import jsPDF from "jspdf"
 export default function FacebookDashboard() {
   const [tempStartDate, setTempStartDate] = useState<string>("2021-01-01")
   const [tempEndDate, setTempEndDate] = useState<string>("2025-12-31")
-  const [startDate, setStartDate] = useState<string>("2021-01-01")
+  const [startDate, setStartDate] = useState<string>("2019-01-01")
   const [endDate, setEndDate] = useState<string>("2025-12-31")
 
   const [overview, setOverview] = useState<any>({})

@@ -9,18 +9,19 @@ export async function GET() {
             SUM(likes) AS total_likes,
             SUM(shares) AS total_shares,
             SUM(comments_added) AS total_comments,
-            SUM(dislikes) AS total_dislikes
-        FROM yt_video_etl;
+            SUM(saves) AS total_saves
+        FROM tt_video_etl;
     `;
         const [row] = await executeQuery(sqlSum);
 
-        const totalEngagement =
+        const totalEngagementCalculator =
             (Number(row.total_likes) || 0) +
             (Number(row.total_shares) || 0) +
             (Number(row.total_comments) || 0) +
-            (Number(row.total_dislikes) || 0);
+            (Number(row.total_saves) || 0);
 
-        return NextResponse.json({ total_youtube_engagement: totalEngagement });
+        
+        return NextResponse.json({ totalTiktokEngagement: totalEngagementCalculator });
     } catch (err) {
         console.error("[youtube-dash] Error:", err);
         return NextResponse.json(
