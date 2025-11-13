@@ -93,10 +93,8 @@ export default function Dashboard() {
     console.log("[v0] AuthToken found:", authToken);
 
     if (!authToken) {
-      // Daya lang, ibalik na lang
-      setIsAuthenticated(true);
-      // console.log("[v0] No auth token, redirecting to login...");
-      // router.push("/login");
+      console.log("[v0] No auth token, redirecting to login...");
+      router.push("/login");
     } else {
       console.log("[v0] Auth token exists, setting authenticated to true");
       setIsAuthenticated(true);

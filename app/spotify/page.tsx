@@ -394,9 +394,9 @@ export default function SpotifyDashboard() {
                     }}
                   />
                   <Tooltip
-                    formatter={(value) => fmtInt(value as number)}
-                    labelFormatter={(value) =>
-                      new Date(value as string).toLocaleDateString("en-US", {
+                    formatter={(value: number) => `${value.toLocaleString()} listeners`}
+                    labelFormatter={(value: string) =>
+                      new Date(value).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
@@ -448,12 +448,9 @@ export default function SpotifyDashboard() {
                   null as any,
                 )
 
-                const startDateStr =
-                  exactLeonora?.release_date ??
-                  containsLeonora?.release_date ??
-                  earliestMarker?.release_date ??
-                  followerGrowth[0]?.date
+                const startDateStr = "2023-01-01";
 
+                console.log("Start Date:  ", startDateStr);
                 const fgFromStart = followerGrowth.filter((d: any) => d.date >= startDateStr)
                 const markersFromStart = followerReleaseMarkers.filter(
                   (r: any) => (r.release_date ?? r.date) >= startDateStr,
@@ -520,7 +517,6 @@ export default function SpotifyDashboard() {
                             fill="#E11D48"
                             stroke="#ffffff"
                             strokeWidth={2}
-                            ifOverflow="discard"
                           >
                             <Label value={relTitle} position="top" offset={10} fill="#111827" fontSize={11} />
                           </ReferenceDot>
