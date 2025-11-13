@@ -14,6 +14,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  BarChart,
+  Bar,
 } from "recharts"
 import { MetricsCard } from "@/app/predictive-analytics/metrics-card"
 
@@ -141,7 +143,7 @@ export default function MetaPredictive() {
       <main className="flex-1 p-8">
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-[#123458]">Meta Predictive Models</h1>
-          <p className="text-gray-600 mt-2">3 Meta Models: Existing Posts + Engagement Rate + Backtest</p>
+          <p className="text-gray-600 mt-2">6 Meta Models: New Posts + Existing Posts + Forecast Predictions</p>
         </header>
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -298,7 +300,159 @@ export default function MetaPredictive() {
           </div>
         </section>
 
-        <div className="space-y-4">
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Meta Model 4: New Posts Backtest */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="absolute top-3 right-3 bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded">
+              New Posts
+            </div>
+            <h2 className="text-sm font-bold mb-1">{data?.meta.newPostsBacktest.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.meta.newPostsBacktest.description}</p>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">MAPE</span>
+                <span className="font-semibold text-gray-900">{data?.meta.newPostsBacktest.metrics.mape}%</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">R²</span>
+                <span className="font-semibold text-gray-900">{data?.meta.newPostsBacktest.metrics.r2.toFixed(3)}</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">MASE</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.meta.newPostsBacktest.metrics.mase.toFixed(3)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">MAE</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.meta.newPostsBacktest.metrics.mae.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Meta Model 5: New Posts Forecast */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="absolute top-3 right-3 bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded">
+              Forecast
+            </div>
+            <h2 className="text-sm font-bold mb-1">{data?.meta.newPostsForecast.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.meta.newPostsForecast.description}</p>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={data?.meta.newPostsForecast.data} margin={{ top: 5, right: 10, left: 0, bottom: 30 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="month" angle={-45} textAnchor="end" height={50} tick={{ fontSize: 8 }} />
+                <YAxis tick={{ fontSize: 9 }} width={40} />
+                <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
+                <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="mt-3 p-2 bg-blue-50 rounded text-xs">
+              <div className="font-semibold text-gray-900">
+                Total: {data?.meta.newPostsForecast.metrics.total?.toLocaleString()}
+              </div>
+              <div className="text-gray-600">
+                CI: {data?.meta.newPostsForecast.metrics.ci_lower?.toLocaleString()} -{" "}
+                {data?.meta.newPostsForecast.metrics.ci_upper?.toLocaleString()}
+              </div>
+            </div>
+          </div>
+
+          {/* Meta Model 6: Existing Posts Backtest */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="absolute top-3 right-3 bg-green-100 text-green-700 text-xs px-2 py-1 rounded">
+              Existing Posts
+            </div>
+            <h2 className="text-sm font-bold mb-1">{data?.meta.existingPostsBacktest.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.meta.existingPostsBacktest.description}</p>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">MAE</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.meta.existingPostsBacktest.metrics.mae.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">R²</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.meta.existingPostsBacktest.metrics.r2.toFixed(3)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">MASE</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.meta.existingPostsBacktest.metrics.mase.toFixed(3)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">MAPE</span>
+                <span className="font-semibold text-gray-900">{data?.meta.existingPostsBacktest.metrics.mape}%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* New reach forecast cards for New Posts */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="absolute top-3 right-3 bg-cyan-100 text-cyan-700 text-xs px-2 py-1 rounded">
+              New Posts Reach
+            </div>
+            <h2 className="text-sm font-bold mb-1">{data?.meta.newPostsReach.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.meta.newPostsReach.description}</p>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">Total Reach (6m)</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.meta.newPostsReach.metrics.total?.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">CI Lower</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.meta.newPostsReach.metrics.ci_lower?.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">CI Upper</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.meta.newPostsReach.metrics.ci_upper?.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* New reach forecast cards for Existing Posts */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="absolute top-3 right-3 bg-lime-100 text-lime-700 text-xs px-2 py-1 rounded">
+              Existing Posts Reach
+            </div>
+            <h2 className="text-sm font-bold mb-1">{data?.meta.existingPostsReach.title}</h2>
+            <p className="text-xs text-gray-600 mb-4">{data?.meta.existingPostsReach.description}</p>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">Monthly Reach</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.meta.existingPostsReach.metrics.monthly_projections[0]?.reach?.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">Total Reach (6m)</span>
+                <span className="font-semibold text-gray-900">
+                  {data?.meta.existingPostsReach.metrics.total?.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span className="text-sm text-gray-600">CI</span>
+                <span className="text-xs font-semibold text-gray-900">
+                  {data?.meta.existingPostsReach.metrics.ci_lower?.toLocaleString()} -{" "}
+                  {data?.meta.existingPostsReach.metrics.ci_upper?.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Connector line between Existing Posts and Engagement Rate */}
           <div className="h-1 bg-black/20 rounded-full"></div>
 
@@ -308,7 +462,7 @@ export default function MetaPredictive() {
             <MetricsCard title="Engagement Rate" metrics={data?.meta.reach6m.metrics} variant="blue" />
             <MetricsCard title="Backtest" metrics={data?.meta.backtest.metrics} variant="red" />
           </div>
-        </div>
+        </section>
       </main>
     </div>
   )
