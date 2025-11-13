@@ -39,6 +39,14 @@ function MetricsBox({ metrics, variant = "blue" }: { metrics: any; variant?: str
   )
 }
 
+function ChartWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="w-full flex flex-col" style={{ height: "300px", minHeight: "300px" }}>
+      {children}
+    </div>
+  )
+}
+
 export default function YouTubePredictive() {
   const [data, setData] = useState<ModelData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -120,37 +128,41 @@ export default function YouTubePredictive() {
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-sm font-bold mb-1">{data?.youtube.cumulativeModel.title}</h2>
             <p className="text-xs text-gray-600 mb-4">Full historical timeline with model validation</p>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart
-                data={data?.youtube.cumulativeModel.part1?.data}
-                margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
-                <YAxis tick={{ fontSize: 9 }} width={50} />
-                <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Line
-                  type="monotone"
-                  dataKey="actual"
-                  stroke="#2563eb"
-                  strokeWidth={2.5}
-                  name="Actual Cumulative"
-                  connectNulls={false}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="model"
-                  stroke="#f97316"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  name="Model Estimate"
-                  connectNulls={true}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <ChartWrapper>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={data?.youtube.cumulativeModel.part1?.data}
+                  margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                  <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
+                  <YAxis tick={{ fontSize: 9 }} width={50} />
+                  <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Line
+                    type="monotone"
+                    dataKey="actual"
+                    stroke="#2563eb"
+                    strokeWidth={2.5}
+                    name="Actual Cumulative"
+                    connectNulls={false}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="model"
+                    stroke="#f97316"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    name="Model Estimate"
+                    connectNulls={true}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartWrapper>
           </div>
 
           {/* YouTube Model 2: 6-Month Cumulative Forecast */}
@@ -159,88 +171,112 @@ export default function YouTubePredictive() {
               {data?.youtube.cumulativeModel.part2?.label || "6-Month Cumulative View Forecast"}
             </h2>
             <p className="text-xs text-gray-600 mb-4">Last 6 months historical + Next 6 months forecast</p>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart
-                data={data?.youtube.cumulativeModel.part2?.data}
-                margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
-                <YAxis tick={{ fontSize: 9 }} width={50} />
-                <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Area
-                  type="monotone"
-                  dataKey="lower"
-                  fill="#86efac"
-                  fillOpacity={0.1}
-                  stroke="none"
-                  name="Confidence Range"
-                />
-                <Area type="monotone" dataKey="upper" fill="#86efac" fillOpacity={0.2} stroke="none" />
-                <Line
-                  type="monotone"
-                  dataKey="historical"
-                  stroke="#2563eb"
-                  strokeWidth={2.5}
-                  name="Historical (Last 6M)"
-                  connectNulls={false}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="forecast"
-                  stroke="#22c55e"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  name="Baseline (6mo)"
-                  connectNulls={true}
-                  dot={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <ChartWrapper>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={data?.youtube.cumulativeModel.part2?.data}
+                  margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                  <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
+                  <YAxis tick={{ fontSize: 9 }} width={50} />
+                  <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Area
+                    type="monotone"
+                    dataKey="lower"
+                    fill="#86efac"
+                    fillOpacity={0.1}
+                    stroke="none"
+                    name="Confidence Range"
+                    isAnimationActive={false}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="upper"
+                    fill="#86efac"
+                    fillOpacity={0.2}
+                    stroke="none"
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="historical"
+                    stroke="#2563eb"
+                    strokeWidth={2.5}
+                    name="Historical (Last 6M)"
+                    connectNulls={false}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="forecast"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    name="Baseline (6mo)"
+                    connectNulls={true}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartWrapper>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-2">
             <h2 className="text-sm font-bold mb-1">{data?.youtube.catalogViews.title}</h2>
             <p className="text-xs text-gray-600 mb-4">{data?.youtube.catalogViews.description}</p>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={data?.youtube.catalogViews.data} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
-                <YAxis tick={{ fontSize: 9 }} width={50} />
-                <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Area
-                  type="monotone"
-                  dataKey="lower"
-                  fill="#fbbf24"
-                  fillOpacity={0.1}
-                  stroke="none"
-                  name="Confidence Range"
-                />
-                <Area type="monotone" dataKey="upper" fill="#fbbf24" fillOpacity={0.2} stroke="none" />
-                <Line
-                  type="monotone"
-                  dataKey="historical"
-                  stroke="#2563eb"
-                  strokeWidth={2.5}
-                  name="Historical (Backcast)"
-                  connectNulls={false}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="forecast"
-                  stroke="#f97316"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  name="Forecast (Baseline 6mo)"
-                  connectNulls={true}
-                  dot={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <ChartWrapper>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data?.youtube.catalogViews.data} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                  <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
+                  <YAxis tick={{ fontSize: 9 }} width={50} />
+                  <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Area
+                    type="monotone"
+                    dataKey="lower"
+                    fill="#fbbf24"
+                    fillOpacity={0.1}
+                    stroke="none"
+                    name="Confidence Range"
+                    isAnimationActive={false}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="upper"
+                    fill="#fbbf24"
+                    fillOpacity={0.2}
+                    stroke="none"
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="historical"
+                    stroke="#2563eb"
+                    strokeWidth={2.5}
+                    name="Historical (Backcast)"
+                    connectNulls={false}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="forecast"
+                    stroke="#f97316"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    name="Forecast (Baseline 6mo)"
+                    connectNulls={true}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartWrapper>
           </div>
         </section>
 
