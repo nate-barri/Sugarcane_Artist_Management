@@ -24,7 +24,7 @@ RUN python3 -m pip install --upgrade pip && \
 # Copy all files
 COPY . .
 
-ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+ENV DATABASE_URL="postgresql://neondb_owner:npg_dGzvq4CJPRx7@ep-lingering-dawn-a410n0b8-pooler.us-east-1.aws.neon.tech:5432/neondb"
 ENV SKIP_ENV_VALIDATION=1
 
 # Build Next.js app

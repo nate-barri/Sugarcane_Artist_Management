@@ -9,57 +9,26 @@ async function detectDataType(filePath: string): Promise<"META" | "YOUTUBE" | "T
   const fs = require("fs").promises
   const content = await fs.readFile(filePath, "utf-8")
   const firstLine = content.split("\n")[0].toLowerCase()
-  const secondLine = content.split("\n")[1]?.toLowerCase() || ""
 
-  // TikTok detection
-  if (
-    firstLine.includes("tiktok_video_id") ||
-    firstLine.includes("content_link") ||
-    (firstLine.includes("video_id") && firstLine.includes("views") && firstLine.includes("likes"))
-  ) {
+  if (firstLine.includes("tiktok_video_id") || firstLine.includes("content_link")) {
     return "TIKTOK"
   }
 
-  // Facebook/Meta detection
-  if (
-    firstLine.includes("post_id") ||
-    firstLine.includes("page_name") ||
-    firstLine.includes("permalink") ||
-    (firstLine.includes("reach") && firstLine.includes("engagement"))
-  ) {
+  // Check for Facebook/Meta specific columns
+  if (firstLine.includes("post_id") || firstLine.includes("page_name") || firstLine.includes("permalink")) {
     return "META"
   }
 
-  // YouTube detection
-  if (
-    firstLine.includes("video title") ||
-    firstLine.includes("video id") ||
-    firstLine.includes("video publish time") ||
-    firstLine.includes("watch time") ||
-    (firstLine.includes("title") && firstLine.includes("views") && firstLine.includes("watch"))
-  ) {
+  // Check for YouTube specific columns
+  if (firstLine.includes("video title") || firstLine.includes("video id") || firstLine.includes("video publish time")) {
     return "YOUTUBE"
   }
 
-  // Spotify detection
   if (
-    (firstLine.includes("song") || firstLine.includes("track")) &&
-    (firstLine.includes("listeners") ||
-      firstLine.includes("streams") ||
-      firstLine.includes("followers") ||
-      firstLine.includes("releases"))
+    firstLine.includes("song") &&
+    (firstLine.includes("listeners") || firstLine.includes("streams") || firstLine.includes("followers"))
   ) {
     return "SPOTIFY"
-  }
-
-  // Additional heuristic: check second line for data patterns if first line is unclear
-  if (secondLine) {
-    const dataLines = [firstLine, secondLine].join(",").toLowerCase()
-
-    if (dataLines.includes("tiktok") || dataLines.includes("video_id")) return "TIKTOK"
-    if (dataLines.includes("facebook") || dataLines.includes("page_name")) return "META"
-    if (dataLines.includes("youtube") || dataLines.includes("watch time")) return "YOUTUBE"
-    if (dataLines.includes("spotify") || dataLines.includes("listeners")) return "SPOTIFY"
   }
 
   return "UNKNOWN"
@@ -100,11 +69,7 @@ function executePythonScript(
 
     const env = {
       ...process.env,
-      PGDATABASE: process.env.PGDATABASE || process.env.DATABASE_URL?.split("/").pop()?.split("?")[0],
-      PGUSER: process.env.PGUSER || process.env.DATABASE_URL?.match(/\/\/(.+?):/)?.[1],
-      PGPASSWORD: process.env.PGPASSWORD || process.env.DATABASE_URL?.match(/:(.+?)@/)?.[1],
-      PGHOST: process.env.PGHOST || process.env.DATABASE_URL?.match(/@(.+?):/)?.[1],
-      PGPORT: process.env.PGPORT || "5432",
+      DATABASE_URL: process.env.DATABASE_URL,
     }
 
     const pythonProcess = spawn(pythonCmd, [scriptPath, filePath], {
