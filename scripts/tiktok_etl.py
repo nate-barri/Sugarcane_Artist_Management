@@ -8,21 +8,11 @@ from datetime import datetime, timezone
 import sys
 import os
 
-# Get database connection from environment variables
-db_params = {
-    'dbname': os.environ.get('PGDATABASE', 'neondb'),
-    'user': os.environ.get('PGUSER', 'neondb_owner'),
-    'password': os.environ.get('PGPASSWORD'),
-    'host': os.environ.get('PGHOST'),
-    'port': os.environ.get('PGPORT', '5432')
-}
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-if sys.stdout.encoding != 'utf-8':
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-if sys.stderr.encoding != 'utf-8':
-    import io
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+if not DATABASE_URL:
+    print("[ERROR] DATABASE_URL environment variable is not set!", file=sys.stderr)
+    sys.exit(1)
 
 # ================= HELPERS =================
 def read_csv_robust(path):
@@ -187,7 +177,7 @@ def process_tiktok_data(file_path):
 def create_table():
     conn = None
     try:
-        conn = psycopg2.connect(**db_params)
+        conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
         
         cur.execute("""
@@ -244,7 +234,7 @@ def create_table():
 def insert_data(df):
     conn = None
     try:
-        conn = psycopg2.connect(**db_params)
+        conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
         
         insert_sql = """
