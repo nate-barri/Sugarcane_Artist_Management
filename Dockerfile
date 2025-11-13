@@ -24,6 +24,9 @@ RUN python3 -m pip install --upgrade pip && \
 # Copy all files
 COPY . .
 
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+ENV SKIP_ENV_VALIDATION=1
+
 # Build Next.js app
 RUN npm run build
 
