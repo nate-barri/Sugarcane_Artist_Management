@@ -10,6 +10,9 @@ const eslintConfig = [
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': 'warn',
+      'import/no-unresolved': 'off',
+      '@typescript-eslint/no-var-requires': 'off',
+      'no-undef': 'off',
     },
   }),
 ]

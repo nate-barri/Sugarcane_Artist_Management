@@ -207,7 +207,8 @@ export default function CrossPlatformDashboard() {
                       cy="50%"
                       outerRadius={110}
                       paddingAngle={2}
-                      label={({ platform, value }) => `${platform}: ${value.toFixed(1)}%`}
+                      label={({ platform, value }) => `${platform}: ${(value as number).toFixed(1)}%`
+}
                     >
                       {distribution.map((entry, idx) => (
                         <Cell

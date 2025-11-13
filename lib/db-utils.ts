@@ -13,7 +13,7 @@ export function getDb() {
   return sql
 }
 
-export async function executeQuery(query: string, params: any[] = []) {
+export async function executeQuery<T = any>(query: string, params: any[] = []): Promise<T[]> {
   const sql = getDb()
   return sql.query(query, params)
 }
