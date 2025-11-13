@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/sidebar";
 import { generateReport } from "@/utils/reportGenerator";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export default function Dashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -88,24 +90,18 @@ export default function Dashboard() {
     fetchAllEngagements();
   }, []);
   useEffect(() => {
-    console.log("[v0] Authentication check starting...");
-    const authToken = localStorage.getItem("authToken");
-    console.log("[v0] AuthToken found:", authToken);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+        router.push("/login");
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
 
-    if (!authToken) {
-      console.log("[v0] No auth token, redirecting to login...");
-      router.push("/login");
-    } else {
-      console.log("[v0] Auth token exists, setting authenticated to true");
-      setIsAuthenticated(true);
-    }
-    setLoading(false);
-
-    // (Optional) cleanup if you later switch to an auth listener:
-    // return () => unsubscribe?.();
   }, [router]);
-
-  console.log("[v0] Render - Loading:", loading, "Authenticated:", isAuthenticated);
 
   if (loading) {
     return (
