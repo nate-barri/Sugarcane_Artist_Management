@@ -45,7 +45,7 @@ function MetricsBox({ metrics, variant = "blue" }: { metrics: any; variant?: str
 
 function ChartWrapper({ children }: { children: React.ReactNode }) {
   return (
-    <div className="w-full" style={{ height: "250px", minHeight: "250px", overflow: "visible" }}>
+    <div className="w-full flex flex-col" style={{ height: "250px", minHeight: "250px" }}>
       {children}
     </div>
   )
@@ -514,7 +514,7 @@ export default function PredictiveAnalyticsDashboard() {
           <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-1 relative">
             <h2 className="text-sm font-bold mb-1">{data?.tiktok.predictionAccuracy.title}</h2>
             <p className="text-xs text-gray-600 mb-4">{data?.tiktok.predictionAccuracy.description}</p>
-            <div className="w-full" style={{ height: "250px", minHeight: "250px" }}>
+            <ChartWrapper>
               <ResponsiveContainer width="100%" height="100%">
                 <ScatterChart margin={{ top: 20, right: 60, left: 40, bottom: 40 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
@@ -569,7 +569,7 @@ export default function PredictiveAnalyticsDashboard() {
 
                   <Scatter name="Predictions" data={data?.tiktok.predictionAccuracy.data || []} fill="#8884d8">
                     {data?.tiktok.predictionAccuracy.data.map((entry, index) => {
-                      let fillColor = "#22c55e" // default green
+                      let fillColor = "#22c55e"
                       if (entry.color === "red") fillColor = "#ef4444"
                       else if (entry.color === "orange") fillColor = "#f97316"
                       else if (entry.color === "yellow") fillColor = "#eab308"
@@ -579,7 +579,7 @@ export default function PredictiveAnalyticsDashboard() {
                   </Scatter>
                 </ScatterChart>
               </ResponsiveContainer>
-            </div>
+            </ChartWrapper>
             <MetricsBox metrics={data?.tiktok.predictionAccuracy.metrics} variant="yellow" />
           </div>
 
