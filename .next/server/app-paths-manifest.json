@@ -1,9 +1,0 @@
-{
-  "/favicon.ico/route": "app/favicon.ico/route.js",
-  "/api/analytics/predictive/models-data/route": "app/api/analytics/predictive/models-data/route.js",
-  "/page": "app/page.js",
-  "/predictive-analytics/page": "app/predictive-analytics/page.js",
-  "/predictive-analytics/Meta/page": "app/predictive-analytics/Meta/page.js",
-  "/predictive-analytics/YouTube/page": "app/predictive-analytics/YouTube/page.js",
-  "/predictive-analytics/TikTok/page": "app/predictive-analytics/TikTok/page.js"
-}
