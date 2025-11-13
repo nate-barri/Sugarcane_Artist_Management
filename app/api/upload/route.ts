@@ -25,8 +25,10 @@ async function detectDataType(filePath: string): Promise<"META" | "YOUTUBE" | "T
   }
 
   if (
-    firstLine.includes("song") &&
-    (firstLine.includes("listeners") || firstLine.includes("streams") || firstLine.includes("followers"))
+    firstLine.includes("date") &&
+    firstLine.includes("listeners") &&
+    firstLine.includes("streams") &&
+    firstLine.includes("followers")
   ) {
     return "SPOTIFY"
   }
