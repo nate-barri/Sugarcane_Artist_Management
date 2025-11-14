@@ -43,14 +43,6 @@ function MetricsBox({ metrics, variant = "blue" }: { metrics: any; variant?: str
   )
 }
 
-function ChartWrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="w-full flex flex-col" style={{ height: "250px", minHeight: "250px" }}>
-      {children}
-    </div>
-  )
-}
-
 export default function PredictiveAnalyticsDashboard() {
   const [data, setData] = useState<ModelData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -135,38 +127,34 @@ export default function PredictiveAnalyticsDashboard() {
             </div>
             <h2 className="text-sm font-bold mb-1">{data?.meta.backtest.title}</h2>
             <p className="text-xs text-gray-600 mb-4">{data?.meta.backtest.description}</p>
-            <ChartWrapper>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data?.meta.backtest.data} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
-                  <YAxis tick={{ fontSize: 9 }} width={50} />
-                  <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
-                  <Line
-                    type="monotone"
-                    dataKey="actual"
-                    stroke="#2563eb"
-                    strokeWidth={2.5}
-                    name="Actual Reach"
-                    connectNulls={false}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="predicted"
-                    stroke="#f97316"
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    name="Predicted Reach"
-                    connectNulls={true}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartWrapper>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={data?.meta.backtest.data} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 9 }} width={50} />
+                <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Line
+                  type="monotone"
+                  dataKey="actual"
+                  stroke="#2563eb"
+                  strokeWidth={2.5}
+                  name="Actual Reach"
+                  connectNulls={false}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="predicted"
+                  stroke="#f97316"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  name="Predicted Reach"
+                  connectNulls={true}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
             <MetricsBox metrics={data?.meta.backtest.metrics} variant="blue" />
           </div>
 
@@ -177,55 +165,43 @@ export default function PredictiveAnalyticsDashboard() {
             </div>
             <h2 className="text-sm font-bold mb-1">{data?.meta.reach6m.title}</h2>
             <p className="text-xs text-gray-600 mb-4">{data?.meta.reach6m.description}</p>
-            <ChartWrapper>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data?.meta.reach6m.data} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
-                  <YAxis tick={{ fontSize: 9 }} width={50} />
-                  <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
-                  <Area
-                    type="monotone"
-                    dataKey="lower"
-                    fill="#93c5fd"
-                    fillOpacity={0.1}
-                    stroke="none"
-                    name="Confidence Range"
-                    isAnimationActive={false}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="upper"
-                    fill="#93c5fd"
-                    fillOpacity={0.2}
-                    stroke="none"
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="historical"
-                    stroke="#2563eb"
-                    strokeWidth={2.5}
-                    name="Historical"
-                    connectNulls={false}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="forecast"
-                    stroke="#22c55e"
-                    strokeWidth={2}
-                    strokeDasharray="4 4"
-                    name="Forecasted"
-                    connectNulls={true}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartWrapper>
+            <ResponsiveContainer width="100%" height={250}>
+              <AreaChart data={data?.meta.reach6m.data} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 9 }} width={50} />
+                <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Area
+                  type="monotone"
+                  dataKey="lower"
+                  fill="#93c5fd"
+                  fillOpacity={0.1}
+                  stroke="none"
+                  name="Confidence Range"
+                />
+                <Area type="monotone" dataKey="upper" fill="#93c5fd" fillOpacity={0.2} stroke="none" />
+                <Line
+                  type="monotone"
+                  dataKey="historical"
+                  stroke="#2563eb"
+                  strokeWidth={2.5}
+                  name="Historical"
+                  connectNulls={false}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="forecast"
+                  stroke="#22c55e"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  name="Forecasted"
+                  connectNulls={true}
+                  dot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
             <MetricsBox metrics={data?.meta.reach6m.metrics} variant="blue" />
           </div>
 
@@ -236,163 +212,135 @@ export default function PredictiveAnalyticsDashboard() {
             </div>
             <h2 className="text-sm font-bold mb-1">{data?.meta.existingPostsForecast.title}</h2>
             <p className="text-xs text-gray-600 mb-4">{data?.meta.existingPostsForecast.description}</p>
-            <ChartWrapper>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={data?.meta.existingPostsForecast.data}
-                  margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
-                  <YAxis tick={{ fontSize: 9 }} width={50} />
-                  <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
-                  <Area
-                    type="monotone"
-                    dataKey="lower"
-                    fill="#86efac"
-                    fillOpacity={0.1}
-                    stroke="none"
-                    isAnimationActive={false}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="upper"
-                    fill="#86efac"
-                    fillOpacity={0.3}
-                    stroke="none"
-                    name="Confidence Range"
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="historical"
-                    stroke="#2563eb"
-                    strokeWidth={2.5}
-                    name="Existing (Historical)"
-                    connectNulls={false}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="forecast"
-                    stroke="#f97316"
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    name="Existing (Forecast)"
-                    connectNulls={true}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartWrapper>
+            <ResponsiveContainer width="100%" height={250}>
+              <AreaChart
+                data={data?.meta.existingPostsForecast.data}
+                margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 9 }} width={50} />
+                <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Area type="monotone" dataKey="lower" fill="#86efac" fillOpacity={0.1} stroke="none" />
+                <Area
+                  type="monotone"
+                  dataKey="upper"
+                  fill="#86efac"
+                  fillOpacity={0.3}
+                  stroke="none"
+                  name="Confidence Range"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="historical"
+                  stroke="#2563eb"
+                  strokeWidth={2.5}
+                  name="Existing (Historical)"
+                  connectNulls={false}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="forecast"
+                  stroke="#f97316"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  name="Existing (Forecast)"
+                  connectNulls={true}
+                  dot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
             <MetricsBox metrics={data?.meta.existingPostsForecast.metrics} variant="green" />
           </div>
 
-          {/* ============ YOUTUBE MODELS (3) ============ */}
+          {/* ============ YOUTUBE MODELS (3) - EXPANDED ============ */}
 
-          {/* YouTube Model 1: Historical Cumulative */}
+          {/* YouTube Model 1: Historical Cumulative - REPLACED with ADD_back style */}
           <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-1 relative">
             <h2 className="text-sm font-bold mb-1">{data?.youtube.cumulativeModel.title}</h2>
             <p className="text-xs text-gray-600 mb-4">Full historical timeline with model validation</p>
-            <ChartWrapper>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={data?.youtube.cumulativeModel.part1?.data}
-                  margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
-                  <YAxis tick={{ fontSize: 9 }} width={50} />
-                  <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
-                  <Line
-                    type="monotone"
-                    dataKey="actual"
-                    stroke="#2563eb"
-                    strokeWidth={2.5}
-                    name="Actual Cumulative"
-                    connectNulls={false}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="model"
-                    stroke="#f97316"
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    name="Model Estimate"
-                    connectNulls={true}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartWrapper>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart
+                data={data?.youtube.cumulativeModel.part1?.data}
+                margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 9 }} width={50} />
+                <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Line
+                  type="monotone"
+                  dataKey="actual"
+                  stroke="#2563eb"
+                  strokeWidth={2.5}
+                  name="Actual Cumulative"
+                  connectNulls={false}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="model"
+                  stroke="#f97316"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  name="Model Estimate"
+                  connectNulls={true}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
             <MetricsBox metrics={data?.youtube.cumulativeModel.part1?.metrics} variant="blue" />
           </div>
 
-          {/* YouTube Model 2: 6-Month Cumulative Forecast */}
+          {/* YouTube Model 2: NEW - 6-Month Cumulative Forecast (9th graph) */}
           <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-1 relative">
             <h2 className="text-sm font-bold mb-1">
               {data?.youtube.cumulativeModel.part2?.label || "6-Month Cumulative View Forecast"}
             </h2>
             <p className="text-xs text-gray-600 mb-4">Last 6 months historical + Next 6 months forecast</p>
-            <ChartWrapper>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={data?.youtube.cumulativeModel.part2?.data}
-                  margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
-                  <YAxis tick={{ fontSize: 9 }} width={50} />
-                  <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
-                  <Area
-                    type="monotone"
-                    dataKey="lower"
-                    fill="#86efac"
-                    fillOpacity={0.1}
-                    stroke="none"
-                    name="Confidence Range"
-                    isAnimationActive={false}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="upper"
-                    fill="#86efac"
-                    fillOpacity={0.2}
-                    stroke="none"
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="historical"
-                    stroke="#2563eb"
-                    strokeWidth={2.5}
-                    name="Historical (Last 6M)"
-                    connectNulls={false}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="forecast"
-                    stroke="#22c55e"
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    name="Baseline (6mo)"
-                    connectNulls={true}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartWrapper>
+            <ResponsiveContainer width="100%" height={250}>
+              <AreaChart
+                data={data?.youtube.cumulativeModel.part2?.data}
+                margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 9 }} width={50} />
+                <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Area
+                  type="monotone"
+                  dataKey="lower"
+                  fill="#86efac"
+                  fillOpacity={0.1}
+                  stroke="none"
+                  name="Confidence Range"
+                />
+                <Area type="monotone" dataKey="upper" fill="#86efac" fillOpacity={0.2} stroke="none" />
+                <Line
+                  type="monotone"
+                  dataKey="historical"
+                  stroke="#2563eb"
+                  strokeWidth={2.5}
+                  name="Historical (Last 6M)"
+                  connectNulls={false}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="forecast"
+                  stroke="#22c55e"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  name="Baseline (6mo)"
+                  connectNulls={true}
+                  dot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
             <MetricsBox metrics={data?.youtube.cumulativeModel.metrics} variant="green" />
           </div>
 
@@ -400,55 +348,43 @@ export default function PredictiveAnalyticsDashboard() {
           <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-1 relative">
             <h2 className="text-sm font-bold mb-1">{data?.youtube.catalogViews.title}</h2>
             <p className="text-xs text-gray-600 mb-4">{data?.youtube.catalogViews.description}</p>
-            <ChartWrapper>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data?.youtube.catalogViews.data} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
-                  <YAxis tick={{ fontSize: 9 }} width={50} />
-                  <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
-                  <Area
-                    type="linear"
-                    dataKey="lower"
-                    fill="#f97316"
-                    fillOpacity={0.1}
-                    stroke="none"
-                    isAnimationActive={false}
-                  />
-                  <Area
-                    type="linear"
-                    dataKey="upper"
-                    fill="#f97316"
-                    fillOpacity={0.2}
-                    stroke="none"
-                    name="Confidence Range"
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="linear"
-                    dataKey="historical"
-                    stroke="#2563eb"
-                    strokeWidth={2.5}
-                    name="Historical (Backcast)"
-                    connectNulls={false}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="linear"
-                    dataKey="forecast"
-                    stroke="#f97316"
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    name="Forecast (Baseline 6mo)"
-                    connectNulls={true}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartWrapper>
+            <ResponsiveContainer width="100%" height={250}>
+              <AreaChart data={data?.youtube.catalogViews.data} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 9 }} width={50} />
+                <Tooltip formatter={(v) => (typeof v === "number" ? v.toLocaleString() : "N/A")} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Area type="linear" dataKey="lower" fill="#f97316" fillOpacity={0.1} stroke="none" />
+                <Area
+                  type="linear"
+                  dataKey="upper"
+                  fill="#f97316"
+                  fillOpacity={0.2}
+                  stroke="none"
+                  name="Confidence Range"
+                />
+                <Line
+                  type="linear"
+                  dataKey="historical"
+                  stroke="#2563eb"
+                  strokeWidth={2.5}
+                  name="Historical (Backcast)"
+                  connectNulls={false}
+                  dot={false}
+                />
+                <Line
+                  type="linear"
+                  dataKey="forecast"
+                  stroke="#f97316"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  name="Forecast (Baseline 6mo)"
+                  connectNulls={true}
+                  dot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
             <MetricsBox metrics={data?.youtube.catalogViews.metrics} variant="orange" />
           </div>
 
@@ -458,128 +394,114 @@ export default function PredictiveAnalyticsDashboard() {
           <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-1 relative">
             <h2 className="text-sm font-bold mb-1">{data?.tiktok.channelViews.title}</h2>
             <p className="text-xs text-gray-600 mb-4">{data?.tiktok.channelViews.description}</p>
-            <ChartWrapper>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data?.tiktok.channelViews.data} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
-                  <YAxis tick={{ fontSize: 9 }} width={50} />
-                  <Tooltip formatter={(v) => (typeof v === "number" ? (v / 1e6).toFixed(1) + "M" : "N/A")} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
-                  <Area
-                    type="monotone"
-                    dataKey="lower"
-                    fill="#fbbf24"
-                    fillOpacity={0.1}
-                    stroke="none"
-                    isAnimationActive={false}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="upper"
-                    fill="#fbbf24"
-                    fillOpacity={0.25}
-                    stroke="none"
-                    name="Confidence Range"
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="historical"
-                    stroke="#2563eb"
-                    strokeWidth={2.5}
-                    name="Historical"
-                    connectNulls={false}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="forecast"
-                    stroke="#f97316"
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    name="Predicted"
-                    connectNulls={true}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartWrapper>
+            <ResponsiveContainer width="100%" height={250}>
+              <AreaChart data={data?.tiktok.channelViews.data} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 9 }} width={50} />
+                <Tooltip formatter={(v) => (typeof v === "number" ? (v / 1e6).toFixed(1) + "M" : "N/A")} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Area type="monotone" dataKey="lower" fill="#fbbf24" fillOpacity={0.1} stroke="none" />
+                <Area
+                  type="monotone"
+                  dataKey="upper"
+                  fill="#fbbf24"
+                  fillOpacity={0.25}
+                  stroke="none"
+                  name="Confidence Range"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="historical"
+                  stroke="#2563eb"
+                  strokeWidth={2.5}
+                  name="Historical"
+                  connectNulls={false}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="forecast"
+                  stroke="#f97316"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  name="Predicted"
+                  connectNulls={true}
+                  dot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
             <MetricsBox metrics={data?.tiktok.channelViews.metrics} variant="yellow" />
           </div>
 
-          {/* TikTok Model 2: Prediction Accuracy (Scatter) */}
+          {/* TikTok Model 2: Prediction Accuracy (Scatter) - ENHANCED */}
           <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-1 relative">
             <h2 className="text-sm font-bold mb-1">{data?.tiktok.predictionAccuracy.title}</h2>
             <p className="text-xs text-gray-600 mb-4">{data?.tiktok.predictionAccuracy.description}</p>
-            <ChartWrapper>
-              <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 20, right: 60, left: 40, bottom: 40 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis
-                    type="number"
-                    dataKey="actual"
-                    name="Actual Engagement Rate (%)"
-                    tick={{ fontSize: 9 }}
-                    domain={[0, 25]}
-                  />
-                  <YAxis
-                    type="number"
-                    dataKey="predicted"
-                    name="Predicted Engagement Rate (%)"
-                    tick={{ fontSize: 9 }}
-                    domain={[0, 25]}
-                  />
-                  <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={{ fontSize: 10 }} />
-                  <Legend wrapperStyle={{ fontSize: 10, paddingTop: 10 }} />
+            <ResponsiveContainer width="100%" height={250}>
+              <ScatterChart margin={{ top: 20, right: 60, left: 40, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis
+                  type="number"
+                  dataKey="actual"
+                  name="Actual Engagement Rate (%)"
+                  tick={{ fontSize: 9 }}
+                  domain={[0, 25]}
+                />
+                <YAxis
+                  type="number"
+                  dataKey="predicted"
+                  name="Predicted Engagement Rate (%)"
+                  tick={{ fontSize: 9 }}
+                  domain={[0, 25]}
+                />
+                <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={{ fontSize: 10 }} />
+                <Legend wrapperStyle={{ fontSize: 10, paddingTop: 10 }} />
 
-                  <ReferenceLine
-                    stroke="#dc2626"
-                    strokeDasharray="5 5"
-                    strokeWidth={2}
-                    segment={[
-                      { x: 0, y: 0 },
-                      { x: 25, y: 25 },
-                    ]}
-                    name="Perfect Prediction"
-                    label={{ value: "Perfect Prediction", fontSize: 9, fill: "#dc2626" }}
-                  />
+                <ReferenceLine
+                  stroke="#dc2626"
+                  strokeDasharray="5 5"
+                  strokeWidth={2}
+                  segment={[
+                    { x: 0, y: 0 },
+                    { x: 25, y: 25 },
+                  ]}
+                  name="Perfect Prediction"
+                  label={{ value: "Perfect Prediction", fontSize: 9, fill: "#dc2626" }}
+                />
 
-                  <ReferenceLine
-                    stroke="#22c55e"
-                    strokeDasharray="3 3"
-                    strokeWidth={1}
-                    segment={[
-                      { x: 0, y: 3 },
-                      { x: 22, y: 25 },
-                    ]}
-                    name="±3% Zone"
-                  />
-                  <ReferenceLine
-                    stroke="#22c55e"
-                    strokeDasharray="3 3"
-                    strokeWidth={1}
-                    segment={[
-                      { x: 3, y: 0 },
-                      { x: 25, y: 22 },
-                    ]}
-                  />
+                <ReferenceLine
+                  stroke="#22c55e"
+                  strokeDasharray="3 3"
+                  strokeWidth={1}
+                  segment={[
+                    { x: 0, y: 3 },
+                    { x: 22, y: 25 },
+                  ]}
+                  name="±3% Zone"
+                />
+                <ReferenceLine
+                  stroke="#22c55e"
+                  strokeDasharray="3 3"
+                  strokeWidth={1}
+                  segment={[
+                    { x: 3, y: 0 },
+                    { x: 25, y: 22 },
+                  ]}
+                />
 
-                  <Scatter name="Predictions" data={data?.tiktok.predictionAccuracy.data || []} fill="#8884d8">
-                    {data?.tiktok.predictionAccuracy.data.map((entry, index) => {
-                      let fillColor = "#22c55e"
-                      if (entry.color === "red") fillColor = "#ef4444"
-                      else if (entry.color === "orange") fillColor = "#f97316"
-                      else if (entry.color === "yellow") fillColor = "#eab308"
+                <Scatter name="Predictions" data={data?.tiktok.predictionAccuracy.data || []} fill="#8884d8">
+                  {data?.tiktok.predictionAccuracy.data.map((entry, index) => {
+                    let fillColor = "#22c55e" // default green
+                    if (entry.color === "red") fillColor = "#ef4444"
+                    else if (entry.color === "orange") fillColor = "#f97316"
+                    else if (entry.color === "yellow") fillColor = "#eab308"
 
-                      return <Cell key={`cell-${index}`} fill={fillColor} />
-                    })}
-                  </Scatter>
-                </ScatterChart>
-              </ResponsiveContainer>
-            </ChartWrapper>
+                    return <Cell key={`cell-${index}`} fill={fillColor} />
+                  })}
+                </Scatter>
+              </ScatterChart>
+            </ResponsiveContainer>
             <MetricsBox metrics={data?.tiktok.predictionAccuracy.metrics} variant="yellow" />
           </div>
 
@@ -587,58 +509,46 @@ export default function PredictiveAnalyticsDashboard() {
           <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-1 relative">
             <h2 className="text-sm font-bold mb-1">{data?.tiktok.cumulativeForecast.title}</h2>
             <p className="text-xs text-gray-600 mb-4">{data?.tiktok.cumulativeForecast.description}</p>
-            <ChartWrapper>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={data?.tiktok.cumulativeForecast.data}
-                  margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
-                  <YAxis tick={{ fontSize: 9 }} width={50} />
-                  <Tooltip formatter={(v) => (typeof v === "number" ? (v / 1e6).toFixed(1) + "M" : "N/A")} />
-                  <Legend wrapperStyle={{ fontSize: 10 }} />
-                  <Area
-                    type="monotone"
-                    dataKey="lower"
-                    fill="#fbbf24"
-                    fillOpacity={0.1}
-                    stroke="none"
-                    isAnimationActive={false}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="upper"
-                    fill="#fbbf24"
-                    fillOpacity={0.25}
-                    stroke="none"
-                    name="Confidence Range"
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="cumulative"
-                    stroke="#2563eb"
-                    strokeWidth={2.5}
-                    name="Historical (Last 6M)"
-                    connectNulls={false}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="forecast"
-                    stroke="#f97316"
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    name="Projected (6-Month)"
-                    connectNulls={true}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartWrapper>
+            <ResponsiveContainer width="100%" height={250}>
+              <AreaChart
+                data={data?.tiktok.cumulativeForecast.data}
+                margin={{ top: 5, right: 10, left: 0, bottom: 40 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="date" angle={-45} textAnchor="end" height={60} tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 9 }} width={50} />
+                <Tooltip formatter={(v) => (typeof v === "number" ? (v / 1e6).toFixed(1) + "M" : "N/A")} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Area type="monotone" dataKey="lower" fill="#fbbf24" fillOpacity={0.1} stroke="none" />
+                <Area
+                  type="monotone"
+                  dataKey="upper"
+                  fill="#fbbf24"
+                  fillOpacity={0.25}
+                  stroke="none"
+                  name="Confidence Range"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="cumulative"
+                  stroke="#2563eb"
+                  strokeWidth={2.5}
+                  name="Historical (Last 6M)"
+                  connectNulls={false}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="forecast"
+                  stroke="#f97316"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  name="Projected (6-Month)"
+                  connectNulls={true}
+                  dot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
             <MetricsBox metrics={data?.tiktok.cumulativeForecast.metrics} variant="yellow" />
           </div>
         </section>
