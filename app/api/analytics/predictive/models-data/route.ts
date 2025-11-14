@@ -5,6 +5,31 @@ import { NextResponse } from "next/server"
 // YouTube models: Cumulative Views, Catalog Views Forecast
 // TikTok models: Channel Views Forecast, Scatter Plot (Predicted vs Actual)
 
+// This fixes the issue where missing or inconsistent data causes chart lines to break
+
+function ensureDataIntegrity(data: any) {
+  // Ensure all null fields are explicitly included for Recharts to properly handle them
+  if (!data) return []
+  
+  if (!data || data.length === 0) {
+    console.warn(`[v0] Empty data array provided to ensureDataIntegrity`)
+  }
+  
+  return data.map((item: any) => ({
+    // Copy all existing fields
+    ...item,
+    // Explicitly ensure null values exist (Recharts needs these)
+    historical: item.historical ?? null,
+    forecast: item.forecast ?? null,
+    actual: item.actual ?? null,
+    predicted: item.predicted ?? null,
+    model: item.model ?? null,
+    upper: item.upper ?? null,
+    lower: item.lower ?? null,
+    cumulative: item.cumulative ?? null,
+  }))
+}
+
 export async function GET() {
   try {
     const data = {
@@ -40,18 +65,18 @@ export async function GET() {
           title: "Facebook Engagement Rate Forecast (Last 6 Months + Next 6 Months)",
           description: "Monthly engagement rate projections",
           data: [
-            { date: "Mar 2025", historical: 215000, forecast: null, upper: null },
-            { date: "Apr 2025", historical: 195000, forecast: null, upper: null },
-            { date: "May 2025", historical: 135000, forecast: null, upper: null },
-            { date: "Jun 2025", historical: 180000, forecast: null, upper: null },
-            { date: "Jul 2025", historical: 375000, forecast: null, upper: null },
-            { date: "Aug 2025", historical: 305000, forecast: null, upper: null },
-            { date: "Sep 2025", historical: null, forecast: 130000, upper: 160000 },
-            { date: "Oct 2025", historical: null, forecast: 140000, upper: 165000 },
-            { date: "Nov 2025", historical: null, forecast: 135000, upper: 158000 },
-            { date: "Dec 2025", historical: null, forecast: 128000, upper: 150000 },
-            { date: "Jan 2026", historical: null, forecast: 125000, upper: 145000 },
-            { date: "Feb 2026", historical: null, forecast: 122000, upper: 142000 },
+            { date: "Mar 2025", historical: 215000, forecast: null, upper: null, lower: null },
+            { date: "Apr 2025", historical: 195000, forecast: null, upper: null, lower: null },
+            { date: "May 2025", historical: 135000, forecast: null, upper: null, lower: null },
+            { date: "Jun 2025", historical: 180000, forecast: null, upper: null, lower: null },
+            { date: "Jul 2025", historical: 375000, forecast: null, upper: null, lower: null },
+            { date: "Aug 2025", historical: 305000, forecast: null, upper: null, lower: null },
+            { date: "Sep 2025", historical: null, forecast: 130000, upper: 160000, lower: 100000 },
+            { date: "Oct 2025", historical: null, forecast: 140000, upper: 165000, lower: 115000 },
+            { date: "Nov 2025", historical: null, forecast: 135000, upper: 158000, lower: 112000 },
+            { date: "Dec 2025", historical: null, forecast: 128000, upper: 150000, lower: 106000 },
+            { date: "Jan 2026", historical: null, forecast: 125000, upper: 145000, lower: 105000 },
+            { date: "Feb 2026", historical: null, forecast: 122000, upper: 142000, lower: 102000 },
           ],
           type: "composite",
           metrics: {
@@ -66,15 +91,15 @@ export async function GET() {
           title: "Backtest Forecast: Actual vs Predicted Reach (3-Month Rolling)",
           description: "Model validation on test set",
           data: [
-            { date: "0.0", actual: 300000, predicted: null },
-            { date: "0.5", actual: 600000, predicted: 400000 },
-            { date: "1.0", actual: 900000, predicted: 1500000 },
-            { date: "1.5", actual: 1100000, predicted: 1000000 },
-            { date: "2.0", actual: 1300000, predicted: 1050000 },
-            { date: "2.5", actual: 900000, predicted: 700000 },
-            { date: "3.0", actual: 500000, predicted: 300000 },
-            { date: "3.5", actual: 300000, predicted: 150000 },
-            { date: "4.0", actual: 150000, predicted: null },
+            { date: "0.0", actual: 300000, predicted: null, model: null },
+            { date: "0.5", actual: 600000, predicted: 400000, model: null },
+            { date: "1.0", actual: 900000, predicted: 1500000, model: null },
+            { date: "1.5", actual: 1100000, predicted: 1000000, model: null },
+            { date: "2.0", actual: 1300000, predicted: 1050000, model: null },
+            { date: "2.5", actual: 900000, predicted: 700000, model: null },
+            { date: "3.0", actual: 500000, predicted: 300000, model: null },
+            { date: "3.5", actual: 300000, predicted: 150000, model: null },
+            { date: "4.0", actual: 150000, predicted: null, model: null },
           ],
           type: "line",
           metrics: {
@@ -177,13 +202,13 @@ export async function GET() {
           part1: {
             label: "Full Historical Timeline",
             data: [
-              { date: "Nov 24", actual: 65000000, model: 62000000 },
-              { date: "Dec 24", actual: 70000000, model: 68000000 },
-              { date: "Jan 25", actual: 75000000, model: 73000000 },
-              { date: "Feb 25", actual: 78000000, model: 76000000 },
-              { date: "Mar 25", actual: 82000000, model: 80000000 },
-              { date: "Apr 25", actual: 85000000, model: 82000000 },
-              { date: "May 25", actual: 88000000, model: 85000000 },
+              { date: "Nov 24", actual: 65000000, model: 62000000, forecast: null, historical: null, lower: null, upper: null },
+              { date: "Dec 24", actual: 70000000, model: 68000000, forecast: null, historical: null, lower: null, upper: null },
+              { date: "Jan 25", actual: 75000000, model: 73000000, forecast: null, historical: null, lower: null, upper: null },
+              { date: "Feb 25", actual: 78000000, model: 76000000, forecast: null, historical: null, lower: null, upper: null },
+              { date: "Mar 25", actual: 82000000, model: 80000000, forecast: null, historical: null, lower: null, upper: null },
+              { date: "Apr 25", actual: 85000000, model: 82000000, forecast: null, historical: null, lower: null, upper: null },
+              { date: "May 25", actual: 88000000, model: 85000000, forecast: null, historical: null, lower: null, upper: null },
             ],
             metrics: {
               r2: 0.8268,
@@ -195,12 +220,12 @@ export async function GET() {
           part2: {
             label: "6-Month Cumulative View Forecast (Last 6 Months + Next 6 Months)",
             data: [
-              { date: "2025-03", historical: 75000000, forecast: null, lower: null, upper: null },
-              { date: "2025-04", historical: 76500000, forecast: null, lower: null, upper: null },
-              { date: "2025-05", historical: 80000000, forecast: null, lower: null, upper: null },
-              { date: "2025-06", historical: null, forecast: 85000000, lower: 80000000, upper: 90000000 },
-              { date: "2025-07", historical: null, forecast: 90000000, lower: 84000000, upper: 96000000 },
-              { date: "2025-08", historical: null, forecast: 95000000, lower: 88000000, upper: 102000000 },
+              { date: "2025-03", historical: 75000000, forecast: null, lower: null, upper: null, actual: null, model: null },
+              { date: "2025-04", historical: 76500000, forecast: null, lower: null, upper: null, actual: null, model: null },
+              { date: "2025-05", historical: 80000000, forecast: null, lower: null, upper: null, actual: null, model: null },
+              { date: "2025-06", historical: null, forecast: 85000000, lower: 80000000, upper: 90000000, actual: null, model: null },
+              { date: "2025-07", historical: null, forecast: 90000000, lower: 84000000, upper: 96000000, actual: null, model: null },
+              { date: "2025-08", historical: null, forecast: 95000000, lower: 88000000, upper: 102000000, actual: null, model: null },
             ],
             metrics: {
               r2: 0.8317,
@@ -222,18 +247,18 @@ export async function GET() {
           title: "Total Catalog Views: Historical (Backcast) + Forecast (Baseline 6mo)",
           description: "Confidence range (70%-130%)",
           data: [
-            { date: "6m", historical: 82000000, forecast: null, lower: null, upper: null },
-            { date: "5m", historical: 83000000, forecast: null, lower: null, upper: null },
-            { date: "4m", historical: 84000000, forecast: null, lower: null, upper: null },
-            { date: "3m", historical: 85000000, forecast: null, lower: null, upper: null },
-            { date: "2m", historical: 86500000, forecast: null, lower: null, upper: null },
-            { date: "1m", historical: 87400000, forecast: null, lower: null, upper: null },
-            { date: "Now", historical: 87400000, forecast: 87400000, lower: 87400000, upper: 87400000 },
-            { date: "+1m", historical: null, forecast: 89000000, lower: 62300000, upper: 113700000 },
-            { date: "+2m", historical: null, forecast: 90500000, lower: 63350000, upper: 115650000 },
-            { date: "+3m", historical: null, forecast: 91800000, lower: 64260000, upper: 117340000 },
-            { date: "+4m", historical: null, forecast: 92800000, lower: 64960000, upper: 118640000 },
-            { date: "+5m", historical: null, forecast: 93071402, lower: 65150000, upper: 121000000 },
+            { date: "6m", historical: 82000000, forecast: null, lower: null, upper: null, actual: null, model: null },
+            { date: "5m", historical: 83000000, forecast: null, lower: null, upper: null, actual: null, model: null },
+            { date: "4m", historical: 84000000, forecast: null, lower: null, upper: null, actual: null, model: null },
+            { date: "3m", historical: 85000000, forecast: null, lower: null, upper: null, actual: null, model: null },
+            { date: "2m", historical: 86500000, forecast: null, lower: null, upper: null, actual: null, model: null },
+            { date: "1m", historical: 87400000, forecast: null, lower: null, upper: null, actual: null, model: null },
+            { date: "Now", historical: 87400000, forecast: 87400000, lower: 87400000, upper: 87400000, actual: null, model: null },
+            { date: "+1m", historical: null, forecast: 89000000, lower: 62300000, upper: 113700000, actual: null, model: null },
+            { date: "+2m", historical: null, forecast: 90500000, lower: 63350000, upper: 115650000, actual: null, model: null },
+            { date: "+3m", historical: null, forecast: 91800000, lower: 64260000, upper: 117340000, actual: null, model: null },
+            { date: "+4m", historical: null, forecast: 92800000, lower: 64960000, upper: 118640000, actual: null, model: null },
+            { date: "+5m", historical: null, forecast: 93071402, lower: 65150000, upper: 121000000, actual: null, model: null },
           ],
           type: "composite",
           metrics: {
@@ -318,18 +343,18 @@ export async function GET() {
           title: "Total Channel Views: Last 6 Months + 6-Month Forecast",
           description: "MAPE (16.8%) confidence range",
           data: [
-            { date: "2025-05", historical: 50000, forecast: null, upper: null },
-            { date: "2025-06", historical: 100000, forecast: null, upper: null },
-            { date: "2025-07", historical: 200000, forecast: null, upper: null },
-            { date: "2025-08", historical: 400000, forecast: null, upper: null },
-            { date: "2025-09", historical: 800000, forecast: null, upper: null },
-            { date: "2025-10", historical: 1200000, forecast: null, upper: null },
-            { date: "2025-11", historical: null, forecast: 1500000, upper: 1750000 },
-            { date: "2025-12", historical: null, forecast: 1800000, upper: 2100000 },
-            { date: "2026-01", historical: null, forecast: 2100000, upper: 2445000 },
-            { date: "2026-02", historical: null, forecast: 2400000, upper: 2795000 },
-            { date: "2026-03", historical: null, forecast: 2700000, upper: 3145000 },
-            { date: "2026-04", historical: null, forecast: 3000000, upper: 3500000 },
+            { date: "2025-05", historical: 50000, forecast: null, upper: null, lower: null, cumulative: null, actual: null, predicted: null },
+            { date: "2025-06", historical: 100000, forecast: null, upper: null, lower: null, cumulative: null, actual: null, predicted: null },
+            { date: "2025-07", historical: 200000, forecast: null, upper: null, lower: null, cumulative: null, actual: null, predicted: null },
+            { date: "2025-08", historical: 400000, forecast: null, upper: null, lower: null, cumulative: null, actual: null, predicted: null },
+            { date: "2025-09", historical: 800000, forecast: null, upper: null, lower: null, cumulative: null, actual: null, predicted: null },
+            { date: "2025-10", historical: 1200000, forecast: null, upper: null, lower: null, cumulative: null, actual: null, predicted: null },
+            { date: "2025-11", historical: null, forecast: 1500000, upper: 1750000, lower: 1250000, cumulative: null, actual: null, predicted: null },
+            { date: "2025-12", historical: null, forecast: 1800000, upper: 2100000, lower: 1500000, cumulative: null, actual: null, predicted: null },
+            { date: "2026-01", historical: null, forecast: 2100000, upper: 2445000, lower: 1755000, cumulative: null, actual: null, predicted: null },
+            { date: "2026-02", historical: null, forecast: 2400000, upper: 2795000, lower: 2005000, cumulative: null, actual: null, predicted: null },
+            { date: "2026-03", historical: null, forecast: 2700000, upper: 3145000, lower: 2255000, cumulative: null, actual: null, predicted: null },
+            { date: "2026-04", historical: null, forecast: 3000000, upper: 3500000, lower: 2500000, cumulative: null, actual: null, predicted: null },
           ],
           type: "composite",
           metrics: {
@@ -422,18 +447,18 @@ export async function GET() {
           title: "Total Channel Views: Cumulative Historical + 6-Month Forecast",
           description: "±MAPE (15.0%) confidence range",
           data: [
-            { date: "2025-05", cumulative: 50000, forecast: null, upper: null },
-            { date: "2025-06", cumulative: 150000, forecast: null, upper: null },
-            { date: "2025-07", cumulative: 350000, forecast: null, upper: null },
-            { date: "2025-08", cumulative: 750000, forecast: null, upper: null },
-            { date: "2025-09", cumulative: 1550000, forecast: null, upper: null },
-            { date: "2025-10", cumulative: 2750000, forecast: null, upper: null },
-            { date: "2025-11", cumulative: null, forecast: 4250000, upper: 4887500 },
-            { date: "2025-12", cumulative: null, forecast: 6050000, upper: 6957500 },
-            { date: "2026-01", cumulative: null, forecast: 8150000, upper: 9372500 },
-            { date: "2026-02", cumulative: null, forecast: 10550000, upper: 12132500 },
-            { date: "2026-03", cumulative: null, forecast: 13250000, upper: 15237500 },
-            { date: "2026-04", cumulative: null, forecast: 16250000, upper: 18687500 },
+            { date: "2025-05", cumulative: 50000, forecast: null, upper: null, lower: null, historical: null, actual: null, predicted: null },
+            { date: "2025-06", cumulative: 150000, forecast: null, upper: null, lower: null, historical: null, actual: null, predicted: null },
+            { date: "2025-07", cumulative: 350000, forecast: null, upper: null, lower: null, historical: null, actual: null, predicted: null },
+            { date: "2025-08", cumulative: 750000, forecast: null, upper: null, lower: null, historical: null, actual: null, predicted: null },
+            { date: "2025-09", cumulative: 1550000, forecast: null, upper: null, lower: null, historical: null, actual: null, predicted: null },
+            { date: "2025-10", cumulative: 2750000, forecast: null, upper: null, lower: null, historical: null, actual: null, predicted: null },
+            { date: "2025-11", cumulative: null, forecast: 4250000, upper: 4887500, lower: 3612500, historical: null, actual: null, predicted: null },
+            { date: "2025-12", cumulative: null, forecast: 6050000, upper: 6957500, lower: 5142500, historical: null, actual: null, predicted: null },
+            { date: "2026-01", cumulative: null, forecast: 8150000, upper: 9372500, lower: 6927500, historical: null, actual: null, predicted: null },
+            { date: "2026-02", cumulative: null, forecast: 10550000, upper: 12132500, lower: 8967500, historical: null, actual: null, predicted: null },
+            { date: "2026-03", cumulative: null, forecast: 13250000, upper: 15237500, lower: 11262500, historical: null, actual: null, predicted: null },
+            { date: "2026-04", cumulative: null, forecast: 16250000, upper: 18687500, lower: 13812500, historical: null, actual: null, predicted: null },
           ],
           type: "composite",
           metrics: {
@@ -515,7 +540,18 @@ export async function GET() {
       },
     }
 
-    return NextResponse.json(data)
+    data.meta.existingPostsForecast.data = ensureDataIntegrity(data.meta.existingPostsForecast.data)
+    data.meta.reach6m.data = ensureDataIntegrity(data.meta.reach6m.data)
+    data.meta.backtest.data = ensureDataIntegrity(data.meta.backtest.data)
+    data.youtube.cumulativeModel.part1.data = ensureDataIntegrity(data.youtube.cumulativeModel.part1.data)
+    data.youtube.cumulativeModel.part2.data = ensureDataIntegrity(data.youtube.cumulativeModel.part2.data)
+    data.youtube.catalogViews.data = ensureDataIntegrity(data.youtube.catalogViews.data)
+    data.tiktok.channelViews.data = ensureDataIntegrity(data.tiktok.channelViews.data)
+    data.tiktok.cumulativeForecast.data = ensureDataIntegrity(data.tiktok.cumulativeForecast.data)
+
+    const response = NextResponse.json(data)
+    response.headers.set('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400')
+    return response
   } catch (error) {
     console.error("Error fetching model data:", error)
     return NextResponse.json({ error: "Failed to fetch model data" }, { status: 500 })

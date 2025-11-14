@@ -1,4 +1,5 @@
 "use client"
+
 import { useState, useEffect } from "react"
 import Sidebar from "@/components/sidebar"
 import type { ModelData } from "@/types/modelData"
@@ -108,6 +109,7 @@ export default function PredictiveAnalyticsDashboard() {
       </div>
     )
   }
+
   return (
     <div className="flex min-h-screen bg-[#D3D3D3]">
       <Sidebar />
@@ -254,7 +256,8 @@ export default function PredictiveAnalyticsDashboard() {
           </div>
 
           {/* ============ YOUTUBE MODELS (3) - EXPANDED ============ */}
-          {/* YouTube Model 1: Historical Cumulative - REPLACED with ADD_back style */}
+
+          {/* YouTube Model 1: Historical Cumulative */}
           <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-1 relative">
             <h2 className="text-sm font-bold mb-1">{data?.youtube.cumulativeModel.title}</h2>
             <p className="text-xs text-gray-600 mb-4">Full historical timeline with model validation</p>
@@ -292,7 +295,7 @@ export default function PredictiveAnalyticsDashboard() {
             <MetricsBox metrics={data?.youtube.cumulativeModel.part1?.metrics} variant="blue" />
           </div>
 
-          {/* YouTube Model 2: NEW - 6-Month Cumulative Forecast (9th graph) */}
+          {/* YouTube Model 2: 6-Month Cumulative Forecast */}
           <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-1 relative">
             <h2 className="text-sm font-bold mb-1">
               {data?.youtube.cumulativeModel.part2?.label || "6-Month Cumulative View Forecast"}
@@ -386,6 +389,7 @@ export default function PredictiveAnalyticsDashboard() {
           </div>
 
           {/* ============ TIKTOK MODELS (3) ============ */}
+
           {/* TikTok Model 1: Channel Views */}
           <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-1 relative">
             <h2 className="text-sm font-bold mb-1">{data?.tiktok.channelViews.title}</h2>
@@ -492,6 +496,7 @@ export default function PredictiveAnalyticsDashboard() {
                     if (entry.color === "red") fillColor = "#ef4444"
                     else if (entry.color === "orange") fillColor = "#f97316"
                     else if (entry.color === "yellow") fillColor = "#eab308"
+
                     return <Cell key={`cell-${index}`} fill={fillColor} />
                   })}
                 </Scatter>
